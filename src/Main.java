@@ -1,9 +1,22 @@
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import protocol.Configuration;
 import protocol.Protocol;
+import proxy.DHTProxy;
+import proxy.KXProxy;
 import sandbox.DummyDHT;
+import scenario.*;
 
 /*
  * To change this template, choose Tools | Templates
@@ -14,66 +27,54 @@ import sandbox.DummyDHT;
  * @author Emertat
  */
 public class Main {
-/**
- * each run of the program starts here. each time, only one scenario is executed
- * when complete, the program will receive a config file address, a dht, a kx, 
- * and a voip file address. and a log file address for the test results. Run the
- * scenario according to the inputs, and write the result in the log file.
- * @param args 
- */
-    public static void main(String args[]) {
-        scenario1("no conf file right now.conf");
-    }
-
+public static ArrayList<Integer> freePorts;
     /**
-     * This function initiates
+     * each run of the program starts here. each time, only one scenario is
+     * executed when complete, the program will receive a .config file address,
+     * a dht, a kx, and a voip file address. and a log file address for the test
+     * results. Run the scenario according to the inputs, and write the result
+     * in the log file.
      *
      * @param args
      */
-    public static void startPolicy(String args[]) {
-        // TODO: later call this function in Main.
-        // TODO: we have to properly parse the args and get the address of KX,VOUP,DHT modules.
-
-//        String confFile = args[0];        
-//        String scenario = args[1];
-//        TODO: switch case on scenario. to run different scenarios.
-    }
-/**
- * scenario1 tests if a DHT Module can listen to a message, properly.
- * TODO: needs completion.
- * @param confFile 
- */
-    private static void scenario1(String confFile) {
-//        Configuration cr = new Configuration(new File(confFile));
-        // creating dummyDHT, and make it listen for connections in a new thread.
-        int portNumber = 8000;
-        DummyDHT dmh = new DummyDHT(portNumber);
-        // send messagess to it.
+    public static void main(String args[]) {
+        args = new String[6]; // this is temp.
+        args[0] = "-scenario";
+        args[1] = "1";
+        args[2] = "-conf";
+        args[3] = "conf.ini";
+        args[4] = "-free";
+        args[5] = "100..200";
         try {
-            Socket echoSocket = new Socket(Configuration.LOCAL_HOST, portNumber);
-            PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
-            out.println(Protocol.addHeader("this is a random and probably invalid message.", Configuration.MessageType.MSG_DHT_PUT));
-            echoSocket.close();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-    /**
-     * In this function we test the DHT's ability to reply to a GET message. we wait for its GET_REPLY message.
-     * TODO: needs completion.
-     * @param confFile 
-     */
-    private static void scenario2(String confFile){
-        int portNumber = 8000; // This is temp
-        try {
-            //TODO: create a Listener: A listener, impersonating a KX module.
-            Socket echoSocket = new Socket(Configuration.LOCAL_HOST, portNumber); //creating a socket and normally sending.
-            PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
-            out.println(Protocol.addHeader("this is the key",
-                    Configuration.MessageType.MSG_DHT_GET));// sending a get request.
-            echoSocket.close(); // closing the connection
-            // this thread normally finishes here, and there is a busy wait in our KX Listener, we evaluate the result there.
-        } catch (Exception ex) {
+            //        new Scenario2();
+            CommandLineParser clp = new DefaultParser();
+            Options options = new Options();
+            options.addOption("kx", true, "kx module");
+            options.addOption("dht", true, "dht module");
+            options.addOption("voip", true, "voip module");
+            options.addOption("conf", true, "Configuration file address");
+            options.addOption("scenario", true, "Scenario number.");
+            options.addOption("free", true, "inclusive range of free ports. for example: one thousand to two thousand: 1000..2000."
+                    + " Default range for test module is 9000 to 9100.");
+            CommandLine cl = clp.parse(options, args);
+//            Configuration conf = new Configuration(new File());
+            System.out.println(cl.getOptionValue("conf"));
+            String portRange = cl.getOptionValue("free");
+            int start;
+            int end;
+            try {
+                start = Integer.parseInt(portRange.split("..")[0]);
+                end = Integer.parseInt(portRange.split("..")[1]);
+            } catch (Exception ex) { // No or bad range provided.
+                start = 9000;
+                end = 9100;
+            }
+            freePorts = new ArrayList<>();
+            for(int i = start; i <= end; i++){
+                freePorts.add(i);
+            }
+            new Scenario4(cl.getOptionValue("conf"), freePorts);
+        } catch (ParseException ex) {
             ex.printStackTrace();
         }
     }

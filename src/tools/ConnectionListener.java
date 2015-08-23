@@ -1,4 +1,4 @@
-package network;
+package tools;
 
 
 import java.net.ServerSocket;
@@ -16,17 +16,7 @@ import java.util.concurrent.Executors;
  * @author Emertat
  */
 public class ConnectionListener {
-    public static void main(String[] args) {
-        new ConnectionListener(new Server() {
-
-            @Override
-            public void handleMessage(String message) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }
-        }).startServer(8000);
-    }
     Server server;
-
     public ConnectionListener(Server s) {
         this.server = s;
     }
@@ -40,7 +30,7 @@ public class ConnectionListener {
 //                    System.out.println("Waiting for clients to connect...");
                     while (true) {
                         Socket clientSocket = serverSocket.accept();
-                        clientProcessingPool.submit(new MessageReceiver(clientSocket, server));
+                        clientProcessingPool.submit(new MessageReceiver(clientSocket, server, port));
                     }
                 } catch (Exception e) {
                     System.err.println("Unable to process client request");
