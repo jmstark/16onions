@@ -4,6 +4,10 @@
  */
 package protocol;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.ArrayList;
+
 /**
  *
  * @author Emertat
@@ -12,17 +16,45 @@ public class Protocol {
 
     public enum MessageType {
 
-        DHT_PUT,
-        DHT_GET,
-        DHT_TRACE,
-        DHT_GET_REPLY,
-        DHT_TRACE_REPLY,
-        DHT_ERROR,
-        KX_TN_BUILD_IN,
-        KX_TN_BUILD_OUT,
-        KX_TN_READY,
-        KX_TN_DESTROY,
-        KX_ERROR
+        DHT_PUT(500),
+        DHT_GET(501),
+        DHT_TRACE(502),
+        DHT_GET_REPLY(503),
+        DHT_TRACE_REPLY(504),
+        DHT_ERROR(505),
+        KX_TN_BUILD_IN(600),
+        KX_TN_BUILD_OUT(601),
+        KX_TN_READY(602),
+        KX_TN_DESTROY(603),
+        KX_ERROR(604);
+        private int numVal;
+
+        MessageType(int numVal) {
+            this.numVal = numVal;
+        }
+
+        public int getNumVal() {
+            return numVal;
+        }
+    }
+
+    /**
+     * This function is the definitive way of reading for this Project, and
+     * since it is too long to implement for every use, is gathered in a
+     * function.
+     *
+     * @param in
+     * @return
+     */
+    public static String read(BufferedReader in) throws IOException {
+        String message = "";
+        char[] buffer = new char[MAX_MESSAGE_SIZE];
+        int valid = 0;
+        while (valid >= 0) {
+            valid = in.read(buffer, 0, MAX_MESSAGE_SIZE);
+            message += new String(buffer, 0, Math.max(valid, 0));
+        }
+        return message;
     }
 
     public static String addHeader(String content, MessageType type) {
@@ -36,7 +68,7 @@ public class Protocol {
      * @return
      */
     private static String addType(String rawMessage, MessageType type) {
-        return twoBytesFormat(type.ordinal()) + rawMessage;
+        return twoBytesFormat(type.getNumVal()) + rawMessage;
     }
 
     /**
@@ -45,8 +77,7 @@ public class Protocol {
      * @return a string that the size has been prepended to it.
      */
     private static String addSize(String typedMessage) {
-//        TODO: add actual size later. right now its random.
-        int size = typedMessage.length() + 2; //two bytes for the size field.
+        int size = typedMessage.length() + SIZE_LENGTH;
         return twoBytesFormat(size) + typedMessage;
     }
 
@@ -75,7 +106,8 @@ public class Protocol {
     }
 
     public static boolean DHT_GET_isValid(String message) {
-        return false;
+        int size = sizeCheck(message);
+        return size > 0;
     }
 
     private static MessageType getType(String message) {
@@ -83,7 +115,7 @@ public class Protocol {
     }
 
     public static boolean DHT_TRACE_isValid(String message) {
-        if (getMessageSize(message) == SIZE_LENGTH + TYPE_LENGTH + KEY_LENGTH
+        if (sizeCheck(message) == SIZE_LENGTH + TYPE_LENGTH + KEY_LENGTH
                 && getType(message) == MessageType.DHT_TRACE) {
             return true;
         }
@@ -91,21 +123,21 @@ public class Protocol {
     }
 
     public static boolean DHT_TRACE_REPLY_isValid(String message) {
-        if(((double) message.length() - SIZE_LENGTH - TYPE_LENGTH - KEY_LENGTH)
-                / (PEER_ID_LENGTH + KX_PORT_LENGTH
-                + DHT_TRACE_REPLAY_RESERVED_BYTES + 
-                IPV4_LENGTH + IPV6_LENGTH) % 1 == 0.0){
+        if (((double) message.length() - SIZE_LENGTH - TYPE_LENGTH - KEY_LENGTH)
+                / (IDENTITY_LENGTH + PORT_LENGTH
+                + DHT_TRACE_REPLAY_RESERVED_BYTES
+                + IPV4_LENGTH + IPV6_LENGTH) % 1 == 0.0) {
             return true;
         }
         return false;
     }
 
     public static boolean DHT_GET_REPLY_isValid(String message) {
-        if (getMessageSize(message) < SIZE_LENGTH + TYPE_LENGTH + KEY_LENGTH) {
+        if (sizeCheck(message) < SIZE_LENGTH + TYPE_LENGTH + KEY_LENGTH) {
             return false;
         }
         if (intFormat(message.substring(SIZE_LENGTH, SIZE_LENGTH + TYPE_LENGTH))
-                != MessageType.DHT_GET_REPLY.ordinal()) {
+                != MessageType.DHT_GET_REPLY.getNumVal()) {
             return false;
         }
         return true;
@@ -118,7 +150,7 @@ public class Protocol {
      * @return
      */
     public static boolean DHT_PUT_isValid(String message) {
-        int size = getMessageSize(message);
+        int size = sizeCheck(message);
         if ((size - SIZE_LENGTH - TYPE_LENGTH)
                 <= KEY_LENGTH
                 + DHT_PUT_RESERVED_BYTES
@@ -128,6 +160,59 @@ public class Protocol {
             return false;
         }
         return true;
+    }
+
+    public static String create_TN_DESTROY(String psuedoIdentity) {
+        return addHeader(psuedoIdentity, MessageType.KX_TN_DESTROY);
+    }
+
+    public static String create_TN_BUILD(String psuedoidentity, int hops,
+            int kxPort, String ipv4, String ipv6, String identity) {
+        return addHeader((char) hops + "000" + psuedoidentity + twoBytesFormat(kxPort)
+                + "00" + identity + ipv4 + ipv6, MessageType.KX_TN_BUILD_OUT);
+    }
+
+    public static String create_TN_READY(String psuedoIdentity, String ipv4, String ipv6) {
+        return addHeader(psuedoIdentity + "0000" + ipv4 + ipv6, MessageType.KX_TN_READY);
+    }
+
+    public static String get_TN_READY_IPv4(String message) {
+        return message.substring(SIZE_LENGTH + TYPE_LENGTH
+                + IDENTITY_LENGTH + TN_READY_RESERVED_BYTES, SIZE_LENGTH
+                + TYPE_LENGTH + IDENTITY_LENGTH + TN_READY_RESERVED_BYTES
+                + IPV4_LENGTH);
+    }
+
+    public static String get_TN_BUILD_IPv6(String message) {
+        return message.substring(SIZE_LENGTH + TYPE_LENGTH
+                + NHOPS_LENGTH + TN_BUILD_RESERVED_BYTES_1
+                + IDENTITY_LENGTH + PORT_LENGTH + TN_BUILD_RESERVED_BYTES_2
+                + IDENTITY_LENGTH + IPV4_LENGTH, SIZE_LENGTH + TYPE_LENGTH
+                + NHOPS_LENGTH + TN_BUILD_RESERVED_BYTES_1
+                + IDENTITY_LENGTH + PORT_LENGTH + TN_BUILD_RESERVED_BYTES_2
+                + IDENTITY_LENGTH + IPV4_LENGTH + IPV6_LENGTH);
+    }
+
+    public static String get_TN_BUILD_IPv4(String message) {
+        return message.substring(SIZE_LENGTH + TYPE_LENGTH
+                + NHOPS_LENGTH + TN_BUILD_RESERVED_BYTES_1
+                + IDENTITY_LENGTH + PORT_LENGTH + TN_BUILD_RESERVED_BYTES_2
+                + IDENTITY_LENGTH, SIZE_LENGTH + TYPE_LENGTH
+                + NHOPS_LENGTH + TN_BUILD_RESERVED_BYTES_1
+                + IDENTITY_LENGTH + PORT_LENGTH + TN_BUILD_RESERVED_BYTES_2
+                + IDENTITY_LENGTH + IPV4_LENGTH);
+    }
+
+    public static String get_TN_BUILD_PsuedoIdentity(String message) {
+        return message.substring(SIZE_LENGTH + TYPE_LENGTH + NHOPS_LENGTH
+                + TN_BUILD_RESERVED_BYTES_1, SIZE_LENGTH + TYPE_LENGTH
+                + NHOPS_LENGTH + TN_BUILD_RESERVED_BYTES_1
+                + IDENTITY_LENGTH);
+
+    }
+
+    public static String create_DHT_GET(String key) {
+        return addHeader(key, MessageType.DHT_GET);
     }
 
     public static String create_DHT_TRACE_REPLY(Hop[] hops, String key) {
@@ -165,12 +250,16 @@ public class Protocol {
      * this function receives the message, and translates the first two bytes of
      * it into an int, which should be the message size. it also does a
      * primitive check if the declared Size matches the actual message length.
+     * if there are multiple GET_REPLY messages packed together in the
+     * parameter, the function can sill check the validity and return a positive
+     * value for valid messages. but the returning value will not be equal to
+     * the summation of all the messages together.
      *
      * @param message the message as a String.
      * @return -1 if message cannot be valid. size of message if message is
      * valid sizewise.
      */
-    public static int getMessageSize(String message) {
+    public static int sizeCheck(String message) {
         if (message.length() < KEY_LENGTH + TYPE_LENGTH) { // at least header.
             return -1;
         }
@@ -181,7 +270,30 @@ public class Protocol {
         if (size == message.length()) { // delcaring right size.
             return size;
         }
+        if (breakDHT_GET_REPLY(message) != null) {
+            return size; // size of the first message.
+        }
         return -1;
+    }
+
+    public static String[] breakDHT_GET_REPLY(String message) {
+        try {
+            ArrayList<String> messages = new ArrayList<String>();
+            do {
+                messages.add(message.substring(0, intFormat(message)));
+                message = message.substring(intFormat(message));
+                if (message.length() == 0) {
+                    break;
+                }
+            } while (true);
+            String res[] = new String[messages.size()];
+            for (int i = 0; i < res.length; i++) {
+                res[i] = messages.remove(0);
+            }
+            return res;
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     public static String twoBytesFormat(int num) {
@@ -225,13 +337,21 @@ public class Protocol {
      */
     public static int REPLICATION_LENGTH = 1;
     public static int DHT_PUT_RESERVED_BYTES = 5;
-    public static int PEER_ID_LENGTH = 32;
-    public static int KX_PORT_LENGTH = 2;
+    public static int IDENTITY_LENGTH = 32;
+    public static int PORT_LENGTH = 2;
     public static int DHT_TRACE_REPLAY_RESERVED_BYTES = 2;
     public static int DHT_TRACE_REPLY_RESERVED_BYTES = 2;
+    public static int TN_READY_RESERVED_BYTES = 4;
+    public static int TN_BUILD_RESERVED_BYTES_1 = 3;
+    public static int TN_BUILD_RESERVED_BYTES_2 = 2;
     public static int IPV4_LENGTH = 4;
     public static int IPV6_LENGTH = 16;
-    public static int MAX_MESSAGE_SIZE = 64000; // IS THIS CORRECT?
-    public static int MAX_VALID_CONTENT = 62000; // TODO: calculate correctly
+    public static int MAX_MESSAGE_SIZE = 64000;
+    public static int MAX_VALID_CONTENT = 62000;
+    /**
+     * NHOPS determines Number of Hops needed to build a tunnel. this is the
+     * length of the field, in bytes.
+     */
+    public static int NHOPS_LENGTH = 1;
     // </editor-fold>
 }

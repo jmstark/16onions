@@ -4,13 +4,18 @@
  */
 package proxy;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import tools.ConnectionListener;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import tools.Server;
 import protocol.Configuration;
 import protocol.Protocol;
-import scenario.Validation;
+import tools.Logger;
 import tools.MyRandom;
 
 /**
@@ -19,83 +24,75 @@ import tools.MyRandom;
  *
  * @author Emertat
  */
-public class KXProxy implements Server {
+public class KXProxy extends Server {
 
     Configuration conf;
-    Validation v;
-    ConnectionListener cl;
     MyRandom r;
+    int realKXPort;
 
-    public KXProxy(Validation v, Configuration conf) {
-        this.conf = conf;
-        cl = new ConnectionListener(this);
-        cl.startServer(conf.getKXPort()); // impersonating KX.
-        this.v = v;
+    public KXProxy(String confFile, int realKXPort) {
+        this.conf = new Configuration(new File(confFile));
+        this.realKXPort = realKXPort;
+        startServer(conf.getKXPort());
         r = new MyRandom();
     }
 
-    public void sendDHT_TRACE(String key) {
-        try {
-            Socket echoSocket = new Socket(Configuration.LOCAL_HOST, conf.getDHTPort());
-            PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
-            String message = Protocol.create_DHT_TRACE(r.randString(Protocol.KEY_LENGTH));
-            out.println(message);
-            out.flush();
-            echoSocket.close();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-    }
-
-    public void sendDHT_PUT(String content, String key) {
-        try {
-            Socket echoSocket = new Socket(Configuration.LOCAL_HOST, conf.getDHTPort());
-            PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
-            String message = Protocol.create_DHT_PUT(key, conf.getDHT_TTL(),
-                    conf.getDHT_REPLICATION(), content);
-            out.println(message);
-            out.flush();
-            echoSocket.close();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    public void sendDHT_GET(String key) {
-        try {
-            Socket echoSocket = new Socket(Configuration.LOCAL_HOST, conf.getDHTPort()); //creating a socket and normally sending.
-            PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
-            String message = Protocol.addHeader(key, Protocol.MessageType.DHT_GET);
-            out.println(message); // sending a get request.
-            echoSocket.close(); // closing the connection
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
     @Override
-    public void handleMessage(String message, int port) {
-        switch (Protocol.getMessageType(message)) {
-            case DHT_GET_REPLY:
-                if (!Protocol.DHT_GET_REPLY_isValid(message)) {
-                    System.out.println("DHT GET REPLY MESSAGE NOT VALID."); // we have an error.
-                    return;
+    public void run() {
+        try {
+            Socket publicSocket = socketBuffer.remove(0);
+            Socket kxSocket = new Socket(conf.getKXHost(), realKXPort);
+            publicSocket.setSoTimeout(2000);
+            kxSocket.setSoTimeout(2000);
+            BufferedReader publicIn = new BufferedReader(new InputStreamReader(publicSocket.getInputStream()));
+            BufferedReader kxIn = new BufferedReader(new InputStreamReader(kxSocket.getInputStream()));
+            PrintWriter publicOut = new PrintWriter(publicSocket.getOutputStream());
+            PrintWriter kxOut = new PrintWriter(kxSocket.getOutputStream());
+            if (Configuration.LOG_ALL) {
+                Logger.logEvent("A connection to KX is established from port "
+                        + publicSocket.getPort() + " On "
+                        + publicSocket.getInetAddress().getHostName() + "("
+                        + publicSocket.getInetAddress().getHostAddress() + ")");
+            }
+            while (true) {
+                try {
+                    String messageToKX = Protocol.read(publicIn);
+                    if (messageToKX.length() == 0) { // public has closed socket
+                        if (Configuration.LOG_ALL) {
+                            Logger.logEvent("Connection to the KX is closed.");
+                        }
+                        break;
+                    }
+                    boolean validity = Protocol.sizeCheck(messageToKX) > 0;
+                    if (!validity || Configuration.LOG_ALL) {
+                        Logger.logEvent((validity ? "" : "IN")
+                                + "VALID MESSAGE TO KX:\n" + messageToKX);
+                    }
+                    // forward it to the KX Module. don't close any of two connections.
+                    kxOut.write(messageToKX);
+                    String messageFromKX = Protocol.read(kxIn);
+                    if (messageFromKX.length() == 0) { // KX has closd socket.
+                        if (Configuration.LOG_ALL) {
+                            Logger.logEvent("Connection is closed by DHT.");
+                        }
+                        break;
+                    }
+                    validity = Protocol.sizeCheck(messageToKX) > 0;
+                    if (!validity || Configuration.LOG_ALL) {
+                        Logger.logEvent((validity ? "" : "IN") 
+                                + "VALID MESSAGE TO KX:\n" + messageToKX);
+                    }
+                    publicOut.write(messageFromKX);
+                } catch (SocketTimeoutException ex) {// This is the timeout Event. Don't do anything.
                 }
-                if (v != null) {
-                    v.validate(message);
-                }
-                break;
-            case DHT_TRACE_REPLY:
-                if (!Protocol.DHT_TRACE_REPLY_isValid(message)) {
-                    System.out.println("DHT TRACE REPLY MESSAGE NOT VALID."); // we have an error.
-                    return;
-                }
-                System.out.println("success!");
-                if (v != null) {
-                    v.validate(message);
-                }
-                break;
+            }
+            publicIn.close();
+            kxOut.close();
+            publicSocket.close();
+            kxSocket.close();
+        } catch (Exception ex) {
+            Logger.logEvent("KX Proxy reached failure. error details: " + 
+                    ex.getMessage());
         }
     }
 }

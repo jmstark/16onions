@@ -4,56 +4,73 @@
  */
 package scenario;
 
+import java.io.File;
+import java.util.ArrayList;
 import protocol.Configuration;
+import static protocol.Configuration.DEV_MODE;
 import protocol.Protocol;
-import proxy.KXProxy;
+import proxy.DHTProxy;
 import sandbox.DummyDHT;
+import sandbox.DummyKX;
+import tools.Logger;
 import tools.MyRandom;
 
 /**
  * In this scenario we use DHT_PUT to save an item, then we use DHT_GET to see
- * if the item is actually saved by the DHT and is retrievable.
+ * if the item is actually saved by the DHT and is retrievable. The same
+ * Scenario can easily be exploited to impose Performance and Stress tests on
+ * DHT module! simply modify the scenario and set a loop on the kx.put() to
+ * measure DHT's abilities.
  *
  * @author Emertat
  */
-public class Scenario3 implements Validation {
+public class Scenario3 {
 
     String content, key;
 
-    public Scenario3(Configuration conf) {
-        MyRandom r = new MyRandom();
-        content = r.randString(200);
-        key = r.randString(Protocol.KEY_LENGTH);
-        DummyDHT dht = new DummyDHT(conf);
-        KXProxy kx = new KXProxy(this, conf);
-        kx.sendDHT_PUT(content, key);
+    public Scenario3(String confFile, ArrayList<Integer> ports) {
         try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-        }
-        kx.sendDHT_GET(key);
-    }
-
-    /**
-     * we know for sure that the received message is a DHT_GET_REPLY message.
-     * retrieve the content: protocol.getMessage()
-     *
-     * @param message
-     * @return
-     */
-    @Override
-    public boolean validate(String message) {
-        if (Protocol.DHT_GET_REPLY_isValid(message)) { // Correct message received
-            System.out.println(message.length());
-            System.out.println(Protocol.get_DHT_REPLY_content(message).length());
-            if (Protocol.get_DHT_REPLY_content(message).equals(content)
-                    && Protocol.get_DHT_REPLY_key(message).equals(key)) {
-                System.out.println("DHT HAS WORKED FINE.");
-                return true; // the retrieved content is valid.
+            Configuration conf = new Configuration(new File(confFile));
+            if (DEV_MODE || Configuration.DHT_CMD == null) {
+                new DummyDHT(confFile); // 
+            } else {
+                Runtime.getRuntime().exec(Configuration.DHT_CMD
+                        + " " + confFile);
             }
+            int realDHTPort = conf.getDHTPort();
+            conf.setDHTPort(ports.remove(0));
+            conf.setDHTHost(Configuration.LOCAL_HOST);
+            String fakeConfFile = conf.store();
+            new DHTProxy(fakeConfFile, realDHTPort);
+            DummyKX kx = new DummyKX(fakeConfFile);
+            MyRandom r = new MyRandom();
+            content = r.randString(200);
+            key = r.randString(Protocol.KEY_LENGTH);
+            kx.put(key, content);
+            String reply = kx.get(key); //for sure, its one or more DHT_GET_REPLY messages.
+            String replies[] = Protocol.breakDHT_GET_REPLY(reply);
+            boolean validity = false;
+            for (String res : replies) {
+                if (Protocol.DHT_GET_REPLY_isValid(res)
+                        && Protocol.get_DHT_REPLY_content(res).equals(content)
+                        && Protocol.get_DHT_REPLY_key(res).equals(key)) {
+                    // at least one of the results is the value we saved.
+                    validity = true;
+                }
+            }
+            if (validity) {
+                if (Configuration.LOG_ALL) {
+                    Logger.logEvent("Scenario 3: Success: DHT module has saved the value as expected.");
+                }
+            } else {
+                Logger.logEvent("DHT module Failed to retrieve content: '"
+                        + content + "', under key: '" + key + "', " + replies.length
+                        + " invalid messages received:\n" + reply);
+            }
+        } catch (Exception ex) {
+            Logger.logEvent("Could not initiate scenario 3. Stack Trace:\n"
+                    + ex.getMessage());
+            System.exit(1);
         }
-        System.out.println("DHT DID NOT RESPOND CORRECTLY.");
-        return false;
     }
 }

@@ -22,11 +22,25 @@ import tools.MyRandom;
  */
 public class Configuration {
 
+    public static final boolean DEV_MODE = false;
     public static String LOCAL_HOST = "127.0.0.1";
-    private String hostkey = "", dht_host = LOCAL_HOST, kx_host = LOCAL_HOST;
+    public static String LOG_FILE = "log.txt";
+    public static String VOIP_CMD;
+    public static String KX_CMD;
+    public static String DHT_CMD;
+    public static boolean LOG_ALL = false;
+    public static int kxHops = 3;
+    private String hostkey = "";
+    private String dht_host = LOCAL_HOST;
+    private String kx_host = LOCAL_HOST;
+    private String outreach_hostname = LOCAL_HOST;
+    private String tun_ip = LOCAL_HOST + "/24";
     private int dht_port = 3001, kx_port = 3002;
+    public int voip_external_port = 3003; //TODO: see what to use instead of this?
+    public static String peerIdentity = "to be filled"; //TODO: fill this.
     private int dht_ttl = 10; // if no TTL was defined, TTL default.
     private int dht_replication = 5; // if no Replication was defined, default.
+    private int outreach_port = 3003;
     private Ini ini;
 
     /**
@@ -37,6 +51,7 @@ public class Configuration {
      * in between. This way we can modify some ports.
      */
     public Configuration() {
+        ini = new Ini();
     }
 
     /**
@@ -68,19 +83,27 @@ public class Configuration {
                 }
             } catch (Exception ex) {
             }
-            if (ini.get("DHT", "HOSTNAME").length() > 0) {
+            if (ini.get("DHT", "HOSTNAME") != null
+                    && ini.get("DHT", "HOSTNAME").length() > 0) {
                 dht_host = ini.get("DHT", "HOSTNAME");
             }
-            if (ini.get("KX", "HOSTNAME").length() > 0) {
+            if (ini.get("KX", "HOSTNAME") != null
+                    && ini.get("KX", "HOSTNAME").length() > 0) {
                 kx_host = ini.get("KX", "HOSTNAME");
             }
-            if (kx_host == null) {
-                kx_host = LOCAL_HOST;
+            if (ini.get("KX", "OUTREACH_HOSTNAME") != null
+                    && ini.get("KX", "OUTREACH_HOSTNAME").length() > 0) {
+                outreach_hostname = ini.get("KX", "OUTREACH_HOSTNAME");
             }
-            if (dht_host == null) {
-                dht_host = LOCAL_HOST;
+            if (ini.get("KX", "TUN_UP") != null
+                    && ini.get("KX", "TUN_UP").length() > 0) {
+                tun_ip = ini.get("KX", "TUN_UP");
             }
             bis.close();
+            try {
+                outreach_port = Integer.parseInt(ini.get("KX", "OUTREACH_PORT"));
+            } catch (Exception ex) {
+            }
             try {
                 dht_port = Integer.parseInt(ini.get("DHT", "PORT"));
             } catch (Exception ex) {
@@ -98,8 +121,35 @@ public class Configuration {
         }
     }
 
+    public String getTunIp() {
+        return tun_ip;
+    }
+
+    public void setTunIp(String cidr) {
+        ini.put("KX", "TUN_IP", cidr);
+        tun_ip = cidr;
+    }
+
+    public void setOutreachHostname(String host) {
+        ini.put("KX", "OUTREACH_HOSTNAME", host);
+        outreach_hostname = host;
+    }
+
+    public String getOutreachHostname() {
+        return outreach_hostname;
+    }
+
     public int getDHTPort() {
         return dht_port;
+    }
+
+    public void setOutreachPort(int port) {
+        ini.put("KX", "OUTREACH_PORT", port);
+        this.outreach_port = port;
+    }
+
+    public int getOutreachPort() {
+        return outreach_port;
     }
 
     public void setDHTPort(int port) {
@@ -155,18 +205,20 @@ public class Configuration {
     public void setHostkey(String hostkey) {
         this.hostkey = hostkey;
     }
-    public String getHostkey(){
+
+    public String getHostkey() {
         return hostkey;
-    }    
-    public String store(){
+    }
+
+    public String store() {
         File f;
         File tempDir = new File(".\\temp\\");
-        if(!tempDir.exists()){
+        if (!tempDir.exists()) {
             tempDir.mkdir();
         }
-        do{
-            f = new File( ".\\temp\\" + new MyRandom().randLetter(50)+ ".ini");
-        } while(f.exists());
+        do {
+            f = new File(".\\temp\\" + new MyRandom().randLetter(50) + ".ini");
+        } while (f.exists());
         try {
             f.createNewFile();
             OutputStream os = new BufferedOutputStream(new FileOutputStream(f));
@@ -179,18 +231,20 @@ public class Configuration {
             return null;
         }
     }
-    public static void main(String args[]){
+
+    public static void main(String args[]) {
         debug();
     }
-    private static void debug(){
+
+    private static void debug() {
 //        try {
-            Configuration conf = new Configuration(new File("conf.ini"));
-            conf.setDHTPort(2000);
-            conf.setDHTHost("something.two.thousand");
+        Configuration conf = new Configuration(new File("conf.ini"));
+        conf.setDHTPort(2000);
+        conf.setDHTHost("something.two.thousand");
 //            File f = new File(new MyRandom().randLetter(50)+ ".ini");
 //            System.out.println(f.getName());
 //            System.out.println(f.createNewFile());
-            conf.store();
+        conf.store();
 //        } catch (IOException ex) {
 //            ex.printStackTrace();
 //        }

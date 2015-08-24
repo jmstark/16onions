@@ -4,29 +4,49 @@
  */
 package scenario;
 
+import java.io.File;
+import java.util.ArrayList;
 import protocol.Configuration;
+import static protocol.Configuration.DEV_MODE;
 import protocol.Protocol;
-import proxy.KXProxy;
+import proxy.DHTProxy;
 import sandbox.DummyDHT;
+import sandbox.DummyKX;
+import tools.Logger;
 import tools.MyRandom;
 
 /**
- * scenario1 tests if a DHT Module can listen to a message, properly, receive 
+ * scenario1 tests if a DHT Module can listen to a message, properly, receive
  * the message and not crash or close the connection meanwhile.
  *
  * @author Emertat
  */
-public class Scenario1{
+public class Scenario1 {
 
-    public Scenario1(Configuration conf) {
+    public Scenario1(String confFile, ArrayList<Integer> ports) {
         try {
-            new DummyDHT(conf); //TODO: actually call the DHT module.
-            Thread.sleep(1000);
+            Configuration conf = new Configuration(new File(confFile));
+            int fakeDHTPort = ports.remove(0);
+            int realDHTPort = conf.getDHTPort();
+            if (DEV_MODE || Configuration.DHT_CMD == null) {
+                new DummyDHT(confFile);
+            } else {
+                Runtime.getRuntime().exec(Configuration.DHT_CMD
+                        + " " + confFile);
+            }
+            conf.setDHTPort(fakeDHTPort);
+            conf.setDHTHost(Configuration.LOCAL_HOST);
+            String tempConfFile = conf.store();
+            new DHTProxy(tempConfFile, realDHTPort);
+
             MyRandom r = new MyRandom();
-            KXProxy kx = new KXProxy(null, conf);
-            kx.sendDHT_PUT(r.randString(Protocol.MAX_VALID_CONTENT), r.randString(Protocol.KEY_LENGTH));
+            DummyKX kx = new DummyKX(tempConfFile);
+            kx.put(r.randString(Protocol.MAX_VALID_CONTENT), r.randString(Protocol.KEY_LENGTH));
         } catch (Exception ex) {
-            ex.printStackTrace();
+            Logger.logEvent("Could not initiate scenario 1. Stack Trace:\n"
+                    + ex.getMessage());
+            System.exit(1);
+
         }
     }
 }

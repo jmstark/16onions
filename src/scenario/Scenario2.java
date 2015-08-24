@@ -4,10 +4,15 @@
  */
 package scenario;
 
+import java.io.File;
+import java.util.ArrayList;
 import protocol.Configuration;
+import static protocol.Configuration.DEV_MODE;
 import protocol.Protocol;
-import proxy.KXProxy;
+import proxy.DHTProxy;
 import sandbox.DummyDHT;
+import sandbox.DummyKX;
+import tools.Logger;
 import tools.MyRandom;
 
 /**
@@ -15,18 +20,30 @@ import tools.MyRandom;
  *
  * @author Emertat
  */
-public class Scenario2 implements Validation {
+public class Scenario2 {
 
-    public Scenario2(Configuration conf) {
-        DummyDHT dht = new DummyDHT(conf);
-        KXProxy kx = new KXProxy(this, conf);
-        MyRandom r = new MyRandom();
-        kx.sendDHT_TRACE(r.randString(Protocol.KEY_LENGTH));
-    }
-
-    @Override
-    public boolean validate(String message) {
-        System.out.println("dht trace reply with 5 hops has length: " + message.length());
-        return true;
+    public Scenario2(String confFile, ArrayList<Integer> ports) {
+        try {
+            Configuration conf = new Configuration(new File(confFile));
+            int fakeDHTPort = ports.remove(0);
+            int realDHTPort = conf.getDHTPort();
+            if (DEV_MODE || Configuration.DHT_CMD == null) {
+                new DummyDHT(confFile);
+            } else {
+                Runtime.getRuntime().exec(Configuration.DHT_CMD
+                        + " " + confFile);
+            }
+            conf.setDHTPort(fakeDHTPort);
+            conf.setDHTHost(Configuration.LOCAL_HOST);
+            String tempConfFile = conf.store();
+            new DHTProxy(tempConfFile, realDHTPort);
+            DummyKX kx = new DummyKX(tempConfFile);
+            MyRandom r = new MyRandom();
+            kx.trace(r.randString(Protocol.KEY_LENGTH));
+        } catch (Exception ex) {
+            Logger.logEvent("Could not initiate scenario 2. Stack Trace:\n"
+                    + ex.getMessage());
+            System.exit(1);
+        }
     }
 }
