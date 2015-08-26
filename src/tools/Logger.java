@@ -25,6 +25,7 @@ public class Logger {
 
     private static String specialString = "<event>";
     private static String escapeString = "<escape>";
+    private static PrintWriter writer;
 
     /**
      * stuff each message before logging to make sure no accidental special
@@ -59,8 +60,8 @@ public class Logger {
             FileInputStream fis = new FileInputStream(f);
             byte b[] = new byte[fis.available()];
             fis.read(b);
-            res = new String(b).split("\n" + specialString +"\n");
-            for(int i = 0; i < res.length; i++){
+            res = new String(b).split("\n" + specialString + "\n");
+            for (int i = 0; i < res.length; i++) {
                 res[i] = destuff(fileName);
             }
             fis.close();
@@ -73,25 +74,35 @@ public class Logger {
         return res;
     }
 
-    public static boolean logEvent(String event) {
+    public static synchronized boolean logEvent(String event) {
         String timeStamp = new SimpleDateFormat("yyyy-MM-dd,HH:mm:ss").format(Calendar.getInstance().getTime());
-        try {
-            File f = new File(Configuration.LOG_FILE);
-            if (f.isDirectory()) {
+        if (null == writer) {
+            try {
+                File f = new File(Configuration.LOG_FILE);
+                if (f.isDirectory()) {
+                    return false;
+                }
+                if (!f.exists()) {
+                    f.createNewFile();
+                }
+                writer = new PrintWriter(new FileOutputStream(f, true), true);
+            } catch (FileNotFoundException ex) {
+                ex.printStackTrace();
+                return false;
+            } catch (IOException ex) {
+                ex.printStackTrace();
                 return false;
             }
-            if (!f.exists()) {
-                f.createNewFile();
-            }
-            PrintWriter pw = new PrintWriter(f);
-            pw.print("\n" + specialString + "\n" + stuff(timeStamp + ": " + event));
-            pw.close();
-            return true;
-        } catch (FileNotFoundException ex) {
-            ex.printStackTrace();
-        } catch (IOException ex) {
-            ex.printStackTrace();
         }
-        return false;
+        writer.println(specialString + stuff(timeStamp + ": " + event));
+        return true;
+    }
+
+    public void finalize() throws Throwable {
+        if (null == writer) {
+            return;
+        }
+        writer.close();
+        writer = null;
     }
 }

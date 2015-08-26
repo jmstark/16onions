@@ -33,7 +33,7 @@ public abstract class Server implements Runnable {
         @Override
         public void run() {
             try {
-                System.out.println("Going to start a server with port: " + this.port);
+                Logger.logEvent("Going to start a server with port: " + this.port);
                 ServerSocket serverSocket = new ServerSocket(this.port);
                 while (true) {
                     Socket clientSocket = serverSocket.accept();

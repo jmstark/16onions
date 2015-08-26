@@ -42,14 +42,15 @@ public class Main {
     public static void main(String args[]) {
         args = new String[6]; // this is temp.
         if (Configuration.DEV_MODE) {
+            args = new String[9];
             args[0] = "-scenario";
             args[1] = "1";
             args[2] = "-conf";
             args[3] = "conf.ini";
             args[4] = "-free";
-            args[5] = "100..200";
+            args[5] = "8000..8100";
             args[6] = "-log";
-            args[7] = "my log file.txt";
+            args[7] = "log.txt";
             args[8] = "-logall";
         }
         try {

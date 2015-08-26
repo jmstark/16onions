@@ -22,7 +22,7 @@ import tools.MyRandom;
  */
 public class Configuration {
 
-    public static final boolean DEV_MODE = false;
+    public static final boolean DEV_MODE = true;
     public static String LOCAL_HOST = "127.0.0.1";
     public static String LOG_FILE = "log.txt";
     public static String VOIP_CMD;

@@ -5,6 +5,7 @@
 package scenario;
 
 import java.io.File;
+import static java.lang.Thread.sleep;
 import java.util.ArrayList;
 import protocol.Configuration;
 import static protocol.Configuration.DEV_MODE;
@@ -41,6 +42,7 @@ public class Scenario1 {
 
             MyRandom r = new MyRandom();
             DummyKX kx = new DummyKX(tempConfFile);
+            sleep(1000);
             kx.put(r.randString(Protocol.MAX_VALID_CONTENT), r.randString(Protocol.KEY_LENGTH));
         } catch (Exception ex) {
             Logger.logEvent("Could not initiate scenario 1. Stack Trace:\n"

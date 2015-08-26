@@ -6,6 +6,9 @@ package protocol;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.DataInputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 
 /**
@@ -36,6 +39,15 @@ public class Protocol {
         public int getNumVal() {
             return numVal;
         }
+
+        public static MessageType asMessageType(int numVal) {
+            for (MessageType mtype : MessageType.values()) {
+                if (mtype.getNumVal() == numVal) {
+                    return mtype;
+                }
+            }
+            return null;
+        }
     }
 
     /**
@@ -55,6 +67,28 @@ public class Protocol {
             message += new String(buffer, 0, Math.max(valid, 0));
         }
         return message;
+    }
+
+    public static ByteBuffer readMsg(DataInputStream in) throws IOException, ProtocolException {
+        int size;
+        MessageType type;
+        byte[] body;
+        ByteBuffer msg;
+        size = in.readUnsignedShort();
+        if (size > MAX_MESSAGE_SIZE) {
+            throw new ProtocolException();
+        }
+        type = MessageType.asMessageType(in.readUnsignedShort());
+        if (null == type)
+            throw new ProtocolException();
+        body = new byte[size - 4];
+        in.readFully(body);
+        msg = ByteBuffer.allocate(size);
+        msg = msg.order(ByteOrder.BIG_ENDIAN);
+        msg.putShort((short) size);
+        msg.putShort((short) type.getNumVal());
+        msg.put(body);
+        return msg;
     }
 
     public static String addHeader(String content, MessageType type) {
@@ -297,7 +331,6 @@ public class Protocol {
     }
 
     public static String twoBytesFormat(int num) {
-        int a[] = {1, 2, 3};
         char c[] = {(char) ((int) (num / 256) % 256), (char) (num % 256)};
         return new String(c);
     }
