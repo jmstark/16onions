@@ -43,7 +43,7 @@ public class Scenario1 {
             MyRandom r = new MyRandom();
             DummyKX kx = new DummyKX(tempConfFile);
             sleep(1000);
-            kx.put(r.randString(Protocol.MAX_VALID_CONTENT), r.randString(Protocol.KEY_LENGTH));
+            kx.put(r.randBytes(Protocol.KEY_LENGTH), r.randBytes(Protocol.MAX_VALID_CONTENT));
         } catch (Exception ex) {
             Logger.logEvent("Could not initiate scenario 1. Stack Trace:\n"
                     + ex.getMessage());

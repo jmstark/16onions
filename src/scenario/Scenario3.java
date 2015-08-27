@@ -5,6 +5,7 @@
 package scenario;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import protocol.Configuration;
 import static protocol.Configuration.DEV_MODE;
@@ -26,7 +27,7 @@ import tools.MyRandom;
  */
 public class Scenario3 {
 
-    String content, key;
+    byte[] content, key;
 
     public Scenario3(String confFile, ArrayList<Integer> ports) {
         try {
@@ -44,10 +45,10 @@ public class Scenario3 {
             new DHTProxy(fakeConfFile, realDHTPort);
             DummyKX kx = new DummyKX(fakeConfFile);
             MyRandom r = new MyRandom();
-            content = r.randString(200);
-            key = r.randString(Protocol.KEY_LENGTH);
+            content = r.randBytes(200);
+            key = r.randBytes(Protocol.KEY_LENGTH);
             kx.put(key, content);
-            String reply = kx.get(key); //for sure, its one or more DHT_GET_REPLY messages.
+            String reply = kx.get(new String(key, StandardCharsets.US_ASCII)); //for sure, its one or more DHT_GET_REPLY messages.
             String replies[] = Protocol.breakDHT_GET_REPLY(reply);
             boolean validity = false;
             for (String res : replies) {

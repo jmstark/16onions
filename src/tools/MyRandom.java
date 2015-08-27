@@ -4,6 +4,7 @@
  */
 package tools;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 /**
@@ -21,13 +22,15 @@ public class MyRandom {
      * @param length
      * @return
      */
-    public String randString(int length) {
-        char[] s = new char[length];
-        for (int i = 0; i < length; i++) {
-            s[i] = (char) rand.nextInt(256);
-        }
-        return new String(s);
+    public String randString(int length){
+        return new String (randBytes(length), StandardCharsets.US_ASCII);
     }
+    
+    public byte[] randBytes(int length) {
+        byte[] bytes = new byte[length];
+        rand.nextBytes(bytes);
+        return bytes;
+    }  
 
     public int randInt(int min, int max) {
 

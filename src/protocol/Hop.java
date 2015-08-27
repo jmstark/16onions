@@ -4,6 +4,9 @@
  */
 package protocol;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import protocol.Protocol;
 
 /**
@@ -55,4 +58,15 @@ public class Hop {
         res += getIPv4() + getIPv6();
         return res;
     }
+
+    public void serialize(DataOutputStream out) throws IOException {
+        out.write(this.ID.getBytes(StandardCharsets.US_ASCII));
+        out.writeShort(this.KX_port);
+        out.writeShort(0);//reserved
+        out.write(this.IPv4.getBytes(StandardCharsets.US_ASCII));
+        out.write(this.IPv6.getBytes(StandardCharsets.US_ASCII));         
+    }
+    
+    //ID: 32; KX port + reserved: 4; IPv4: 4; IPv6: 16
+    public static final int WIRE_SIZE = 32 + 4 + 4 + 16;
 }

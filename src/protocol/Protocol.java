@@ -90,22 +90,24 @@ public class Protocol {
         msg.put(body);
         return msg;
     }
-
-    public static ByteBuffer addHeader(String content, MessageType type) {
-//        return addSize(addType(content, type));
+    
+    public static ByteBuffer addHeaderByteBuffer (ByteBuffer body, MessageType type){
         int size;
-        byte[] contentBytes;
         ByteBuffer buf;
-        contentBytes = content.getBytes();
-        size = contentBytes.length;
-        size += 4; //4 bytes for the header
-        buf = ByteBuffer.allocate(size);
-        buf = buf.order(ByteOrder.BIG_ENDIAN);
-        assert (size < MAX_MESSAGE_SIZE);
+        size = body.limit();
+        buf = ByteBuffer.allocate (size + 4);
         buf.putShort((short) size);
         buf.putShort((short) type.getNumVal());
-        buf.put(contentBytes);
+        buf.put(body);
+        buf.flip();      
         return buf;
+    }
+
+    public static ByteBuffer addHeader(String content, MessageType type) {
+//        return addSize(addType(content, type));        
+        byte[] contentBytes;        
+        contentBytes = content.getBytes();
+        return addHeaderByteBuffer (ByteBuffer.wrap(contentBytes), type);
     }
 
     /**
@@ -284,9 +286,22 @@ public class Protocol {
      * size more than maximum allowed.
      * @return the built message with its header also completed.
      */
-    public static ByteBuffer create_DHT_PUT(String key, int TTL, int Replication, String content) {
-        String res = key + twoBytesFormat(TTL) + (char) Replication + "00000" + content;
-        return addHeader(res, MessageType.DHT_PUT);
+    public static ByteBuffer create_DHT_PUT(byte[] key, int ttl, int replication, byte[] content) {
+        ByteBuffer buf;
+        int size;
+        size = 256;
+        size += 4; //TTL: 2; replication: 1; reserved: 1
+        size += 4; //reserved: 4
+        size += content.length;
+        buf = ByteBuffer.allocate(size);
+        buf.put(key);
+        buf.putShort((short) ttl);
+        buf.put((byte) replication);
+        buf.put((byte) 0); // reserved
+        buf.putInt(0); //reserved
+        buf.put(content);
+        buf.flip();
+        return addHeaderByteBuffer(buf.asReadOnlyBuffer(), MessageType.DHT_PUT);
     }
 
     public static MessageType getMessageType(String message) {

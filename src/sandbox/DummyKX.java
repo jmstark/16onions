@@ -5,6 +5,7 @@
 package sandbox;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 
 import protocol.Configuration;
 import protocol.Protocol;
+import protocol.dht.DhtPutMessage;
 import tools.Logger;
 import tools.Server;
 
@@ -81,11 +83,13 @@ public class DummyKX extends Server {
         return null;
     }
 
-    public void put(String key, String content) {
+    public void put(byte[] key, byte[] content) {
+        DhtPutMessage putMsg;
+        putMsg = new DhtPutMessage(key, conf.getDHT_TTL(), conf.getDHT_REPLICATION(), content);
         try {
             Socket socket = new Socket(conf.getDHTHost(), conf.getDHTPort());
-            OutputStream out = socket.getOutputStream();
-            out.write(Protocol.create_DHT_PUT(key, conf.getDHT_TTL(), conf.getDHT_REPLICATION(), content).array());
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            putMsg.send(out);
             out.close();
             socket.close();
         } catch (Exception ex) {

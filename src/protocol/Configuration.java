@@ -8,6 +8,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.EnumSet;
 import org.ini4j.Ini;
 import tools.MyRandom;
 
@@ -29,6 +36,7 @@ public class Configuration {
     public static String KX_CMD;
     public static String DHT_CMD;
     public static boolean LOG_ALL = true;
+    public static boolean DEL_CONF_FILES = true;
     public static int kxHops = 3;
     private String hostkey = "";
     private String dht_host = LOCAL_HOST;
@@ -211,21 +219,29 @@ public class Configuration {
     }
 
     public String store() {
-        File f;
-        File tempDir = new File(".\\temp\\");
-        if (!tempDir.exists()) {
-            tempDir.mkdir();
-        }
-        do {
-            f = new File(".\\temp\\" + new MyRandom().randLetter(50) + ".ini");
-        } while (f.exists());
+        Path f;
+        Path tempDir;
+        FileAttribute attrs;
+        attrs = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxr-xr-x"));
         try {
-            f.createNewFile();
-            OutputStream os = new BufferedOutputStream(new FileOutputStream(f));
+            tempDir = Files.createTempDirectory("anon_voip_testing", attrs);
+            if (Configuration.DEL_CONF_FILES) {
+                tempDir.toFile().deleteOnExit();
+            }
+            attrs = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-r--r--"));
+
+            f = Files.createTempFile(tempDir, "", ".ini", attrs);
+            if (Configuration.DEL_CONF_FILES) {
+                f.toFile().deleteOnExit();
+            }
+            OutputStream os = new BufferedOutputStream(Files.newOutputStream(f,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE));
             os.write(("HOSTKEY = " + hostkey + "\n").getBytes());
             ini.store(os);
-//            ini.store(file);
-            return f.getAbsolutePath();
+//            ini.store(file);            
+            os.close();
+            return f.toAbsolutePath().toString();
         } catch (IOException ex) {
             ex.printStackTrace();
             return null;
