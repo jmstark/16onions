@@ -28,7 +28,7 @@ public class Configuration {
     public static String VOIP_CMD;
     public static String KX_CMD;
     public static String DHT_CMD;
-    public static boolean LOG_ALL = false;
+    public static boolean LOG_ALL = true;
     public static int kxHops = 3;
     private String hostkey = "";
     private String dht_host = LOCAL_HOST;

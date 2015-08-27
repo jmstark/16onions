@@ -91,8 +91,21 @@ public class Protocol {
         return msg;
     }
 
-    public static String addHeader(String content, MessageType type) {
-        return addSize(addType(content, type));
+    public static ByteBuffer addHeader(String content, MessageType type) {
+//        return addSize(addType(content, type));
+        int size;
+        byte[] contentBytes;
+        ByteBuffer buf;
+        contentBytes = content.getBytes();
+        size = contentBytes.length;
+        size += 4; //4 bytes for the header
+        buf = ByteBuffer.allocate(size);
+        buf = buf.order(ByteOrder.BIG_ENDIAN);
+        assert (size < MAX_MESSAGE_SIZE);
+        buf.putShort((short) size);
+        buf.putShort((short) type.getNumVal());
+        buf.put(contentBytes);
+        return buf;
     }
 
     /**
@@ -196,17 +209,17 @@ public class Protocol {
         return true;
     }
 
-    public static String create_TN_DESTROY(String psuedoIdentity) {
+    public static ByteBuffer create_TN_DESTROY(String psuedoIdentity) {
         return addHeader(psuedoIdentity, MessageType.KX_TN_DESTROY);
     }
 
-    public static String create_TN_BUILD(String psuedoidentity, int hops,
+    public static ByteBuffer create_TN_BUILD(String psuedoidentity, int hops,
             int kxPort, String ipv4, String ipv6, String identity) {
         return addHeader((char) hops + "000" + psuedoidentity + twoBytesFormat(kxPort)
                 + "00" + identity + ipv4 + ipv6, MessageType.KX_TN_BUILD_OUT);
     }
 
-    public static String create_TN_READY(String psuedoIdentity, String ipv4, String ipv6) {
+    public static ByteBuffer create_TN_READY(String psuedoIdentity, String ipv4, String ipv6) {
         return addHeader(psuedoIdentity + "0000" + ipv4 + ipv6, MessageType.KX_TN_READY);
     }
 
@@ -245,11 +258,11 @@ public class Protocol {
 
     }
 
-    public static String create_DHT_GET(String key) {
+    public static ByteBuffer create_DHT_GET(String key) {
         return addHeader(key, MessageType.DHT_GET);
     }
 
-    public static String create_DHT_TRACE_REPLY(Hop[] hops, String key) {
+    public static ByteBuffer create_DHT_TRACE_REPLY(Hop[] hops, String key) {
         String res = key;
         for (int i = 0; i < hops.length; i++) {
             res += hops[i].toString();
@@ -257,7 +270,7 @@ public class Protocol {
         return addHeader(res, MessageType.DHT_TRACE_REPLY);
     }
 
-    public static String create_DHT_TRACE(String key) {
+    public static ByteBuffer create_DHT_TRACE(String key) {
         return addHeader(key, MessageType.DHT_TRACE);
     }
 
@@ -271,7 +284,7 @@ public class Protocol {
      * size more than maximum allowed.
      * @return the built message with its header also completed.
      */
-    public static String create_DHT_PUT(String key, int TTL, int Replication, String content) {
+    public static ByteBuffer create_DHT_PUT(String key, int TTL, int Replication, String content) {
         String res = key + twoBytesFormat(TTL) + (char) Replication + "00000" + content;
         return addHeader(res, MessageType.DHT_PUT);
     }

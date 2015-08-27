@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import tools.Server;
 import protocol.Configuration;
@@ -50,7 +51,7 @@ public class DummyDHT extends Server {
             } else if (mt.equals(Protocol.MessageType.DHT_GET)) { // answer with local fake storage.
                 String content = Protocol.get_DHT_MESSAGE_key(message)
                         + fakeStorage.get(Protocol.get_DHT_MESSAGE_key(message));
-                String replyMessage = Protocol.addHeader(content, Protocol.MessageType.DHT_GET_REPLY);
+                ByteBuffer replyMessage = Protocol.addHeader(content, Protocol.MessageType.DHT_GET_REPLY);
                 PrintWriter out = new PrintWriter(s.getOutputStream(), true);
                 out.print(replyMessage);
                 out.flush();
@@ -65,7 +66,7 @@ public class DummyDHT extends Server {
                     hops[i].setIPv6(rand.randString(Protocol.IPV6_LENGTH));
                     hops[i].setKX_port(Protocol.intFormat(rand.randString(Protocol.PORT_LENGTH)));
                 }
-                String reply = Protocol.create_DHT_TRACE_REPLY(hops, Protocol.get_DHT_MESSAGE_key(message));
+                ByteBuffer reply = Protocol.create_DHT_TRACE_REPLY(hops, Protocol.get_DHT_MESSAGE_key(message));
                 Socket echoSocket = new Socket(Configuration.LOCAL_HOST, conf.getKXPort());
                 PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
                 out.println(reply);

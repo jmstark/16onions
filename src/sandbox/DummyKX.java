@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -83,8 +84,9 @@ public class DummyKX extends Server {
     public void put(String key, String content) {
         try {
             Socket socket = new Socket(conf.getDHTHost(), conf.getDHTPort());
-            PrintWriter out = new PrintWriter(socket.getOutputStream());
-            out.println(Protocol.create_DHT_PUT(key, conf.getDHT_TTL(), conf.getDHT_REPLICATION(), content));
+            OutputStream out = socket.getOutputStream();
+            out.write(Protocol.create_DHT_PUT(key, conf.getDHT_TTL(), conf.getDHT_REPLICATION(), content).array());
+            out.close();
             socket.close();
         } catch (Exception ex) {
             ex.printStackTrace();
