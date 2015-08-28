@@ -18,8 +18,7 @@ import java.util.logging.Logger;
  */
 public class SelectorThread implements Runnable {
 
-    private Selector selector;
-    private SelectionKey[] keys;
+    private final Selector selector;
 
     public SelectorThread() throws IOException {
         selector = Selector.open();
@@ -28,6 +27,11 @@ public class SelectorThread implements Runnable {
     public void addChannel(SelectableChannel ch,
             int ops,
             EventProcessor processor) throws ClosedChannelException {
+        SelectionKey key = ch.keyFor(this.selector);
+        if (null != key)
+        {
+            ops = key.interestOps() | ops;
+        }
         ch.register(this.selector, ops, processor);
     }
 
@@ -35,8 +39,8 @@ public class SelectorThread implements Runnable {
      * Wakeup this selector thread. If the selector is not blocked, any future
      * select calls will be unblocked immediately.
      */
-    public void wakeup() {
-        this.selector.wakeup();
+    public void wakeup() throws IOException {
+        this.selector.wakeup(); //wakeup();
     }
 
     @Override
@@ -44,7 +48,13 @@ public class SelectorThread implements Runnable {
         int ready;
         while (true) {
             try {
-                ready = this.selector.select();
+                ready = this.selector.selectNow();
+                if (0 == ready){
+                    // if no keys to select, exit
+                    if(this.selector.keys().isEmpty())
+                        return;
+                    ready = this.selector.select();
+                }
             } catch (IOException ex) {
                 Logger.getLogger(SelectorThread.class.getName()).log(Level.SEVERE, null, ex);
                 return;
@@ -66,12 +76,12 @@ public class SelectorThread implements Runnable {
         boolean requeue;
         while (iter.hasNext()) {
             readyKey = iter.next();
-            
+
             readyOps = readyKey.readyOps();
             processor = (EventProcessor) readyKey.attachment();
             requeue = processor.process(readyOps, readyKey.channel(), this);
             if (!requeue)
-                readyKey.cancel(); 
+                readyKey.cancel();
             iter.remove();
         }
     }

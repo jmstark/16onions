@@ -54,7 +54,9 @@ public class SelectorThreadTest {
                 logger.log(Level.SEVERE, null, ex);
                 return false;
             }
-            logger.log(Level.INFO, "Read{0} bytes: {1}", new Object[]{nread, buf.toString()});
+            logger.log(Level.INFO, "Read {0} bytes: {1}",
+                    new Object[]{nread, new String(buf.array())});
+            buf.clear();
             return false;
         }
     }
@@ -70,7 +72,6 @@ public class SelectorThreadTest {
                 SocketChannel connection = acceptChannel.accept();
                 assert (null != connection);
                 connection.configureBlocking(false);
-                logger.info(connection.getRemoteAddress().toString());
                 instance.addChannel(connection, SelectionKey.OP_READ, new ServerProcessor());
                 return false;
             } catch (IOException ex) {
@@ -116,7 +117,7 @@ public class SelectorThreadTest {
                 selector.addChannel(channel, SelectionKey.OP_WRITE, new ClientProcessor());
             } catch (IOException ex) {
                 logger.log(Level.SEVERE, null, ex);
-                return true;
+                return false;
             }
             return true;
         }
@@ -140,7 +141,6 @@ public class SelectorThreadTest {
         acceptChannel = ServerSocketChannel.open().bind(null, 1);
         acceptChannel.configureBlocking(false);
         this.boundAddr = acceptChannel.getLocalAddress();
-        logger.info("Listenining at: "+ this.boundAddr.toString());
         assert (null != this.boundAddr);
     }
 
@@ -151,11 +151,11 @@ public class SelectorThreadTest {
     }
 
     /**
-     * Test of addChannel method, of class SelectorThread.
+     * Test single threaded instance of class SelectorThread.
      */
     @Test
-    public void testAddChannel() throws Exception {
-        System.out.println("addChannel");
+    public void testSingleThreaded() throws Exception {
+        System.out.println("SingleThreaded");
         SelectorThread instance = new SelectorThread();
         instance.addChannel(acceptChannel, SelectionKey.OP_ACCEPT, new ListenProcessor());
         SocketChannel socket = SocketChannel.open();
@@ -165,25 +165,32 @@ public class SelectorThreadTest {
         else
             instance.addChannel(socket, SelectionKey.OP_WRITE, new ClientProcessor());
         instance.run();
-//        Thread instanceThread = new Thread(instance);
-//        instanceThread.start();
-//        instanceThread.join();
-//        if (instanceThread.isAlive()) {
-//            fail("Instance Thread is still alive!");
-//            instance.wakeup();
-//        }
+
     }
 
     /**
-     * Test of wakeup method, of class SelectorThread.
+     * Test multi-threaded instance of class SelectorThread.
+     * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
      */
-    //@Test
-    public void testWakeup() throws IOException, InterruptedException {
-        System.out.println("wakeup");
+    @Test
+    public void testMultiThreaded() throws IOException, InterruptedException {
+        System.out.println("MultiThreaded");
         SelectorThread instance = new SelectorThread();
-        Thread thread = new Thread(instance);
-        Thread.sleep(1000);
-        instance.wakeup();        
+        instance.addChannel(acceptChannel, SelectionKey.OP_ACCEPT, new ListenProcessor());
+        SocketChannel socket = SocketChannel.open();
+        socket.configureBlocking(false);
+        if (!socket.connect(this.boundAddr))
+            instance.addChannel(socket, SelectionKey.OP_CONNECT, new ConnectProcessor());
+        else
+            instance.addChannel(socket, SelectionKey.OP_WRITE, new ClientProcessor());
+        Thread instanceThread = new Thread(instance);
+        instanceThread.start();
+        instanceThread.join(1000);
+        if (instanceThread.isAlive()) {
+            fail("Instance Thread is still alive!");
+            instance.wakeup();
+        }
     }
 
     /**
