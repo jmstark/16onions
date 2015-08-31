@@ -5,12 +5,10 @@
  */
 package tools;
 
-import java.nio.channels.SelectableChannel;
-
 /**
  *
- * @author troll
+ * @author totakura
  */
-public interface EventProcessor {
-    public boolean process (int readyOps, SelectableChannel channel, SelectorThread selector);
+public class ChannelNotRegisteredException extends Exception {
+    
 }

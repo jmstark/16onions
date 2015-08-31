@@ -14,9 +14,9 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author troll
+ * @author totakura
  */
-public class SelectorThread implements Runnable {
+public final class SelectorThread implements Runnable {
 
     private final Selector selector;
 
@@ -26,18 +26,34 @@ public class SelectorThread implements Runnable {
 
     public void addChannel(SelectableChannel ch,
             int ops,
-            EventProcessor processor) throws ClosedChannelException {
-        SelectionKey key = ch.keyFor(this.selector);
-        if (null != key)
-        {
-            ops = key.interestOps() | ops;
-        }
+            EventHandler processor) throws ClosedChannelException, ChannelAlreadyRegisteredException {
+        if (null != ch.keyFor(this.selector))
+            throw new ChannelAlreadyRegisteredException();
         ch.register(this.selector, ops, processor);
+    }
+
+    public void modifyChannelInterestOps (SelectableChannel channel, int ops)
+            throws ChannelNotRegisteredException {
+        SelectionKey key = channel.keyFor(this.selector);
+        if (null == key) {
+            throw new ChannelNotRegisteredException();
+        }
+        key.interestOps (ops);
+    }
+
+    public void removeChannel(SelectableChannel ch) throws ChannelNotRegisteredException {
+        SelectionKey key = ch.keyFor(this.selector);
+        if (null == key){
+            throw new ChannelNotRegisteredException();
+        }
+        key.cancel();
     }
 
     /**
      * Wakeup this selector thread. If the selector is not blocked, any future
      * select calls will be unblocked immediately.
+     *
+     * @throws java.io.IOException
      */
     public void wakeup() throws IOException {
         this.selector.wakeup(); //wakeup();
@@ -49,10 +65,11 @@ public class SelectorThread implements Runnable {
         while (true) {
             try {
                 ready = this.selector.selectNow();
-                if (0 == ready){
+                if (0 == ready) {
                     // if no keys to select, exit
-                    if(this.selector.keys().isEmpty())
+                    if (this.selector.keys().isEmpty()) {
                         return;
+                    }
                     ready = this.selector.select();
                 }
             } catch (IOException ex) {
@@ -71,18 +88,27 @@ public class SelectorThread implements Runnable {
         SelectionKey readyKey;
         Set<SelectionKey> readySet = this.selector.selectedKeys();
         Iterator<SelectionKey> iter = readySet.iterator();
-        EventProcessor processor;
-        int readyOps;
-        boolean requeue;
+        EventHandler handler;
+        SelectableChannel channel;
         while (iter.hasNext()) {
             readyKey = iter.next();
-
-            readyOps = readyKey.readyOps();
-            processor = (EventProcessor) readyKey.attachment();
-            requeue = processor.process(readyOps, readyKey.channel(), this);
-            if (!requeue)
-                readyKey.cancel();
+            handler = (EventHandler) readyKey.attachment();
+            channel = readyKey.channel();
             iter.remove();
+            if (!readyKey.isValid())
+                continue;
+            if (readyKey.isReadable()) {
+                handler.readHandler(channel, this);
+            }
+            if (readyKey.isValid() && readyKey.isWritable()) {
+                handler.writeHandler(channel, this);
+            }
+            if (readyKey.isValid() && readyKey.isAcceptable()) {
+                handler.acceptHandler(channel, this);
+            }
+            if (readyKey.isValid() && readyKey.isConnectable()) {
+                handler.connectHandler(channel, this);
+            }
         }
     }
 }
