@@ -8,7 +8,7 @@ package tools;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
 import protocol.Message;
 
 /**
@@ -17,7 +17,7 @@ import protocol.Message;
  */
 public abstract class ServerClient implements EventHandler {
 
-    protected SocketChannel channel;
+    protected AsynchronousSocketChannel channel;    
 
     public abstract boolean writeMessage(ByteBuffer msg);
 

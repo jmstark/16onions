@@ -7,7 +7,11 @@ package tools;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.CompletionHandler;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
@@ -22,209 +26,106 @@ import java.util.logging.Logger;
  *
  * @author Emertat
  */
-public class Server implements EventHandler {
+public class Server {
 
-    private final ServerSocketChannel serverChannel;
-    private SelectorThread selector;
-    private final ServerHandler handler;
-    private Thread serverThread;
-    private final HashMap<SocketChannel, ServerClient> clientMap;
-    private boolean hasOwnSelector;
+    private final AsynchronousServerSocketChannel serverChannel;
+    private final Logger logger;
+    private final AsynchronousChannelGroup threadPool;
 
-    public Server(ServerHandler handler, SocketAddress SockAddr) throws IOException {
-        serverChannel = ServerSocketChannel.open();
+    public Server(SocketAddress SockAddr, AsynchronousChannelGroup threadPool) throws IOException {
+        this.threadPool = threadPool;
+        serverChannel = AsynchronousServerSocketChannel.open(threadPool);
         serverChannel.bind(SockAddr);
-        serverChannel.configureBlocking(false);
-        this.handler = handler;
-        this.clientMap = new HashMap(50);
+        serverChannel.accept (this, new AcceptHandler());
+        logger = Logger.getLogger(Server.class.getName());
     }
-
-    public void start(SelectorThread selector) {
-        this.selector = selector;
-        try {
-            selector.addChannel(serverChannel, SelectionKey.OP_ACCEPT, this);
-            serverThread = new Thread(selector);
-            serverThread.start();
-        } catch (ClosedChannelException | ChannelAlreadyRegisteredException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+    
+    private class AcceptHandler implements CompletionHandler<AsynchronousSocketChannel, Server> {
+        @Override
+        public void completed (AsynchronousSocketChannel channel, Server server) {
+            new ServerClientImpl(channel);
+            logger.info("A new client has connected");
         }
-    }
-
-    public void start() throws IOException {
-        SelectorThread selector = new SelectorThread();
-        this.hasOwnSelector = true;
-        this.start(selector);
+        
+        @Override
+        public void failed (Throwable ex, Server server ){
+            try {
+                server.stop();
+            } catch (IOException ex1) {
+                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex1);
+            }
+        }
     }
 
     public void stop() throws IOException {
-        if (this.hasOwnSelector) {
-            this.selector.wakeup();
-        }
-        Iterator<ServerClient> iter = this.clientMap.values().iterator();
-        ServerClient client;
-        while (iter.hasNext()) {
-            client = iter.next();
-            client.close();
-        }
         this.serverChannel.close();
-        while (true) {
-            try {
-                this.serverThread.join();
-                break;
-            } catch (InterruptedException ex) {
-                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
     }
 
-    @Override
-    public void readHandler(SelectableChannel channel, SelectorThread selector) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
+    private class ServerClientImpl extends ServerClient {        
+        private final ByteBuffer buffer;
+        private final ReadHandler readHandler;
+        private final WriteHandler writeHandler;
 
-    @Override
-    public void writeHandler(SelectableChannel channel, SelectorThread selector) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public void acceptHandler(SelectableChannel channel, SelectorThread selector) {
-        try {
-            ServerSocketChannel serverSocket = (ServerSocketChannel) channel;
-            SocketChannel clientSocket;
-            ServerClient client;
-
-            clientSocket = serverSocket.accept();
-            client = new ServerClientImpl(clientSocket, this);
-            this.clientMap.put(clientSocket, client);
-            if (!this.handler.newConnectionHandler(client)) {
-                cleanupServerClient(clientSocket);
-                return;
-            }
-            clientSocket.configureBlocking(false);
-            this.selector.addChannel(clientSocket, SelectionKey.OP_READ, client);
-        } catch (IOException | ChannelAlreadyRegisteredException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    private void cleanupServerClient(SocketChannel socket) {
-        this.clientMap.remove(socket);
-        try {
-            socket.close();
-        } catch (IOException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    private void disconnectClientSocket(SocketChannel socket) {
-        ServerClient client = this.clientMap.get(socket);
-        this.handler.disconnectHandler(client);
-        cleanupServerClient(socket);
-    }
-
-    @Override
-    public void connectHandler(SelectableChannel channel, SelectorThread selector) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    private class ServerClientImpl extends ServerClient implements EventHandler {
-        
-        private final Server server;
-        private boolean writePending;
-        private final LinkedList<ByteBuffer> messages;
-        private boolean readPending;
-
-        ServerClientImpl(SocketChannel channel, Server server) {
+        ServerClientImpl(AsynchronousSocketChannel channel) {
             this.channel = channel;
-            this.server = server;
-            this.messages = new LinkedList();
-            this.readPending = true;
-        }
-
-        private void refreshInterestOps() throws ChannelNotRegisteredException {
-            int ops = 0;
-            if (this.readPending) {
-                ops |= SelectionKey.OP_READ;
-            }
-            if (this.writePending) {
-                ops |= SelectionKey.OP_WRITE;
-            }
-            if (0 == ops) {
-                this.disconnect();
-                return;
-            }
-            this.server.selector.modifyChannelInterestOps(this.channel, ops);
+            this.buffer = ByteBuffer.allocate(512);
+            this.readHandler = new ReadHandler();
+            this.writeHandler = new WriteHandler();
+            channel.read(buffer, this, readHandler);
         }
 
         @Override
         public boolean writeMessage(ByteBuffer msg) {
-            this.writePending = true;
-            try {
-                this.refreshInterestOps();
-            } catch (ChannelNotRegisteredException ex) {
-                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-                return false;
-            }
-            this.messages.add(msg);
-            return true;
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
 
-        @Override
-        public void readHandler(SelectableChannel channel, SelectorThread selector) {
-            SocketChannel socket;
-            ByteBuffer buffer = ByteBuffer.allocate(5);
-            int nread = 0;
-            int ops = 0;
-
-            socket = (SocketChannel) channel;
-            try {                
-                nread = socket.read(buffer);
-            } catch (IOException ex) {
-                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-                this.disconnect();
+        private class ReadHandler implements CompletionHandler<Integer, ServerClientImpl> {
+            
+            @Override
+            public void completed (Integer result, ServerClientImpl client) {
+                if (result <= 0)
+                {
+                    client.disconnect();
+                }
+                buffer.flip();
+                logger.log (Level.INFO, "Read: {0}", new String(buffer.array(), 0, buffer.limit()));
+                client.channel.write(buffer, client, writeHandler);
             }
-            if (nread == -1) {
-                this.disconnect();
-                this.readPending = false;
-                this.writePending = false;
-                return;
+            
+            @Override
+            public void failed (Throwable ex, ServerClientImpl client) {
+                client.disconnect();
             }
-            buffer.flip();
-            this.server.handler.messageHandler(this, buffer);
         }
-
-        @Override
-        public void writeHandler(SelectableChannel channel, SelectorThread selector) {
-            SocketChannel socket = (SocketChannel) channel;
-            ByteBuffer msg;            
-
-            msg = this.messages.peek();
-            if (null != msg) {
-                try {
-                    socket.write(msg);
-                    if (!msg.hasRemaining()) {
-                        this.messages.remove();
-                    }
-                } catch (IOException ex) {
-                    Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-                    this.disconnect();
-                    return;
+        
+        private class WriteHandler implements CompletionHandler<Integer, ServerClientImpl>{            
+            
+            @Override
+            public void completed (Integer result, ServerClientImpl client) {
+                if (result <= 0)
+                {
+                    client.disconnect();
+                }
+                if (buffer.hasRemaining())
+                    client.channel.write(buffer, client, writeHandler);
+                else {
+                    buffer.clear();
+                    client.channel.read(buffer, client, readHandler);
                 }
             }
-            if (this.messages.isEmpty()) {
-                this.writePending = false;
-            }
-            try {
-                this.refreshInterestOps();
-            } catch (ChannelNotRegisteredException ex) {
-                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-                this.disconnect();
+            
+            @Override
+            public void failed (Throwable ex, ServerClientImpl client) {
+                client.disconnect();
             }
         }
-
+        
         private void disconnect() {
-            this.server.disconnectClientSocket(channel);
+            try {
+                this.channel.close();
+            } catch (IOException ex) {
+                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
 }
