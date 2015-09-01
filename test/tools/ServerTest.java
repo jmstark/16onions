@@ -7,14 +7,14 @@ package tools;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.charset.StandardCharsets;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,9 +24,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import protocol.Message;
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
 
 /**
  *
@@ -37,7 +34,7 @@ public class ServerTest {
     private final Logger logger;
 
     public ServerTest() {
-        logger = Logger.getLogger(SelectorThreadTest.class.getName());
+        logger = Logger.getLogger(ServerTest.class.getName());
     }
 
     @BeforeClass
@@ -57,52 +54,98 @@ public class ServerTest {
     public void tearDown() {
     }
 
-    private class EchoServerHandler implements ServerHandler {
-
-        @Override
-        public boolean newConnectionHandler(ServerClient client) {
-            logger.info("New client connected");
-            return true;
-        }
-
-        @Override
-        public boolean messageHandler(ServerClient client, ByteBuffer msg) {
-            System.out.print(new String(msg.array(), 0, msg.limit()));
-            System.out.flush();
-            client.writeMessage(msg);
-            return true;
-        }
-
-        @Override
-        public void disconnectHandler(ServerClient client) {
-            logger.info("Client disconnected");
-        }
-
-    }
-
     @Test
     public void testSomeMethod() throws InterruptedException, IOException, ExecutionException {
         try {
-            final ExecutorService fixedThreadPoolExecutor = Executors.newFixedThreadPool(2);
+            final int cores = Runtime.getRuntime().availableProcessors();
+            final ThreadFactory threadFactory = Executors.defaultThreadFactory();
             final AsynchronousChannelGroup threadPool;
-            threadPool = AsynchronousChannelGroup.withCachedThreadPool(fixedThreadPoolExecutor, 2);
-            final Server server = new Server(new InetSocketAddress(6001), threadPool);
-
-            final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-            final ScheduledFuture waitTask;
-            waitTask = scheduler.scheduleWithFixedDelay(new Runnable() {
-                public void run() {
-                    //Simple wait
-                }
-            }, 300, 300, TimeUnit.SECONDS
-            );
-            waitTask.get();
-            server.stop();
+            threadPool = AsynchronousChannelGroup.withFixedThreadPool(cores, threadFactory);
+            final Server server = new EchoServer(new InetSocketAddress(6001), threadPool);
+            server.start();
+            while (!threadPool.awaitTermination(1, TimeUnit.SECONDS));
         } catch (IOException ex) {
             Logger.getLogger(ServerTest.class.getName()).log(Level.SEVERE, null, ex);
             fail();
-            return;
         }
     }
 
+    private class EchoServerClient {
+        private final ByteBuffer buffer;
+        private final ReadHandler readHandler;
+        private final WriteHandler writeHandler;
+        private final AsynchronousSocketChannel channel;
+
+        EchoServerClient(AsynchronousSocketChannel channel) {
+            this.channel = channel;
+            this.buffer = ByteBuffer.allocate(1024);
+            this.readHandler = new ReadHandler();
+            this.writeHandler = new WriteHandler();
+            channel.read(buffer, this, readHandler);
+        }
+
+        private class ReadHandler implements CompletionHandler<Integer, EchoServerClient> {
+
+            @Override
+            public void completed (Integer result, EchoServerClient client) {
+                if (result <= 0)
+                {
+                    client.disconnect();
+                    return;
+                }
+                buffer.flip();
+                logger.log (Level.INFO, "Read: {0}", new String(buffer.array(), 0, buffer.limit()));
+                client.channel.write(buffer, client, writeHandler);
+            }
+
+            @Override
+            public void failed (Throwable ex, EchoServerClient client) {
+                client.disconnect();
+            }
+        }
+
+        private class WriteHandler implements CompletionHandler<Integer, EchoServerClient>{
+
+            @Override
+            public void completed (Integer result, EchoServerClient client) {
+                if (result <= 0)
+                {
+                    client.disconnect();
+                    return;
+                }
+                if (buffer.hasRemaining())
+                    client.channel.write(buffer, client, writeHandler);
+                else {
+                    buffer.clear();
+                    client.channel.read(buffer, client, readHandler);
+                }
+            }
+
+            @Override
+            public void failed (Throwable ex, EchoServerClient client) {
+                client.disconnect();
+            }
+        }
+
+        private void disconnect() {
+            try {
+                logger.info("Client Disconnected");
+                this.channel.close();
+            } catch (IOException ex) {
+                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    private class EchoServer extends Server {
+
+        public EchoServer(SocketAddress SockAddr, AsynchronousChannelGroup channelGroup) throws IOException {
+            super(SockAddr, channelGroup);
+        }
+
+        @Override
+        protected void handleClient(AsynchronousSocketChannel channel) {
+            new EchoServerClient(channel);
+        }
+    }
 }
