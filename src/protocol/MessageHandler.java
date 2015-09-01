@@ -9,13 +9,6 @@ package protocol;
  *
  * @author troll
  */
-public class ProtocolException extends Exception {
-
-    public ProtocolException(String msg) {
-        super(msg);
-    }
-
-    public ProtocolException() {
-    }
-
+public interface MessageHandler {
+    public void handleMessage (Message message);
 }

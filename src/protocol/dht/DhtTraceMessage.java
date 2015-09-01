@@ -5,6 +5,7 @@
  */
 package protocol.dht;
 
+import java.nio.ByteBuffer;
 import protocol.Protocol;
 
 /**
@@ -15,5 +16,9 @@ public class DhtTraceMessage extends DhtMessage {
     public DhtTraceMessage(byte[] key){
         this.addKey(key);
         this.addHeader(Protocol.MessageType.DHT_TRACE);
+    }
+
+    public static DhtTraceMessage parse (final ByteBuffer buf, byte[] key){
+        return new DhtTraceMessage (key);
     }
 }

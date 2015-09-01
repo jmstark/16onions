@@ -20,9 +20,9 @@ public class DhtPutMessage extends DhtMessage{
     private int ttl;
     private int replication;
     private byte[] content;
-    
+
     public DhtPutMessage(byte[] key, int ttl, int replication, byte[] content){
-        this.ttl = ttl;               
+        this.ttl = ttl;
         this.replication = replication;
         this.size += 8; //ttl + replication + reserved
         this.content = content;
@@ -30,7 +30,7 @@ public class DhtPutMessage extends DhtMessage{
         this.addKey(key);
         this.addHeader(Protocol.MessageType.DHT_PUT);
     }
-    
+
     @Override
     public void send(DataOutputStream out) throws IOException
     {
@@ -39,5 +39,15 @@ public class DhtPutMessage extends DhtMessage{
         out.writeByte(this.replication);
         out.write(new byte[5]); //reserved dummy
         out.write(this.content);
+    }
+
+    static public DhtPutMessage parse (final ByteBuffer buf, byte[] key){
+        int ttl = buf.getShort();
+        int replication = buf.get();
+        byte reserved1 = buf.get();// skip
+        int reserved2 = buf.getInt();
+        byte[] content = new byte[buf.remaining()];
+        buf.get(content);
+        return new DhtPutMessage(key, ttl, replication, content);
     }
 }

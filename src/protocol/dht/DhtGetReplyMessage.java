@@ -7,6 +7,7 @@ package protocol.dht;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  *
@@ -25,5 +26,11 @@ public class DhtGetReplyMessage extends DhtMessage {
     public void send(DataOutputStream out) throws IOException {
         super.send(out);
         out.write(content);
+    }
+
+    public static DhtGetReplyMessage parse (final ByteBuffer buf, byte[] key) {
+        byte[] content = new byte[buf.remaining()];
+        buf.get(content);
+        return new DhtGetReplyMessage (key, content);
     }
 }

@@ -90,7 +90,7 @@ public class Protocol {
         msg.put(body);
         return msg;
     }
-    
+
     public static ByteBuffer addHeaderByteBuffer (ByteBuffer body, MessageType type){
         int size;
         ByteBuffer buf;
@@ -99,13 +99,13 @@ public class Protocol {
         buf.putShort((short) size);
         buf.putShort((short) type.getNumVal());
         buf.put(body);
-        buf.flip();      
+        buf.flip();
         return buf;
     }
 
     public static ByteBuffer addHeader(String content, MessageType type) {
-//        return addSize(addType(content, type));        
-        byte[] contentBytes;        
+//        return addSize(addType(content, type));
+        byte[] contentBytes;
         contentBytes = content.getBytes();
         return addHeaderByteBuffer (ByteBuffer.wrap(contentBytes), type);
     }
@@ -385,6 +385,12 @@ public class Protocol {
      * Size of the header section of message, in bytes.
      */
     public static int TYPE_LENGTH = 2;
+
+    /**
+     * Size of the header
+     */
+    public static int HEADER_LENGTH = SIZE_LENGTH + TYPE_LENGTH;
+
     /**
      * Size of the key section of messages, in bytes.
      */

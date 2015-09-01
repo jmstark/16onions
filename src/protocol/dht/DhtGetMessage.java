@@ -5,6 +5,7 @@
  */
 package protocol.dht;
 
+import java.nio.ByteBuffer;
 import protocol.Protocol;
 
 /**
@@ -14,6 +15,10 @@ import protocol.Protocol;
 public class DhtGetMessage extends DhtMessage {
     public DhtGetMessage(byte[] key){
         this.addKey(key);
-        this.addHeader(Protocol.MessageType.DHT_GET);        
-    }    
+        this.addHeader(Protocol.MessageType.DHT_GET);
+    }
+
+    static public DhtGetMessage parse (final ByteBuffer buf, byte[] key) {
+        return new DhtGetMessage (key);
+    }
 }
