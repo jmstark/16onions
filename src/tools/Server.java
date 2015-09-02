@@ -23,7 +23,7 @@ public abstract class Server {
     private final AsynchronousChannelGroup channelGroup;
     private final AcceptHandler acceptHandler;
 
-    public Server(SocketAddress SockAddr, AsynchronousChannelGroup channelGroup) throws IOException {
+    protected Server(SocketAddress SockAddr, AsynchronousChannelGroup channelGroup) throws IOException {
         this.logger = Logger.getLogger(Server.class.getName());
         this.channelGroup = channelGroup;
         this.serverChannel = AsynchronousServerSocketChannel.open(channelGroup);
@@ -40,13 +40,17 @@ public abstract class Server {
         this.serverChannel.close();
     }
 
-    abstract protected void handleClient(AsynchronousSocketChannel channel);
+    /**
+     * This function is called when a new connection is opened to the server.
+     * @param channel the newly opened channel
+     */
+    abstract protected void handleNewClient(AsynchronousSocketChannel channel);
 
     private class AcceptHandler implements CompletionHandler<AsynchronousSocketChannel, Server> {
 
         @Override
         public void completed(AsynchronousSocketChannel channel, Server server) {
-            handleClient(channel);
+            handleNewClient(channel);
             logger.fine("A new client has connected");
             server.serverChannel.accept(server, server.acceptHandler);
         }

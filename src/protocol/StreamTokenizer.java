@@ -27,11 +27,24 @@ public class StreamTokenizer {
         this.handler = handler;
     }
 
-    public void reset() {
+    public final void reset() {
         this.state = ParseState.SIZE;
         this.expect = Protocol.SIZE_LENGTH;
     }
 
+    /**
+     * Extracts message tokens from the given input. If the input contains
+     * multiple messages, they are tokenized in the order they appear in the
+     * input. Tokens are then parsed into messages which are then given to the
+     * message handler.
+     *
+     * @param buf the buffer containing the data stream to be tokenized.
+     * @return If the given input is in-sufficient to construct a message, True
+     * is returned signifying that more input is needed. If sufficient input is
+     * provided, false is returned. If the input contains multiple messages,
+     * then the sufficiency test is made for the last message in the input.
+     * @throws ProtocolException
+     */
     public boolean input(ByteBuffer buf) throws ProtocolException {
         ByteBuffer tokenizedCopy;
         Message message;
@@ -61,8 +74,9 @@ public class StreamTokenizer {
                     }
                     handler.handleMessage(message);
                     this.reset();
-                    if (buf.remaining() == 0)
+                    if (buf.remaining() == 0) {
                         return false;
+                    }
                     continue;
             }
         }

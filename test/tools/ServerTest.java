@@ -144,7 +144,7 @@ public class ServerTest {
         }
 
         @Override
-        protected void handleClient(AsynchronousSocketChannel channel) {
+        protected void handleNewClient(AsynchronousSocketChannel channel) {
             new EchoServerClient(channel);
         }
     }

@@ -76,6 +76,7 @@ public class StreamTokenizerTest {
         buffer.flip();
         assertFalse (instance.input(buffer));
         buffer.flip();
+        buffer.compact();
         getMsg.send(buffer);
         buffer.flip();
         int limit = buffer.limit();
