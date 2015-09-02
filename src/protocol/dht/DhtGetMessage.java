@@ -13,16 +13,17 @@ import protocol.Protocol;
  * @author troll
  */
 public class DhtGetMessage extends DhtMessage {
-    public DhtGetMessage(byte[] key){
+    public DhtGetMessage(DHTKey key){
         this.addKey(key);
         this.addHeader(Protocol.MessageType.DHT_GET);
     }
 
+    @Override
     public void send (ByteBuffer out) {
         super.send(out);
     }
 
-    static public DhtGetMessage parse (final ByteBuffer buf, byte[] key) {
+    static public DhtGetMessage parse (final ByteBuffer buf, DHTKey key) {
         return new DhtGetMessage (key);
     }
 }

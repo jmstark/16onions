@@ -5,7 +5,6 @@
  */
 package protocol.dht;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import protocol.Message;
 import protocol.Protocol.MessageType;
@@ -15,27 +14,28 @@ import protocol.Protocol.MessageType;
  * @author troll
  */
 public abstract class DhtMessage extends Message {
-    private byte[] key;
+    private DHTKey key;
     private boolean keyAdded;
 
-    public void addKey(byte[] key){
+    public void addKey(DHTKey key){
         assert (!this.keyAdded);
         this.keyAdded = true;
         this.key = key;
-        this.size += key.length;
+        this.size += key.getValue().length;
     }
 
     @Override
     protected void send(ByteBuffer out){
         assert (this.keyAdded);
         super.send(out);
-        out.put(key);
+        out.put(key.getValue());
     }
 
     static public DhtMessage parse (final ByteBuffer buf, MessageType type) {
         assert (buf.remaining() >= DHT_KEY_SIZE);
-        byte[] key = new byte[DHT_KEY_SIZE];
-        buf.get(key);
+        byte[] keyData = new byte[DHT_KEY_SIZE];
+        buf.get(keyData);
+        DHTKey key = new DHTKey(keyData);
         switch(type) {
             case DHT_GET:
                 return DhtGetMessage.parse(buf, key);
@@ -58,7 +58,7 @@ public abstract class DhtMessage extends Message {
     /**
      * @return the key
      */
-    public byte[] getKey() {
+    public DHTKey getKey() {
         return key;
     }
 }

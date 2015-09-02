@@ -18,7 +18,7 @@ public class DhtTraceReplyMessage extends DhtMessage {
 
     private LinkedList<Hop> hops;
 
-    public DhtTraceReplyMessage(byte[] key){
+    public DhtTraceReplyMessage(DHTKey key){
         this.addKey(key);
     }
 
@@ -42,7 +42,7 @@ public class DhtTraceReplyMessage extends DhtMessage {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    public static DhtTraceReplyMessage parse(final ByteBuffer buf, byte[] key) {
+    public static DhtTraceReplyMessage parse(final ByteBuffer buf, DHTKey key) {
         DhtTraceReplyMessage msg = new DhtTraceReplyMessage(key);
         Hop hop;
         while (null != (hop = parseHop(buf))){

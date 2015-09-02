@@ -5,8 +5,6 @@
  */
 package protocol.dht;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -15,9 +13,9 @@ import java.nio.ByteBuffer;
  */
 public class DhtGetReplyMessage extends DhtMessage {
 
-    private byte[] content;
+    private final DHTContent content;
 
-    public DhtGetReplyMessage(byte[] key, byte[] content) {
+    public DhtGetReplyMessage(DHTKey key, DHTContent content) {
         this.addKey(key);
         this.content = content;
     }
@@ -25,19 +23,19 @@ public class DhtGetReplyMessage extends DhtMessage {
     @Override
     protected void send(ByteBuffer out) {
         super.send(out);
-        out.put(content);
+        out.put(content.getValue());
     }
 
-    public static DhtGetReplyMessage parse (final ByteBuffer buf, byte[] key) {
+    public static DhtGetReplyMessage parse (final ByteBuffer buf, DHTKey key) {
         byte[] content = new byte[buf.remaining()];
         buf.get(content);
-        return new DhtGetReplyMessage (key, content);
+        return new DhtGetReplyMessage (key, new DHTContent(content));
     }
 
     /**
      * @return the content
      */
-    public byte[] getContent() {
+    public DHTContent getContent() {
         return content;
     }
 }
