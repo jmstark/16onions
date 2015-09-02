@@ -18,6 +18,11 @@ public class DhtTraceMessage extends DhtMessage {
         this.addHeader(Protocol.MessageType.DHT_TRACE);
     }
 
+    @Override
+    public void send (ByteBuffer out) {
+        super.send(out);
+    }
+
     public static DhtTraceMessage parse (final ByteBuffer buf, byte[] key){
         return new DhtTraceMessage (key);
     }

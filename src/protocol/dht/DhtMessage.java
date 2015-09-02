@@ -5,7 +5,6 @@
  */
 package protocol.dht;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import protocol.Message;
@@ -27,10 +26,10 @@ public abstract class DhtMessage extends Message {
     }
 
     @Override
-    public void send(DataOutputStream out) throws IOException{
+    protected void send(ByteBuffer out){
         assert (this.keyAdded);
         super.send(out);
-        out.write(key);
+        out.put(key);
     }
 
     static public DhtMessage parse (final ByteBuffer buf, MessageType type) {
@@ -55,4 +54,11 @@ public abstract class DhtMessage extends Message {
     }
 
     static final int DHT_KEY_SIZE = 32;
+
+    /**
+     * @return the key
+     */
+    public byte[] getKey() {
+        return key;
+    }
 }

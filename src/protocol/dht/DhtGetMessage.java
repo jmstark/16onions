@@ -18,6 +18,10 @@ public class DhtGetMessage extends DhtMessage {
         this.addHeader(Protocol.MessageType.DHT_GET);
     }
 
+    public void send (ByteBuffer out) {
+        super.send(out);
+    }
+
     static public DhtGetMessage parse (final ByteBuffer buf, byte[] key) {
         return new DhtGetMessage (key);
     }

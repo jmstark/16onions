@@ -5,8 +5,6 @@
  */
 package protocol.dht;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.ListIterator;
@@ -30,7 +28,7 @@ public class DhtTraceReplyMessage extends DhtMessage {
     }
 
     @Override
-    public void send(DataOutputStream out) throws IOException {
+    protected void send(ByteBuffer out) {
         Hop hop;
         super.send(out);
         ListIterator<Hop> iter = hops.listIterator();

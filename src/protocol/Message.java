@@ -5,11 +5,9 @@
  */
 package protocol;
 
-import java.io.IOException;
-import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import protocol.Protocol.MessageType;
-import protocol.dht.*;
+import protocol.dht.DhtMessage;
 
 /**
  *
@@ -34,18 +32,29 @@ public abstract class Message {
         this.size += 4;
     }
 
-    protected void send(DataOutputStream out) throws IOException {
-        assert (this.headerAdded);
-        out.writeShort(this.size);
-        out.writeShort(this.type.getNumVal());
+    @Override
+    public boolean equals (Object obj) {
+        if (! (obj instanceof Message))
+            return false;
+        Message otherMsg = (Message) obj;
+        if (otherMsg.getSize() != size)
+            return false;
+        return otherMsg.getType() == type;
     }
 
-    public static Message parseMessage (final ByteBuffer buf){
+    protected void send(ByteBuffer out) {
+        assert (this.headerAdded);
+        out.putShort( (short) this.size);
+        out.putShort( (short) this.type.getNumVal());
+    }
+
+    public static Message parseMessage (ByteBuffer buf){
         int size;
         MessageType type;
 
         size = buf.getShort();
         type = MessageType.asMessageType(buf.getShort());
+        buf.limit(size);
         switch(type) {
             case DHT_GET:
             case DHT_PUT:
@@ -62,5 +71,19 @@ public abstract class Message {
                 assert (false);
         }
         return null;
+    }
+
+    /**
+     * @return the size
+     */
+    public int getSize() {
+        return size;
+    }
+
+    /**
+     * @return the type
+     */
+    public MessageType getType() {
+        return type;
     }
 }

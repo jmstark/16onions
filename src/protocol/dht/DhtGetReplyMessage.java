@@ -23,14 +23,21 @@ public class DhtGetReplyMessage extends DhtMessage {
     }
 
     @Override
-    public void send(DataOutputStream out) throws IOException {
+    protected void send(ByteBuffer out) {
         super.send(out);
-        out.write(content);
+        out.put(content);
     }
 
     public static DhtGetReplyMessage parse (final ByteBuffer buf, byte[] key) {
         byte[] content = new byte[buf.remaining()];
         buf.get(content);
         return new DhtGetReplyMessage (key, content);
+    }
+
+    /**
+     * @return the content
+     */
+    public byte[] getContent() {
+        return content;
     }
 }

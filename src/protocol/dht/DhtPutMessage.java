@@ -5,11 +5,8 @@
  */
 package protocol.dht;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.Stack;
 import protocol.Protocol;
 
 /**
@@ -17,11 +14,11 @@ import protocol.Protocol;
  * @author troll
  */
 public class DhtPutMessage extends DhtMessage{
-    private int ttl;
-    private int replication;
-    private byte[] content;
+    private final short ttl;
+    private final byte replication;
+    private final byte[] content;
 
-    public DhtPutMessage(byte[] key, int ttl, int replication, byte[] content){
+    public DhtPutMessage(byte[] key, short ttl, byte replication, byte[] content){
         this.ttl = ttl;
         this.replication = replication;
         this.size += 8; //ttl + replication + reserved
@@ -32,22 +29,42 @@ public class DhtPutMessage extends DhtMessage{
     }
 
     @Override
-    public void send(DataOutputStream out) throws IOException
-    {
+    public void send(ByteBuffer out) {
         super.send(out);
-        out.writeShort(this.ttl);
-        out.writeByte(this.replication);
-        out.write(new byte[5]); //reserved dummy
-        out.write(this.content);
+        out.putShort(this.ttl);
+        out.put(this.replication);
+        out.put(new byte[5]); //reserved dummy
+        out.put(this.content);
     }
 
     static public DhtPutMessage parse (final ByteBuffer buf, byte[] key){
-        int ttl = buf.getShort();
-        int replication = buf.get();
+        short ttl = buf.getShort();
+        byte replication = buf.get();
         byte reserved1 = buf.get();// skip
         int reserved2 = buf.getInt();
         byte[] content = new byte[buf.remaining()];
         buf.get(content);
         return new DhtPutMessage(key, ttl, replication, content);
+    }
+
+    /**
+     * @return the ttl
+     */
+    public short getTTL() {
+        return ttl;
+    }
+
+    /**
+     * @return the replication
+     */
+    public byte getReplication() {
+        return replication;
+    }
+
+    /**
+     * @return the content
+     */
+    public byte[] getContent() {
+        return content;
     }
 }
