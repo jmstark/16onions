@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannel;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -17,18 +16,18 @@ import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.Assume;
 
 /**
  *
@@ -76,7 +75,7 @@ public class ServerTest {
             ExecutorService clientThreadPool = Executors.newFixedThreadPool(2);
             AsynchronousChannelGroup clientChannelGroup;
             clientChannelGroup = AsynchronousChannelGroup.withThreadPool(clientThreadPool);
-            EchoClient[] clients = new EchoClient[4000];
+            EchoClient[] clients = new EchoClient[500];
             for (int i = 0; i < clients.length; i++) {
                 clients[i] = new EchoClient(port, clientChannelGroup);
             }
@@ -269,6 +268,7 @@ public class ServerTest {
                     connection.close();
                 } catch (IOException ex) {
                     Logger.getLogger(ServerTest.class.getName()).log(Level.SEVERE, null, ex);
+                    Assume.assumeNoException(ex);
                 }
             }
 
