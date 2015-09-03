@@ -5,15 +5,17 @@
 package sandbox;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.util.HashMap;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Configuration;
+import protocol.Connection;
 import protocol.Message;
 import protocol.ProtocolServer;
-import protocol.ProtocolServerClient;
 import protocol.dht.DHTContent;
 import protocol.dht.DHTKey;
 import protocol.dht.DhtGetMessage;
@@ -29,17 +31,15 @@ import protocol.dht.DhtTraceReplyMessage;
  */
 public class DummyDHT extends ProtocolServer {
     private static final Logger logger = Logger.getLogger(ProtocolServer.class.getName());
+    private HashMap<DHTKey, DHTContent> storage;
 
-    public DummyDHT (SocketAddress socketAddress,
-            AsynchronousChannelGroup channelGroup,
-            Configuration config) throws IOException {
+    public DummyDHT(SocketAddress socketAddress,
+            AsynchronousChannelGroup channelGroup) throws IOException {
         super(socketAddress, channelGroup);
     }
 
-    private HashMap<DHTKey, DHTContent> storage;
-
     @Override
-    public boolean handleMessage(Message message, ProtocolServerClient client) {
+    protected boolean handleMessage(Message message, Connection client) {
         DhtMessage dhtMsg = (DhtMessage) message;
         DHTKey key = dhtMsg.getKey();
         switch(message.getType()) {
@@ -74,5 +74,13 @@ public class DummyDHT extends ProtocolServer {
             default:
         }
         return false;
+    }
+
+    public static DummyDHT instantiate(Configuration conf) throws IOException {
+        InetSocketAddress socketAddress;
+        socketAddress = new InetSocketAddress(conf.getDHTHost(), conf.getDHTPort());
+        AsynchronousChannelGroup channelGroup;
+        channelGroup = AsynchronousChannelGroup.withThreadPool(Executors.newSingleThreadExecutor());
+        return new DummyDHT(socketAddress, channelGroup);
     }
 }

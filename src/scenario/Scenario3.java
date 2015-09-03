@@ -33,7 +33,7 @@ public class Scenario3 {
         try {
             Configuration conf = new Configuration(new File(confFile));
             if (DEV_MODE || Configuration.DHT_CMD == null) {
-                new DummyDHT(confFile); // 
+                DummyDHT.instantiate(conf);
             } else {
                 Runtime.getRuntime().exec(Configuration.DHT_CMD
                         + " " + confFile);

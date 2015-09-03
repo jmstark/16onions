@@ -5,7 +5,6 @@
 package scenario;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import protocol.Configuration;
 import static protocol.Configuration.DEV_MODE;
@@ -42,7 +41,7 @@ public class Scenario4 {
             conf.setDHTHost(realDHTHost);
             String configForDHT = conf.store(); // create a new config file.
             if (DEV_MODE || Configuration.DHT_CMD == null) {
-                new DummyDHT(configForDHT); // initiate DHT with fake KX port, real DHT port.
+                DummyDHT.instantiate(conf); // initiate DHT with fake KX port, real DHT port.
             } else {
                 Runtime.getRuntime().exec(Configuration.DHT_CMD
                         + " " + configForDHT);

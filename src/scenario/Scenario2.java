@@ -28,7 +28,7 @@ public class Scenario2 {
             int fakeDHTPort = ports.remove(0);
             int realDHTPort = conf.getDHTPort();
             if (DEV_MODE || Configuration.DHT_CMD == null) {
-                new DummyDHT(confFile);
+                DummyDHT.instantiate(conf);
             } else {
                 Runtime.getRuntime().exec(Configuration.DHT_CMD
                         + " " + confFile);
