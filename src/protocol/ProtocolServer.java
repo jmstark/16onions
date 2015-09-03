@@ -15,17 +15,29 @@ import tools.Server;
  *
  * @author totakura
  */
-public abstract class ProtocolServer extends Server implements ServerClientMessageHandler {
+public abstract class ProtocolServer extends Server {
     public ProtocolServer(SocketAddress socketAddress, AsynchronousChannelGroup channelGroup) throws IOException {
         super(socketAddress, channelGroup);
     }
 
     @Override
     protected void handleNewClient(AsynchronousSocketChannel channel) {
-        new ProtocolServerClient(channel, this);
+        Connection connection = new Connection(channel);
+        ServerMessageHandler msgHandler = new ServerMessageHandler(connection);
+        connection.receive(msgHandler);
     }
 
-    @Override
-    abstract public boolean handleMessage(Message message, ProtocolServerClient client);
+    private class ServerMessageHandler extends MessageHandler<Connection, Boolean> {
 
+        private ServerMessageHandler(Connection connection) {
+            super(connection);
+        }
+        @Override
+        protected Boolean handleMessage(Message message, Connection connection)
+        {
+            return ProtocolServer.this.handleMessage(message, connection);
+        }
+    }
+
+    protected abstract boolean handleMessage(Message message, Connection connection);
 }

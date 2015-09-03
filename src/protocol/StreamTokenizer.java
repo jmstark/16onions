@@ -19,7 +19,7 @@ public class StreamTokenizer {
     }
 
     private ParseState state;
-    private final MessageHandler handler;
+    private final MessageHandler<?, Void> handler;
     private int expect;
 
     public StreamTokenizer(MessageHandler handler) {

@@ -13,6 +13,8 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import protocol.dht.DHTContent;
+import protocol.dht.DHTKey;
 import protocol.dht.DhtGetMessage;
 import protocol.dht.DhtPutMessage;
 import tools.MyRandom;
@@ -39,8 +41,9 @@ public class StreamTokenizerTest {
     public StreamTokenizerTest() {
         byte[] key = MyRandom.randBytes(32);
         byte[] content = MyRandom.randBytes(128);
-        putMsg = new DhtPutMessage(key, (short) 3600, (byte) 3, content);
-        getMsg = new DhtGetMessage(MyRandom.randBytes(32));
+        putMsg = new DhtPutMessage(new DHTKey(key),
+                (short) 3600, (byte) 3, new DHTContent(content));
+        getMsg = new DhtGetMessage(new DHTKey(MyRandom.randBytes(32)));
     }
 
     @Before
@@ -88,11 +91,11 @@ public class StreamTokenizerTest {
         assertTrue("Messages didn't match", testResult);
     }
 
-    private class MessageHandlerImpl implements MessageHandler {
+    private class MessageHandlerImpl extends MessageHandler<Void, Void> {
         int messagesReceived;
 
         @Override
-        public void handleMessage(Message message) {
+        public Void handleMessage(Message message, Void nothing) {
             boolean test = false;
 
             if (0 == messagesReceived)
@@ -100,10 +103,11 @@ public class StreamTokenizerTest {
             if (1 == messagesReceived)
                 test = message.equals(getMsg);
             if (!test)
-                return;
+                return null;
             messagesReceived++;
             if (2 == messagesReceived)
                 testResult = true;
+            return null;
         }
     }
 
