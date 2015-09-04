@@ -83,6 +83,7 @@ public class ProtocolServerTest {
 
     @BeforeClass
     public static void setUpClass() {
+        Logger.getGlobal().setLevel(Level.INFO);
     }
 
     @AfterClass
@@ -118,13 +119,15 @@ public class ProtocolServerTest {
         compareMessage = dhtGetMsg;
         client.sendMsg(dhtGetMsg);
         client.receive(new ClientMessageHandler());
+        channelGroup.shutdown();
         try {
             assertTrue(channelGroup.awaitTermination(300, TimeUnit.SECONDS));
         } catch (InterruptedException ex) {
             Assume.assumeNoException(ex);
         }
-        client.disconnect();
         assertTrue(success);
+        Logger.getGlobal().log(Level.INFO,
+            "The above warning is expected as part of this test; the sky isn't falling");
     }
 
     private boolean success = false;

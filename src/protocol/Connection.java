@@ -20,7 +20,7 @@ import java.util.logging.Logger;
  * @author totakura
  */
 public class Connection<A> {
-    private static final Logger logger = Logger.getLogger(Connection.class.getName());
+    private static final Logger logger = Logger.getGlobal();
     private final AsynchronousSocketChannel channel;
     private final ByteBuffer readBuffer;
     private final ByteBuffer writeBuffer;
@@ -59,8 +59,6 @@ public class Connection<A> {
     }
 
     public void disconnect() {
-        tokenizer.reset();
-        writeQueue.clear();
         logger.fine("Disconnecting client");
         try {
             channel.close();
@@ -82,10 +80,15 @@ public class Connection<A> {
                 channel.write(writeBuffer, connection, writeCompletionHandler);
                 return;
             }
+            writeBuffer.clear();
             if (writeQueue.isEmpty())
+            {
                 writeQueued = false;
-            else
-                channel.write(readBuffer, connection, writeCompletionHandler);
+                return;
+            }
+            Message message = writeQueue.remove();
+            message.send(writeBuffer);
+            channel.write(writeBuffer, connection, writeCompletionHandler);
         }
 
         @Override
@@ -117,6 +120,7 @@ public class Connection<A> {
             if (result <= 0) {
                 logger.warning("Failed to read");
                 disconnect();
+                return;
             }
             readBuffer.flip();
             try {
