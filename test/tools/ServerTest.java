@@ -83,6 +83,7 @@ public class ServerTest {
             assertTrue("clients didn't finish",
                     clientChannelGroup.awaitTermination(300, TimeUnit.SECONDS));
             server.stop();
+            serverChannelGroup.shutdown();
             assertTrue("server didn't finish",
                     serverChannelGroup.awaitTermination(1, TimeUnit.SECONDS));
             for (EchoClient client : clients) {
@@ -177,7 +178,7 @@ public class ServerTest {
         @Override
         protected void handleNewClient(AsynchronousSocketChannel channel) {
             new EchoServerClient(channel);
-            logger.log(Level.INFO, "Clients Handled: {0}", ++clientsHandled);
+            logger.log(Level.FINE, "Clients Handled: {0}", ++clientsHandled);
         }
     }
 
