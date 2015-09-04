@@ -6,7 +6,9 @@
 package protocol;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.LinkedList;
@@ -59,10 +61,8 @@ public class Connection<A> {
     public void disconnect() {
         tokenizer.reset();
         writeQueue.clear();
-        readBuffer.clear();
-        writeBuffer.clear();
+        logger.fine("Disconnecting client");
         try {
-            logger.fine("Disconnecting client");
             channel.close();
         } catch (IOException ex) {
             logger.warning(ex.toString());
@@ -137,5 +137,14 @@ public class Connection<A> {
         }
     }
 
+    public static Connection create(SocketAddress socketAddress,
+            AsynchronousChannelGroup channelGroup) throws IOException {
+        AsynchronousSocketChannel channel = AsynchronousSocketChannel.open(channelGroup);
+        channel.connect(socketAddress);
+        return new Connection(channel);
+    }
 
+    public static Connection create(SocketAddress socketAddress) throws IOException {
+        return create(socketAddress, null);
+    }
 }

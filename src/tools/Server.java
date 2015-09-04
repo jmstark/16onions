@@ -36,7 +36,6 @@ public abstract class Server {
     }
 
     public void stop() throws IOException {
-        this.channelGroup.shutdownNow();
         this.serverChannel.close();
     }
 
