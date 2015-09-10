@@ -4,6 +4,8 @@
  */
 package protocol;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
@@ -12,18 +14,25 @@ import java.nio.charset.StandardCharsets;
  * @author Emertat
  */
 public class Hop {
-    private String ID, IPv4, IPv6;
+
+    private byte[] ID, IPv4, IPv6;
     private int KX_port;
 
-    public void setID(String ID) {
+    Hop(byte[] ID, byte[] IPv4, byte[] IPv6){
+        this.setID(ID);
+        this.setIPv4(IPv4);
+        this.setIPv6(IPv6);
+    }
+
+    public void setID(byte[] ID) {
         this.ID = ID;
     }
 
-    public void setIPv4(String IPv4) {
+    public void setIPv4(byte[] IPv4) {
         this.IPv4 = IPv4;
     }
 
-    public void setIPv6(String IPv6) {
+    public void setIPv6(byte[] IPv6) {
         this.IPv6 = IPv6;
     }
 
@@ -31,15 +40,15 @@ public class Hop {
         this.KX_port = KX_port;
     }
 
-    public String getID() {
+    public byte[] getID() {
         return ID;
     }
 
-    public String getIPv4() {
+    public byte[] getIPv4() {
         return IPv4;
     }
 
-    public String getIPv6() {
+    public byte[] getIPv6() {
         return IPv6;
     }
 
@@ -49,20 +58,29 @@ public class Hop {
 
     @Override
     public String toString() {
-        String res = getID() + Protocol.twoBytesFormat(getKX_port());
-        for(int i = 0 ; i < Protocol.DHT_TRACE_REPLY_RESERVED_BYTES; i++){
-            res +="-";
+        StringBuilder strBuilder = new StringBuilder(256);
+        try {
+            if (null != this.IPv4) {
+                strBuilder.append(InetAddress.getByAddress(this.IPv4).toString());
+                strBuilder.append('/');
+            }
+            if (null != this.IPv6) {
+                strBuilder.append(InetAddress.getByAddress(this.IPv6).toString());
+            }
+        } catch (UnknownHostException e) {
+            assert (false);
         }
-        res += getIPv4() + getIPv6();
-        return res;
+        strBuilder.append(':');
+        strBuilder.append(this.KX_port);
+        return strBuilder.toString();
     }
 
     public void serialize(ByteBuffer out) {
-        out.put(this.ID.getBytes(StandardCharsets.US_ASCII));
-        out.putShort( (short) this.KX_port);
+        out.put(this.ID);
+        out.putShort((short) this.KX_port);
         out.putShort((short) 0);//reserved
-        out.put(this.IPv4.getBytes(StandardCharsets.US_ASCII));
-        out.put(this.IPv6.getBytes(StandardCharsets.US_ASCII));
+        out.put(this.IPv4);
+        out.put(this.IPv6);
     }
 
     //ID: 32; KX port + reserved: 4; IPv4: 4; IPv6: 16
