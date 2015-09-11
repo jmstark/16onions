@@ -8,6 +8,9 @@ package protocol;
 import java.nio.ByteBuffer;
 import protocol.Protocol.MessageType;
 import protocol.dht.DhtMessage;
+import protocol.kx.KxTunnelBuildMessage;
+import protocol.kx.KxTunnelDestroyMessage;
+import protocol.kx.KxTunnelReadyMessage;
 
 /**
  *
@@ -48,6 +51,12 @@ public abstract class Message {
         out.putShort( (short) this.type.getNumVal());
     }
 
+    protected final void sendEmptyBytes(ByteBuffer out, int nbytes) {
+        assert (0 < nbytes);
+        byte[] zeros = new byte[nbytes];
+        out.put(zeros);
+    }
+
     public static Message parseMessage (ByteBuffer buf){
         int size;
         MessageType type;
@@ -64,9 +73,11 @@ public abstract class Message {
                 return DhtMessage.parse(buf, type);
             case KX_TN_BUILD_IN:
             case KX_TN_BUILD_OUT:
+                return KxTunnelBuildMessage.parse(buf, type);
             case KX_TN_DESTROY:
+                return KxTunnelDestroyMessage.parse(buf);
             case KX_TN_READY:
-                assert (false);
+                return KxTunnelReadyMessage.parse(buf);
             default:
                 assert (false);
         }
