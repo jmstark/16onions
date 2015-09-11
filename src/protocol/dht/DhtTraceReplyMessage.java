@@ -38,14 +38,10 @@ public class DhtTraceReplyMessage extends DhtMessage {
         }
     }
 
-    private static Hop parseHop (ByteBuffer buf) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
     public static DhtTraceReplyMessage parse(final ByteBuffer buf, DHTKey key) {
         DhtTraceReplyMessage msg = new DhtTraceReplyMessage(key);
         Hop hop;
-        while (null != (hop = parseHop(buf))){
+        while (null != (hop = Hop.parse(buf))){
             msg.addHop(hop);
         }
         return msg;

@@ -18,6 +18,7 @@ public class DhtGetReplyMessage extends DhtMessage {
     public DhtGetReplyMessage(DHTKey key, DHTContent content) {
         this.addKey(key);
         this.content = content;
+        this.size += content.getValue().length;
     }
 
     @Override
