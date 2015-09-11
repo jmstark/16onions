@@ -1,0 +1,22 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package protocol.kx;
+
+import protocol.Hop;
+import protocol.Protocol;
+
+/**
+ *
+ * @author troll
+ */
+public class KxTunnelBuildOutgoingMessage extends KxTunnelBuildMessage {
+
+    public KxTunnelBuildOutgoingMessage(byte nhops, byte[] pseudoID, Hop exchangePoint) {
+        super(nhops, pseudoID, exchangePoint);
+        this.addHeader(Protocol.MessageType.KX_TN_BUILD_OUT);
+    }
+
+}

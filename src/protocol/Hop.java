@@ -13,30 +13,18 @@ import java.nio.charset.StandardCharsets;
  *
  * @author Emertat
  */
-public class Hop {
+public final class Hop {
 
-    private byte[] ID, IPv4, IPv6;
-    private int KX_port;
+    private final byte[] ID, IPv4, IPv6;
+    private final short KX_port;
 
-    Hop(byte[] ID, byte[] IPv4, byte[] IPv6){
-        this.setID(ID);
-        this.setIPv4(IPv4);
-        this.setIPv6(IPv6);
-    }
-
-    public void setID(byte[] ID) {
+    Hop(byte[] ID, byte[] IPv4, byte[] IPv6, short KX_port){
+        assert (Protocol.IDENTITY_LENGTH == ID.length);
+        assert (4 == IPv4.length);
+        assert (16 == IPv6.length);
         this.ID = ID;
-    }
-
-    public void setIPv4(byte[] IPv4) {
         this.IPv4 = IPv4;
-    }
-
-    public void setIPv6(byte[] IPv6) {
         this.IPv6 = IPv6;
-    }
-
-    public void setKX_port(int KX_port) {
         this.KX_port = KX_port;
     }
 
@@ -85,4 +73,18 @@ public class Hop {
 
     //ID: 32; KX port + reserved: 4; IPv4: 4; IPv6: 16
     public static final int WIRE_SIZE = 32 + 4 + 4 + 16;
+
+    public static Hop parse (final ByteBuffer buf) {
+        byte[] ID, ipv4, ipv6;
+        short port;
+        port = buf.getShort();
+        buf.position(buf.position() + 2); //skip 2 reserved bytes
+        ID = new byte[Protocol.IDENTITY_LENGTH];
+        buf.get(ID);
+        ipv4 = new byte[4];
+        ipv6 = new byte[16];
+        buf.get(ipv4);
+        buf.get(ipv6);
+        return new Hop (ID, ipv4, ipv6, port);
+    }
 }
