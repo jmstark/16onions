@@ -18,7 +18,8 @@ import protocol.Configuration;
 import protocol.Connection;
 import protocol.Message;
 import protocol.ProtocolServer;
-import protocol.kx.*;
+import protocol.kx.KxTunnelBuildMessage;
+import protocol.kx.KxTunnelReadyMessage;
 
 /**
  *
@@ -54,6 +55,7 @@ public class DummyKX extends ProtocolServer {
             if (null != ipv4_address && null != ipv6_address)
                 break;
         }
+        assert ((null != ipv4_address) || (null != ipv6_address));
     }
 
     @Override
@@ -72,6 +74,7 @@ public class DummyKX extends ProtocolServer {
                 buildMsg = (KxTunnelBuildMessage) message;
                 tunReadyMsg = new KxTunnelReadyMessage(buildMsg.getPseudoID(),
                     ipv4_address, ipv6_address);
+                connection.sendMsg(tunReadyMsg);
             }
             case KX_TN_DESTROY:
                 logger.info("Received TUN_DESTROY.");
