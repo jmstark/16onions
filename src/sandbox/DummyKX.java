@@ -69,12 +69,14 @@ public class DummyKX extends ProtocolServer {
                 tunReadyMsg = new KxTunnelReadyMessage(buildMsg.getPseudoID(),
                         new byte[4], new byte[16]);
                 connection.sendMsg(tunReadyMsg);
+                return true;
             }
             case KX_TN_BUILD_OUT: {
                 buildMsg = (KxTunnelBuildMessage) message;
                 tunReadyMsg = new KxTunnelReadyMessage(buildMsg.getPseudoID(),
                     ipv4_address, ipv6_address);
                 connection.sendMsg(tunReadyMsg);
+                return true;
             }
             case KX_TN_DESTROY:
                 logger.info("Received TUN_DESTROY.");
