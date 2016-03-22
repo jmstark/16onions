@@ -38,8 +38,7 @@ public class ServerTest {
     private final Logger logger;
 
     public ServerTest() {
-        logger = Logger.getLogger(ServerTest.class.getName());
-        //logger.setLevel(Level.FINE);
+        logger = Logger.getLogger(ServerTest.class.getName());        
     }
 
     @Before
@@ -55,6 +54,7 @@ public class ServerTest {
     public void testSomeMethod() throws InterruptedException, ExecutionException {
         try {
             final int cores = Runtime.getRuntime().availableProcessors();
+            logger.log(Level.INFO, "Test running with {0} processor cores", cores);
             final ThreadFactory threadFactory = Executors.defaultThreadFactory();
             final AsynchronousChannelGroup serverChannelGroup;
             int port;
@@ -210,6 +210,7 @@ public class ServerTest {
             private ConnectHandler(){this.retries = 0;}
             @Override
             public void completed(Void v, Void a) {
+                logger.fine("Client connected to server");
                 connection.write(writeBuffer, null, writeHandler);
                 connection.read(readBuffer, null, readHandler);
             }
@@ -218,7 +219,7 @@ public class ServerTest {
             public void failed(Throwable thrwbl, Void a) {
                 if (retries < 3)
                 {
-                    logger.info("Connect failed; retrying");
+                    logger.warning("Connect failed; retrying");
                     connection.connect(remoteSocket, null, this);
                     retries++;
                     return;
@@ -237,8 +238,10 @@ public class ServerTest {
             @Override
             public void completed(Integer v, Void a) {
                 if (writeBuffer.hasRemaining()) {
+                    logger.fine(String.format("Writing {0} bytes", writeBuffer.hasRemaining()));
                     connection.write(writeBuffer, null, this);
                 }
+                logger.log(Level.FINE, "Finished writing");
             }
 
             @Override
