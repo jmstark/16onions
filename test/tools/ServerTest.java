@@ -35,10 +35,10 @@ import org.junit.Test;
  */
 public class ServerTest {
 
-    private final Logger logger;
+    private final Logger clientLogger;
 
     public ServerTest() {
-        logger = Logger.getLogger(ServerTest.class.getName());        
+        clientLogger = Logger.getLogger("Client");
     }
 
     @Before
@@ -51,14 +51,14 @@ public class ServerTest {
     }
 
     @Test
-    public void testSomeMethod() throws InterruptedException, ExecutionException {
-        try {
+    public void testSomeMethod() throws InterruptedException,
+            ExecutionException, IOException {
             final int cores = Runtime.getRuntime().availableProcessors();
-            logger.log(Level.INFO, "Test running with {0} processor cores", cores);
+            //logger.log(Level.INFO, "Test running with {0} processor cores", cores/2);
             final ThreadFactory threadFactory = Executors.defaultThreadFactory();
             final AsynchronousChannelGroup serverChannelGroup;
             int port;
-            serverChannelGroup = AsynchronousChannelGroup.withFixedThreadPool(cores, threadFactory);
+            serverChannelGroup = AsynchronousChannelGroup.withFixedThreadPool(cores/2, threadFactory);
             Server server = null;
             for (port = 6001; (null == server) && (port < 6999); port++) {
                 try {
@@ -72,20 +72,24 @@ public class ServerTest {
             Assume.assumeTrue(null != server);
             server.start();
 
-            ExecutorService clientThreadPool = Executors.newFixedThreadPool(2);
+            ExecutorService clientThreadPool = Executors.newFixedThreadPool(cores/2);
             AsynchronousChannelGroup clientChannelGroup;
             clientChannelGroup = AsynchronousChannelGroup.withThreadPool(clientThreadPool);
-            EchoClient[] clients = new EchoClient[500];
+            EchoClient[] clients = new EchoClient[50000];
             for (int i = 0; i < clients.length; i++) {
-                clients[i] = new EchoClient(port, clientChannelGroup);
+                clients[i] = new EchoClient(port, clientChannelGroup, i);
+                if (499 == (i % 500)) {
+                    Thread.sleep(500);
+                }
             }
+            Thread.sleep(500);
             clientChannelGroup.shutdown();
             assertTrue("clients didn't finish",
                     clientChannelGroup.awaitTermination(300, TimeUnit.SECONDS));
             server.stop();
             serverChannelGroup.shutdown();
             assertTrue("server didn't finish",
-                    serverChannelGroup.awaitTermination(1, TimeUnit.SECONDS));
+                    serverChannelGroup.awaitTermination(30, TimeUnit.SECONDS));
             for (EchoClient client : clients) {
                 assertTrue(client.success);
             }
@@ -95,10 +99,6 @@ public class ServerTest {
             if (!serverChannelGroup.isShutdown()) {
                 serverChannelGroup.shutdownNow();
             }
-        } catch (IOException ex) {
-            Logger.getLogger(ServerTest.class.getName()).log(Level.SEVERE, null, ex);
-            fail();
-        }
     }
 
     private class EchoServerClient {
@@ -107,12 +107,14 @@ public class ServerTest {
         private final ReadHandler readHandler;
         private final WriteHandler writeHandler;
         private final AsynchronousSocketChannel channel;
+        private Logger logger;
 
-        EchoServerClient(AsynchronousSocketChannel channel) {
+        EchoServerClient(AsynchronousSocketChannel channel, int clientId) {
             this.channel = channel;
             this.buffer = ByteBuffer.allocate(1024);
             this.readHandler = new ReadHandler();
             this.writeHandler = new WriteHandler();
+            this.logger = Logger.getLogger(String.format("ServerClient[{0}]", clientId));
             channel.read(buffer, this, readHandler);
         }
 
@@ -170,14 +172,16 @@ public class ServerTest {
 
     private class EchoServer extends Server {
         private int clientsHandled;
+        private Logger logger;
 
         public EchoServer(SocketAddress SockAddr, AsynchronousChannelGroup channelGroup) throws IOException {
             super(SockAddr, channelGroup);
+            this.logger = Logger.getLogger("Server");
         }
 
         @Override
         protected void handleNewClient(AsynchronousSocketChannel channel) {
-            new EchoServerClient(channel);
+            new EchoServerClient(channel, clientsHandled);
             logger.log(Level.FINE, "Clients Handled: {0}", ++clientsHandled);
         }
     }
@@ -192,8 +196,10 @@ public class ServerTest {
         private ByteBuffer readBuffer;
         private boolean success;
         private SocketAddress remoteSocket;
+        private Logger logger;
+        private int clientId;
 
-        private EchoClient(int port, AsynchronousChannelGroup pool) throws IOException {
+        private EchoClient(int port, AsynchronousChannelGroup pool, int clientId) throws IOException {
             this.success = false;
             this.randBytes = MyRandom.randBytes(4 * 1024);
             this.writeBuffer = ByteBuffer.wrap(randBytes);
@@ -203,6 +209,8 @@ public class ServerTest {
             this.connection = AsynchronousSocketChannel.open(pool);
             this.remoteSocket = new InetSocketAddress(port);
             this.connection.connect(this.remoteSocket, null, new ConnectHandler());
+            this.logger = clientLogger;
+            this.clientId = clientId;
         }
 
         private class ConnectHandler implements CompletionHandler<Void, Void> {
@@ -210,7 +218,7 @@ public class ServerTest {
             private ConnectHandler(){this.retries = 0;}
             @Override
             public void completed(Void v, Void a) {
-                logger.fine("Client connected to server");
+                logger.log(Level.FINE, "{0}-connected to server", clientId);
                 connection.write(writeBuffer, null, writeHandler);
                 connection.read(readBuffer, null, readHandler);
             }
@@ -219,13 +227,15 @@ public class ServerTest {
             public void failed(Throwable thrwbl, Void a) {
                 if (retries < 3)
                 {
-                    logger.warning("Connect failed; retrying");
+                    logger.log(Level.WARNING,"{0}-connect failed; retrying", clientId);
                     connection.connect(remoteSocket, null, this);
                     retries++;
                     return;
                 }
                 try {
-                    logger.log(Level.WARNING, "client: closing connection due to {0}", thrwbl.toString());
+                    logger.log(Level.WARNING,
+                               "{0}-closing connection due to {1}",
+                                new Object[]{clientId, thrwbl.toString()});
                     connection.close();
                 } catch (IOException ex) {
 
@@ -238,16 +248,18 @@ public class ServerTest {
             @Override
             public void completed(Integer v, Void a) {
                 if (writeBuffer.hasRemaining()) {
-                    logger.fine(String.format("Writing {0} bytes", writeBuffer.hasRemaining()));
+                    logger.log(Level.FINE, "{0}-Writing {1} bytes",
+                                new Object[] {clientId, writeBuffer.hasRemaining()});
                     connection.write(writeBuffer, null, this);
                 }
-                logger.log(Level.FINE, "Finished writing");
+                logger.log(Level.FINE, "{0}-Finished writing", clientId);
             }
 
             @Override
             public void failed(Throwable thrwbl, Void a) {
                 try {
-                    logger.log(Level.WARNING, "client: closing connection due to {0}", thrwbl.toString());
+                    logger.log(Level.WARNING, "{0}-closing connection due to {1}",
+                            new Object[]{clientId, thrwbl.toString()});
                     connection.close();
                 } catch (IOException ex) {
 
@@ -267,7 +279,7 @@ public class ServerTest {
                 readBuffer.flip();
                 byte[] readBytes = readBuffer.array();
                 success = Arrays.equals(readBytes, randBytes);
-                logger.fine("client: closing connection");
+                logger.log(Level.FINE, "{0}-closing connection", clientId);
                 try {
                     connection.close();
                 } catch (IOException ex) {
