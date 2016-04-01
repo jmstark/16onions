@@ -12,9 +12,9 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import protocol.Configuration;
 import protocol.Protocol;
-import tools.Logger;
 
 /**
  *
@@ -22,10 +22,12 @@ import tools.Logger;
  */
 public class DummyVOIP {
 
+    final Logger logger;
     Configuration conf;
 
     public DummyVOIP(String confFile) {
         conf = new Configuration(new File(confFile));
+        logger = Logger.getLogger(this.getClass().getName());
     }
 
     /**
@@ -48,8 +50,10 @@ public class DummyVOIP {
             socket.close();
             return Protocol.get_TN_READY_IPv4(reply);
         } catch (Exception ex) {
-            Logger.logEvent(" Dummy Voip Failed to send tunnel build request."
-                    + "error details: " + ex.getMessage());
+            logger.log(Level.WARNING,
+                    "Dummy Voip Failed to send tunnel build request." + 
+                            "error details: {0}",
+                    ex.getMessage());
             return null;
         }
     }
@@ -58,24 +62,27 @@ public class DummyVOIP {
         try {
             Socket socket = new Socket(conf.getKXHost(), conf.getKXPort());
             socket.setSoTimeout(60000); // 60 seconds.
-            PrintWriter out = new PrintWriter(socket.getOutputStream());
-            out.print(Protocol.create_TN_DESTROY(identity));
-            out.close();
+            try (PrintWriter out = new PrintWriter(socket.getOutputStream())) {
+                out.print(Protocol.create_TN_DESTROY(identity));
+            }
         } catch (Exception ex) {
-            Logger.logEvent(" Dummy Voip Failed to send tunnel destroy request."
-                    + "error details: " + ex.getMessage());
+            logger.log(Level.WARNING,
+                    " Dummy Voip Failed to send tunnel destroy request." +
+                            "error details: {0}",
+                    ex.getMessage());
         }
     }
 
     public void send(String ip, int port, String content) {
         try {
             Socket socket = new Socket(ip, port);
-            PrintWriter out = new PrintWriter(socket.getOutputStream());
-            out.print(content);
-            out.close();
+            try (PrintWriter out = new PrintWriter(socket.getOutputStream())) {
+                out.print(content);
+            }
         } catch (Exception ex) {
-            Logger.logEvent(" Dummy Voip Failed to send data. error details: "
-                    + ex.getMessage());
+            logger.log(Level.WARNING,
+                    "Dummy Voip Failed to send data. error details: {0}",
+                    ex.getMessage());
         }
     }
 }
