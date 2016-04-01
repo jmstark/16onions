@@ -1,0 +1,22 @@
+
+
+
+Testing Caveats
+===============
+
+In test cases for the server implementation, lot of clients try to open
+connections to the server.  This works until the system runs out of ports and
+the connect() syscall fails with address unavailable error.  Observing
+experimentally, this seems to happen after ~24500 connections.
+
+This behavior is due to TCP connections waiting in TCP_WAIT state.  TCP_WAIT is
+configured by default to have a timeout of ~1 minute.
+
+To fix this, you have to either shrink the TCP_WAIT timeout to 1 sec.  This is
+not a problem for testing as the test cases use loopback interface.  However,
+you should be careful to reset TCP_WAIT timeout to the default setting
+afterwards.
+
+An another way, on Linux, is to enable TCP_TW_REUSE.  This is done by writing
+`1' to /proc/sys/net/ipv4/tcp_tw_reuse.  This causes new TCP connections to
+reuse the ports occupied by TCP connections in TCP_WAIT state.
