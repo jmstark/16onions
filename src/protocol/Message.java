@@ -8,6 +8,7 @@ package protocol;
 import java.nio.ByteBuffer;
 import protocol.Protocol.MessageType;
 import protocol.dht.DhtMessage;
+import protocol.gossip.GossipMessage;
 import protocol.kx.KxTunnelBuildMessage;
 import protocol.kx.KxTunnelDestroyMessage;
 import protocol.kx.KxTunnelReadyMessage;
@@ -57,7 +58,7 @@ public abstract class Message {
         out.put(zeros);
     }
 
-    public static Message parseMessage (ByteBuffer buf){
+    public static Message parseMessage (ByteBuffer buf) throws MessageParserException{
         int size;
         MessageType type;
 
@@ -78,6 +79,8 @@ public abstract class Message {
                 return KxTunnelDestroyMessage.parse(buf);
             case KX_TN_READY:
                 return KxTunnelReadyMessage.parse(buf);
+            case GOSSIP:
+                return GossipMessage.parse(buf);
             default:
                 assert (false);
         }
