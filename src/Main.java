@@ -15,7 +15,6 @@ import protocol.Configuration;
 import protocol.Protocol;
 import proxy.DHTProxy;
 import proxy.KXProxy;
-import sandbox.DummyDHT;
 
 /*
  * To change this template, choose Tools | Templates
