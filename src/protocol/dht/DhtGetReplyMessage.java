@@ -27,10 +27,10 @@ public class DhtGetReplyMessage extends DhtMessage {
         out.put(content.getValue());
     }
 
-    public static DhtGetReplyMessage parse (final ByteBuffer buf, DHTKey key) {
+    public static DhtGetReplyMessage parse(final ByteBuffer buf, DHTKey key) {
         byte[] content = new byte[buf.remaining()];
         buf.get(content);
-        return new DhtGetReplyMessage (key, new DHTContent(content));
+        return new DhtGetReplyMessage(key, new DHTContent(content));
     }
 
     /**

@@ -37,13 +37,12 @@ public class DummyKX extends ProtocolServer {
         super(socketAddress, channelGroup);
         NetworkInterface netdev;
         netdev = NetworkInterface.getByIndex(0);
-        if (null == netdev)
-        {
+        if (null == netdev) {
             logger.log(Level.WARNING, "no network interfaces found");
             return;
         }
         Enumeration<InetAddress> addresses = netdev.getInetAddresses();
-        while(addresses.hasMoreElements()){
+        while (addresses.hasMoreElements()) {
             InetAddress address = addresses.nextElement();
             if (null != ipv6_address && address instanceof Inet6Address) {
                 ipv6_address = address.getAddress();
@@ -52,8 +51,9 @@ public class DummyKX extends ProtocolServer {
             if (null != ipv4_address && address instanceof Inet4Address) {
                 ipv4_address = address.getAddress();
             }
-            if (null != ipv4_address && null != ipv6_address)
+            if (null != ipv4_address && null != ipv6_address) {
                 break;
+            }
         }
         assert ((null != ipv4_address) || (null != ipv6_address));
     }
@@ -74,7 +74,7 @@ public class DummyKX extends ProtocolServer {
             case KX_TN_BUILD_OUT: {
                 buildMsg = (KxTunnelBuildMessage) message;
                 tunReadyMsg = new KxTunnelReadyMessage(buildMsg.getPseudoID(),
-                    ipv4_address, ipv6_address);
+                        ipv4_address, ipv6_address);
                 connection.sendMsg(tunReadyMsg);
                 return true;
             }

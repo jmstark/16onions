@@ -27,23 +27,24 @@ public final class SelectorThread implements Runnable {
     public void addChannel(SelectableChannel ch,
             int ops,
             EventHandler processor) throws ClosedChannelException, ChannelAlreadyRegisteredException {
-        if (null != ch.keyFor(this.selector))
+        if (null != ch.keyFor(this.selector)) {
             throw new ChannelAlreadyRegisteredException();
+        }
         ch.register(this.selector, ops, processor);
     }
 
-    public void modifyChannelInterestOps (SelectableChannel channel, int ops)
+    public void modifyChannelInterestOps(SelectableChannel channel, int ops)
             throws ChannelNotRegisteredException {
         SelectionKey key = channel.keyFor(this.selector);
         if (null == key) {
             throw new ChannelNotRegisteredException();
         }
-        key.interestOps (ops);
+        key.interestOps(ops);
     }
 
     public void removeChannel(SelectableChannel ch) throws ChannelNotRegisteredException {
         SelectionKey key = ch.keyFor(this.selector);
-        if (null == key){
+        if (null == key) {
             throw new ChannelNotRegisteredException();
         }
         key.cancel();
@@ -95,8 +96,9 @@ public final class SelectorThread implements Runnable {
             handler = (EventHandler) readyKey.attachment();
             channel = readyKey.channel();
             iter.remove();
-            if (!readyKey.isValid())
+            if (!readyKey.isValid()) {
                 continue;
+            }
             if (readyKey.isReadable()) {
                 handler.readHandler(channel, this);
             }

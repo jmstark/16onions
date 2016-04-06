@@ -15,9 +15,9 @@ public class MyRandom {
 
     static Random rand;
 
-            static {
-                rand = new Random();
-            }
+    static {
+        rand = new Random();
+    }
 
     /**
      * This is a tool that generates a random ASCII string with the requested
@@ -26,8 +26,8 @@ public class MyRandom {
      * @param length
      * @return
      */
-    public static String randString(int length){
-        return new String (randBytes(length), StandardCharsets.US_ASCII);
+    public static String randString(int length) {
+        return new String(randBytes(length), StandardCharsets.US_ASCII);
     }
 
     public static byte[] randBytes(int length) {
@@ -42,7 +42,7 @@ public class MyRandom {
         return randomNum;
     }
 
-    public static String randLetter(int length){
+    public static String randLetter(int length) {
         char[] s = new char[length];
         for (int i = 0; i < s.length; i++) {
             s[i] = (char) randInt(65, 86);

@@ -30,8 +30,7 @@ public class Protocol {
         KX_TN_READY(602),
         KX_TN_DESTROY(603),
         KX_ERROR(604),
-        GOSSIP(700)
-        ;
+        GOSSIP(700);
         private int numVal;
 
         MessageType(int numVal) {

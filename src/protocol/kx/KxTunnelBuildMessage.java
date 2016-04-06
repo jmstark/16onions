@@ -16,11 +16,12 @@ import protocol.Protocol.MessageType;
  * @author troll
  */
 public abstract class KxTunnelBuildMessage extends Message {
+
     private final byte nhops;
     private final byte[] pseudoID;
     private final Hop exchangePoint;
 
-    KxTunnelBuildMessage(byte nhops, byte[] pseudoID, Hop exchangePoint){
+    KxTunnelBuildMessage(byte nhops, byte[] pseudoID, Hop exchangePoint) {
         //this.addHeader(Protocol.MessageType.KX_TN_BUILD_IN);
         assert (null != exchangePoint);
         this.nhops = nhops;
@@ -33,7 +34,7 @@ public abstract class KxTunnelBuildMessage extends Message {
     }
 
     @Override
-    public void send (ByteBuffer out) {
+    public void send(ByteBuffer out) {
         super.send(out);
         out.put(getNhops());
         this.sendEmptyBytes(out, 3); //3 bytes reserved
@@ -62,7 +63,7 @@ public abstract class KxTunnelBuildMessage extends Message {
         return exchangePoint;
     }
 
-    static final public KxTunnelBuildMessage parse (final ByteBuffer buf,
+    static final public KxTunnelBuildMessage parse(final ByteBuffer buf,
             MessageType type) {
         byte nhops;
         byte[] pseudoID;
@@ -74,9 +75,9 @@ public abstract class KxTunnelBuildMessage extends Message {
         exchangePoint = Hop.parse(buf);
         switch (type) {
             case KX_TN_BUILD_IN:
-                return new KxTunnelBuildIncomingMessage (nhops, pseudoID, exchangePoint);
+                return new KxTunnelBuildIncomingMessage(nhops, pseudoID, exchangePoint);
             case KX_TN_BUILD_OUT:
-                return new KxTunnelBuildOutgoingMessage (nhops, pseudoID, exchangePoint);
+                return new KxTunnelBuildOutgoingMessage(nhops, pseudoID, exchangePoint);
 
         }
         assert (false);

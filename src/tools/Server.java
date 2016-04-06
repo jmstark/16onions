@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 /**
  *
  * @author Emertat
+ * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 public abstract class Server {
 
@@ -41,6 +42,7 @@ public abstract class Server {
 
     /**
      * This function is called when a new connection is opened to the server.
+     *
      * @param channel the newly opened channel
      */
     abstract protected void handleNewClient(AsynchronousSocketChannel channel);

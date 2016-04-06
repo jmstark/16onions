@@ -12,12 +12,13 @@ import protocol.Protocol;
  *
  * @author troll
  */
-public class DhtPutMessage extends DhtMessage{
+public class DhtPutMessage extends DhtMessage {
+
     private final short ttl;
     private final byte replication;
     private final DHTContent content;
 
-    public DhtPutMessage(DHTKey key, short ttl, byte replication, DHTContent content){
+    public DhtPutMessage(DHTKey key, short ttl, byte replication, DHTContent content) {
         this.ttl = ttl;
         this.replication = replication;
         this.size += 8; //ttl + replication + reserved
@@ -36,7 +37,7 @@ public class DhtPutMessage extends DhtMessage{
         out.put(this.content.getValue());
     }
 
-    static public DhtPutMessage parse (final ByteBuffer buf, DHTKey key){
+    static public DhtPutMessage parse(final ByteBuffer buf, DHTKey key) {
         short ttl = buf.getShort();
         byte replication = buf.get();
         byte reserved1 = buf.get();// skip

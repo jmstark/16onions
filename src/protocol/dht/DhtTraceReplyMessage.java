@@ -18,11 +18,11 @@ public class DhtTraceReplyMessage extends DhtMessage {
 
     private LinkedList<Hop> hops;
 
-    public DhtTraceReplyMessage(DHTKey key){
+    public DhtTraceReplyMessage(DHTKey key) {
         this.addKey(key);
     }
 
-    public void addHop(Hop hop){
+    public void addHop(Hop hop) {
         hops.add(hop);
         this.size += Hop.WIRE_SIZE;
     }
@@ -32,16 +32,16 @@ public class DhtTraceReplyMessage extends DhtMessage {
         Hop hop;
         super.send(out);
         ListIterator<Hop> iter = hops.listIterator();
-        while (iter.hasNext()){
+        while (iter.hasNext()) {
             hop = iter.next();
-            hop.serialize (out);
+            hop.serialize(out);
         }
     }
 
     public static DhtTraceReplyMessage parse(final ByteBuffer buf, DHTKey key) {
         DhtTraceReplyMessage msg = new DhtTraceReplyMessage(key);
         Hop hop;
-        while (null != (hop = Hop.parse(buf))){
+        while (null != (hop = Hop.parse(buf))) {
             msg.addHop(hop);
         }
         return msg;

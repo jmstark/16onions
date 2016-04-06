@@ -13,17 +13,18 @@ import protocol.Protocol;
  * @author troll
  */
 public class DhtTraceMessage extends DhtMessage {
-    public DhtTraceMessage(DHTKey key){
+
+    public DhtTraceMessage(DHTKey key) {
         this.addKey(key);
         this.addHeader(Protocol.MessageType.DHT_TRACE);
     }
 
     @Override
-    public void send (ByteBuffer out) {
+    public void send(ByteBuffer out) {
         super.send(out);
     }
 
-    public static DhtTraceMessage parse (final ByteBuffer buf, DHTKey key){
-        return new DhtTraceMessage (key);
+    public static DhtTraceMessage parse(final ByteBuffer buf, DHTKey key) {
+        return new DhtTraceMessage(key);
     }
 }

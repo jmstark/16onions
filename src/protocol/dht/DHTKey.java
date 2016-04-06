@@ -12,12 +12,14 @@ import java.util.Arrays;
  * @author totakura
  */
 public class DHTKey {
+
     byte[] value;
+
     public DHTKey(byte[] key) {
         this.value = key;
     }
 
-    public byte[] getValue () {
+    public byte[] getValue() {
         return this.value;
     }
 

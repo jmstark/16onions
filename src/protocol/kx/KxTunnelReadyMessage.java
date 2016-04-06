@@ -14,11 +14,12 @@ import protocol.Protocol;
  * @author troll
  */
 public class KxTunnelReadyMessage extends Message {
+
     final byte[] pseudoID;
     final byte[] ipv4;
     final byte[] ipv6;
 
-    public KxTunnelReadyMessage (byte[] pseudoID, byte[] ipv4, byte[] ipv6) {
+    public KxTunnelReadyMessage(byte[] pseudoID, byte[] ipv4, byte[] ipv6) {
         assert (Protocol.IDENTITY_LENGTH == pseudoID.length);
         assert (4 == ipv4.length);
         assert (16 == ipv6.length);
@@ -32,7 +33,7 @@ public class KxTunnelReadyMessage extends Message {
         this.addHeader(Protocol.MessageType.KX_TN_READY);
     }
 
-    byte[] getPseudoID () {
+    byte[] getPseudoID() {
         return this.pseudoID;
     }
 
@@ -41,11 +42,11 @@ public class KxTunnelReadyMessage extends Message {
         super.send(out);
         out.put(pseudoID);
         this.sendEmptyBytes(out, 4);
-        out.put (ipv4);
-        out.put (ipv6);
+        out.put(ipv4);
+        out.put(ipv6);
     }
 
-    public static KxTunnelReadyMessage parse (ByteBuffer in) {
+    public static KxTunnelReadyMessage parse(ByteBuffer in) {
         byte[] id, ipv4, ipv6;
         id = new byte[Protocol.IDENTITY_LENGTH];
         ipv4 = new byte[4];
@@ -54,6 +55,6 @@ public class KxTunnelReadyMessage extends Message {
         in.position(in.position() + 4);
         in.get(ipv4);
         in.get(ipv6);
-        return new KxTunnelReadyMessage (id, ipv4, ipv6);
+        return new KxTunnelReadyMessage(id, ipv4, ipv6);
     }
 }

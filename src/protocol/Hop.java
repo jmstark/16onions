@@ -18,7 +18,7 @@ public final class Hop {
     private final byte[] ID, IPv4, IPv6;
     private final short KX_port;
 
-    Hop(byte[] ID, byte[] IPv4, byte[] IPv6, short KX_port){
+    Hop(byte[] ID, byte[] IPv4, byte[] IPv6, short KX_port) {
         assert (Protocol.IDENTITY_LENGTH == ID.length);
         assert (4 == IPv4.length);
         assert (16 == IPv6.length);
@@ -74,7 +74,7 @@ public final class Hop {
     //ID: 32; KX port + reserved: 4; IPv4: 4; IPv6: 16
     public static final int WIRE_SIZE = 32 + 4 + 4 + 16;
 
-    public static Hop parse (final ByteBuffer buf) {
+    public static Hop parse(final ByteBuffer buf) {
         byte[] ID, ipv4, ipv6;
         short port;
         port = buf.getShort();
@@ -85,6 +85,6 @@ public final class Hop {
         ipv6 = new byte[16];
         buf.get(ipv4);
         buf.get(ipv6);
-        return new Hop (ID, ipv4, ipv6, port);
+        return new Hop(ID, ipv4, ipv6, port);
     }
 }

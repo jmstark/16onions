@@ -69,7 +69,7 @@ public class StreamTokenizer {
                     tokenizedCopy = buf.slice();
                     buf.position(buf.position() + this.expect);
                     try {
-                    message = Message.parseMessage(tokenizedCopy);
+                        message = Message.parseMessage(tokenizedCopy);
                     } catch (MessageParserException ex) {
                         throw new ProtocolException("Bad protocol message given");
                     }

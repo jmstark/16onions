@@ -18,17 +18,18 @@ import protocol.kx.KxTunnelReadyMessage;
  * @author troll
  */
 public abstract class Message {
+
     protected int size;
 
     private boolean headerAdded;
     private MessageType type;
 
-    protected Message(){
+    protected Message() {
         this.size = 0;
         this.headerAdded = false;
     }
 
-    protected final void addHeader(MessageType type){
+    protected final void addHeader(MessageType type) {
 
         assert (!this.headerAdded);
         this.headerAdded = true;
@@ -37,19 +38,21 @@ public abstract class Message {
     }
 
     @Override
-    public boolean equals (Object obj) {
-        if (! (obj instanceof Message))
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Message)) {
             return false;
+        }
         Message otherMsg = (Message) obj;
-        if (otherMsg.getSize() != size)
+        if (otherMsg.getSize() != size) {
             return false;
+        }
         return otherMsg.getType() == type;
     }
 
     protected void send(ByteBuffer out) {
         assert (this.headerAdded);
-        out.putShort( (short) this.size);
-        out.putShort( (short) this.type.getNumVal());
+        out.putShort((short) this.size);
+        out.putShort((short) this.type.getNumVal());
     }
 
     protected final void sendEmptyBytes(ByteBuffer out, int nbytes) {
@@ -58,14 +61,14 @@ public abstract class Message {
         out.put(zeros);
     }
 
-    public static Message parseMessage (ByteBuffer buf) throws MessageParserException{
+    public static Message parseMessage(ByteBuffer buf) throws MessageParserException {
         int size;
         MessageType type;
 
         size = buf.getShort();
         type = MessageType.asMessageType(buf.getShort());
         buf.limit(size);
-        switch(type) {
+        switch (type) {
             case DHT_GET:
             case DHT_PUT:
             case DHT_TRACE:

@@ -14,10 +14,11 @@ import protocol.Protocol.MessageType;
  * @author troll
  */
 public abstract class DhtMessage extends Message {
+
     private DHTKey key;
     private boolean keyAdded;
 
-    public void addKey(DHTKey key){
+    public void addKey(DHTKey key) {
         assert (!this.keyAdded);
         this.keyAdded = true;
         this.key = key;
@@ -25,18 +26,18 @@ public abstract class DhtMessage extends Message {
     }
 
     @Override
-    protected void send(ByteBuffer out){
+    protected void send(ByteBuffer out) {
         assert (this.keyAdded);
         super.send(out);
         out.put(key.getValue());
     }
 
-    static public DhtMessage parse (final ByteBuffer buf, MessageType type) {
+    static public DhtMessage parse(final ByteBuffer buf, MessageType type) {
         assert (buf.remaining() >= DHT_KEY_SIZE);
         byte[] keyData = new byte[DHT_KEY_SIZE];
         buf.get(keyData);
         DHTKey key = new DHTKey(keyData);
-        switch(type) {
+        switch (type) {
             case DHT_GET:
                 return DhtGetMessage.parse(buf, key);
             case DHT_PUT:

@@ -12,13 +12,14 @@ import java.util.Arrays;
  * @author totakura
  */
 public class DHTContent {
+
     byte[] value;
 
     public DHTContent(byte[] value) {
         this.value = value;
     }
 
-    public byte[] getValue(){
+    public byte[] getValue() {
         return this.value;
     }
 

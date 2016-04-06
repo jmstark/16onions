@@ -51,8 +51,8 @@ public class DummyVOIP {
             return Protocol.get_TN_READY_IPv4(reply);
         } catch (Exception ex) {
             logger.log(Level.WARNING,
-                    "Dummy Voip Failed to send tunnel build request." + 
-                            "error details: {0}",
+                    "Dummy Voip Failed to send tunnel build request."
+                    + "error details: {0}",
                     ex.getMessage());
             return null;
         }
@@ -67,8 +67,8 @@ public class DummyVOIP {
             }
         } catch (Exception ex) {
             logger.log(Level.WARNING,
-                    " Dummy Voip Failed to send tunnel destroy request." +
-                            "error details: {0}",
+                    " Dummy Voip Failed to send tunnel destroy request."
+                    + "error details: {0}",
                     ex.getMessage());
         }
     }

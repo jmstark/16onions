@@ -8,12 +8,14 @@ package protocol.kx;
 import java.nio.ByteBuffer;
 import protocol.Message;
 import protocol.Protocol;
+
 /**
  *
  * @author troll
  */
-public class KxTunnelDestroyMessage extends Message{
- final byte[] pseudoID;
+public class KxTunnelDestroyMessage extends Message {
+
+    final byte[] pseudoID;
 
     public KxTunnelDestroyMessage(byte[] pseudoID) {
         assert (Protocol.IDENTITY_LENGTH == pseudoID.length);
@@ -22,7 +24,7 @@ public class KxTunnelDestroyMessage extends Message{
         this.addHeader(Protocol.MessageType.KX_TN_DESTROY);
     }
 
-    byte[] getPseudoID () {
+    byte[] getPseudoID() {
         return this.pseudoID;
     }
 
@@ -32,10 +34,10 @@ public class KxTunnelDestroyMessage extends Message{
         out.put(pseudoID);
     }
 
-    public static KxTunnelDestroyMessage parse (ByteBuffer in) {
+    public static KxTunnelDestroyMessage parse(ByteBuffer in) {
         byte[] id;
         id = new byte[Protocol.IDENTITY_LENGTH];
         in.get(id);
-        return new KxTunnelDestroyMessage (id);
+        return new KxTunnelDestroyMessage(id);
     }
 }

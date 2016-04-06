@@ -10,5 +10,5 @@ package tools;
  * @author totakura
  */
 public class ChannelNotRegisteredException extends Exception {
-    
+
 }

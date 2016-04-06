@@ -30,6 +30,7 @@ import protocol.dht.DhtTraceReplyMessage;
  * @author totakura
  */
 public class DummyDHT extends ProtocolServer {
+
     private static final Logger logger = Logger.getLogger(ProtocolServer.class.getName());
     private HashMap<DHTKey, DHTContent> storage;
 
@@ -42,7 +43,7 @@ public class DummyDHT extends ProtocolServer {
     protected boolean handleMessage(Message message, Connection client) {
         DhtMessage dhtMsg = (DhtMessage) message;
         DHTKey key = dhtMsg.getKey();
-        switch(message.getType()) {
+        switch (message.getType()) {
             case DHT_PUT: {
                 DhtPutMessage putMsg = (DhtPutMessage) message;
                 DHTContent content = putMsg.getContent();
@@ -53,8 +54,7 @@ public class DummyDHT extends ProtocolServer {
             case DHT_GET: {
                 DhtGetMessage getMsg = (DhtGetMessage) message;
                 DHTContent content = storage.get(key);
-                if (null != content)
-                {
+                if (null != content) {
                     DhtGetReplyMessage getReplyMsg;
                     getReplyMsg = new DhtGetReplyMessage(key, content);
                     client.sendMsg(getReplyMsg);
@@ -69,7 +69,7 @@ public class DummyDHT extends ProtocolServer {
             }
             case DHT_GET_REPLY:
             case DHT_TRACE_REPLY:
-                logger.log (Level.WARNING, "Unexpected DHT message received");
+                logger.log(Level.WARNING, "Unexpected DHT message received");
                 break;
             default:
         }

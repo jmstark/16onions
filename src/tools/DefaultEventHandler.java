@@ -11,7 +11,7 @@ import java.nio.channels.SelectableChannel;
  *
  * @author totakura
  */
-public class DefaultEventHandler implements EventHandler{
+public class DefaultEventHandler implements EventHandler {
 
     @Override
     public void readHandler(SelectableChannel channel, SelectorThread selector) {
@@ -32,5 +32,5 @@ public class DefaultEventHandler implements EventHandler{
     public void connectHandler(SelectableChannel channel, SelectorThread selector) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-    
+
 }

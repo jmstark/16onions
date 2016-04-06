@@ -10,5 +10,5 @@ package protocol;
  * @author totakura
  */
 public class MessageSizeExceededException extends Exception {
-    
+
 }

@@ -19,13 +19,13 @@ public class Peer {
     private static final int DEFAULT_ADDRESSES = 3;
     private ArrayList<InetSocketAddress> addresses;
     private final Connection connection;
-    
+
     public Peer(InetSocketAddress address, Connection connection) {
         this.connection = connection;
         this.addresses = new ArrayList(DEFAULT_ADDRESSES);
         this.addresses.add(address);
     }
-    
+
     public void sendMessage(Message message) {
         this.connection.sendMsg(message);
     }

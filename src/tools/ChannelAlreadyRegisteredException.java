@@ -9,6 +9,6 @@ package tools;
  *
  * @author totakura
  */
-public class ChannelAlreadyRegisteredException extends Exception{
-    
+public class ChannelAlreadyRegisteredException extends Exception {
+
 }
