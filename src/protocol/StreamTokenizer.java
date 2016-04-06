@@ -9,11 +9,11 @@ import java.nio.ByteBuffer;
 
 /**
  *
- * @author troll
+ * @author Sree Harsha Totakura
  */
 public class StreamTokenizer {
 
-    enum ParseState {
+    private enum ParseState {
         SIZE,
         BODY
     }
@@ -68,7 +68,11 @@ public class StreamTokenizer {
                 case BODY:
                     tokenizedCopy = buf.slice();
                     buf.position(buf.position() + this.expect);
+                    try {
                     message = Message.parseMessage(tokenizedCopy);
+                    } catch (MessageParserException ex) {
+                        throw new ProtocolException("Bad protocol message given");
+                    }
                     if (null == message) {
                         throw new ProtocolException("Bad protocol message given");
                     }

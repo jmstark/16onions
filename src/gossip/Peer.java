@@ -14,9 +14,11 @@ import java.util.ArrayList;
  */
 public class Peer {
     private ArrayList<InetSocketAddress> addresses;
+    private static final int DEFAULT_ADDRESSES = 3;
 
-    public Peer(ArrayList<InetSocketAddress> addresses) {
-        this.addresses = addresses;
+    public Peer(InetSocketAddress address) {
+        this.addresses = new ArrayList(DEFAULT_ADDRESSES);
+        this.addresses.add(address);
     }
 }
 
