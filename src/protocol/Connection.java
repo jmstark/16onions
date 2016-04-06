@@ -19,7 +19,8 @@ import java.util.logging.Logger;
  *
  * @author totakura
  */
-public class Connection<A> {
+public final class Connection<CA, CB> {
+
     private static final Logger logger = Logger.getGlobal();
     private final AsynchronousSocketChannel channel;
     private final ByteBuffer readBuffer;
@@ -29,9 +30,16 @@ public class Connection<A> {
     private final StreamTokenizer tokenizer;
     private boolean writeQueued;
     private final LinkedList<Message> writeQueue;
-    private MessageHandler<A,Boolean> topLevelHandler;
+    private final CB closure;
+    private MessageHandler<CA, Boolean> topLevelHandler;
+    private DisconnectHandler disconnectHandler;
 
     public Connection(AsynchronousSocketChannel channel) {
+        this(channel, null);
+    }
+
+    public Connection(AsynchronousSocketChannel channel,
+            CB closure) {
         this.channel = channel;
         readBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
         writeBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
@@ -39,18 +47,28 @@ public class Connection<A> {
         this.writeQueue = new LinkedList();
         this.readCompletionHandler = new ReadCompletionHandler();
         this.writeCompletionHandler = new WriteCompletionHandler();
-        this.tokenizer = new StreamTokenizer (new ClientMessageHandler());
+        this.tokenizer = new StreamTokenizer(new ClientMessageHandler());
+        this.closure = closure;
     }
 
-    public void receive(MessageHandler<A, Boolean> topLevelHandler) {
+    public final AsynchronousSocketChannel getChannel() {
+        return channel;
+    }
+
+    public void setDisconnectHandler(DisconnectHandler disconnectHandler) {
+        this.disconnectHandler = disconnectHandler;
+    }
+
+    public void receive(MessageHandler<CA, Boolean> topLevelHandler) {
         this.topLevelHandler = topLevelHandler;
         channel.read(readBuffer, this, this.readCompletionHandler);
     }
 
     public void sendMsg(Message message) {
-         writeQueue.add(message);
-        if (writeQueued)
+        writeQueue.add(message);
+        if (writeQueued) {
             return;
+        }
         message = writeQueue.remove();
         message.send(writeBuffer);
         writeBuffer.flip();
@@ -59,6 +77,9 @@ public class Connection<A> {
     }
 
     public void disconnect() {
+        if (null != this.disconnectHandler) {
+            disconnectHandler.handleDisconnect();
+        }
         logger.fine("Disconnecting client");
         try {
             channel.close();
@@ -68,21 +89,20 @@ public class Connection<A> {
     }
 
     private class WriteCompletionHandler implements CompletionHandler<Integer, Connection> {
+
         @Override
         public void completed(Integer result, Connection connection) {
             if (result <= 0) {
                 logger.warning("Write channel closed while trying to writing");
                 disconnect();
             }
-            if (writeBuffer.hasRemaining())
-            {
+            if (writeBuffer.hasRemaining()) {
                 writeBuffer.compact();
                 channel.write(writeBuffer, connection, writeCompletionHandler);
                 return;
             }
             writeBuffer.clear();
-            if (writeQueue.isEmpty())
-            {
+            if (writeQueue.isEmpty()) {
                 writeQueued = false;
                 return;
             }
@@ -101,18 +121,21 @@ public class Connection<A> {
      * Simple message handler which logs each received message
      */
     private class ClientMessageHandler extends MessageHandler<Void, Void> {
+
         @Override
-        public Void handleMessage (Message message, Void nothing) {
+        public Void handleMessage(Message message, Void nothing) {
             boolean keepAlive;
             logger.log(Level.FINE, "Received message of type: {0}", message.getType().name());
             keepAlive = topLevelHandler.handleMessage(message);
-            if (!keepAlive)
+            if (!keepAlive) {
                 disconnect();
+            }
             return null;
         }
     }
 
     private class ReadCompletionHandler implements CompletionHandler<Integer, Connection> {
+
         @Override
         public void completed(Integer result, Connection connection) {
             boolean waiting;

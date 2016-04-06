@@ -26,7 +26,7 @@ public abstract class MessageHandler<A, B> {
 
     protected abstract B handleMessage(Message message, A a);
 
-    public final B handleMessage(Message message) {
+    final B handleMessage(Message message) {
         return handleMessage(message, a);
     }
 }

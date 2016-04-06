@@ -14,54 +14,75 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
+import protocol.DisconnectHandler;
 import protocol.Message;
 import protocol.ProtocolServer;
 
 /**
  * Server for handling Gossip P2P connections.
- * @author totakura
+ *
+ * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class GossipServer extends ProtocolServer {
+public class GossipServer extends ProtocolServer<Peer> {
 
-    private Logger logger;
+    private static final Logger LOGGER = Logger.getLogger("Gossip");
     private LinkedList<Peer> peers;
+    private int max_peers;
 
-    public GossipServer(SocketAddress socketAddress, AsynchronousChannelGroup channelGroup) throws IOException {
+    public GossipServer(SocketAddress socketAddress,
+            AsynchronousChannelGroup channelGroup,
+            int max_peers) throws IOException {
         super(socketAddress, channelGroup);
-        this.logger = Logger.getLogger("Gossip");
+        this.max_peers = max_peers;
     }
 
     @Override
-    protected void handleNewClient(AsynchronousSocketChannel channel) {
+    protected Peer handleNewClient(Connection connection) {
+        AsynchronousSocketChannel channel;
         SocketAddress peer_address;
         Peer peer;
+
+        if (peers.size() >= max_peers) {
+            return null;
+        }
+        channel = connection.getChannel();
         try {
             peer_address = channel.getRemoteAddress();
         } catch (IOException exp) {
-            logger.log(Level.WARNING, "Dropping new peer connection: {1}",
+            LOGGER.log(Level.WARNING, "Dropping new peer connection: {0}",
                     exp.toString());
-            closeChannelIgnoringException(channel);
-            return;
+            return null;
         }
         if (!(peer_address instanceof InetSocketAddress)) {
-            logger.log(Level.SEVERE,
+            LOGGER.log(Level.SEVERE,
                     "Peer connected via invalid socket address; dropping");
-            closeChannelIgnoringException(channel);
-            return;
+            return null;
         }
-        peer = new Peer((InetSocketAddress) peer_address);
+        peer = new Peer((InetSocketAddress) peer_address, connection);
         this.peers.add(peer);
-        super.handleNewClient(channel);
+        return peer;
     }
 
     @Override
-    protected boolean handleMessage(Message message, Connection connection) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    protected boolean handleMessage(Message message,
+            Peer peer) {
+        //FIXME: Message handler for P2P messages received from peers
+        return true;
     }
 
-    private static void closeChannelIgnoringException(AsynchronousSocketChannel channel) {
-        try {
-                channel.close();
-            } catch (IOException ex) {/*ignore*/}
+    @Override
+    protected void handleDisconnect(Peer peer) {
+        if (!peers.remove(peer)) {
+            LOGGER.severe("Removing an unknown peer? This is a bug; report it");
+        }
+        LOGGER.log(Level.INFO, "Peer {0} disconnected", peer.toString());
+    }
+
+    public int getMaxPeers() {
+        return max_peers;
+    }
+
+    public void setMaxPeers(int max_peers) {
+        this.max_peers = max_peers;
     }
 }

@@ -42,17 +42,29 @@ public class ProtocolServerTest {
     private DhtMessage compareMessage;
     private Connection client;
 
-    private class ProtocolEchoServer extends ProtocolServer {
+    private class ProtocolEchoServer extends ProtocolServer<Connection> {
 
-        public ProtocolEchoServer(SocketAddress socketAddress, AsynchronousChannelGroup channelGroup) throws IOException {
+        public ProtocolEchoServer(SocketAddress socketAddress,
+                AsynchronousChannelGroup channelGroup) throws IOException {
             super(socketAddress, channelGroup);
         }
 
         @Override
-        protected boolean handleMessage(Message message, Connection connection) {
+        protected boolean handleMessage(Message message,
+                Connection connection) {
             assertEquals(compareMessage, message);
             connection.sendMsg(message);
             return true;
+        }
+
+        @Override
+        protected Connection handleNewClient(Connection connection) {
+            return connection;
+        }
+
+        @Override
+        protected void handleDisconnect(Connection closure) {
+            return; //do nothing
         }
 
     }
