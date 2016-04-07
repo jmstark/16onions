@@ -14,4 +14,8 @@ public class MessageParserException extends Exception {
     public MessageParserException(String description) {
         super(description);
     }
+
+    public MessageParserException() {
+        super();
+    }
 }

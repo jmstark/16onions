@@ -30,7 +30,10 @@ public class Protocol {
         KX_TN_READY(602),
         KX_TN_DESTROY(603),
         KX_ERROR(604),
-        GOSSIP(700);
+        // Gossip API messages
+        GOSSIP(700),
+        //Gossip P2P Messages
+        GOSSIP_HELLO(721);
         private int numVal;
 
         MessageType(int numVal) {
