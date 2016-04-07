@@ -15,30 +15,34 @@ import protocol.Message;
  *
  * @author totakura
  */
-public class Peer {
+final class Peer {
 
     static final int DEFAULT_ADDRESSES = 3;
     private ArrayList<InetSocketAddress> addresses;
     private Connection connection;
 
-    public Peer(InetSocketAddress address) {
+    Peer(InetSocketAddress address) {
         this(address, null);
     }
 
-    public Peer(InetSocketAddress address, Connection connection) {
+    Peer(InetSocketAddress address, Connection connection) {
         this.connection = connection;
         this.addresses = new ArrayList(DEFAULT_ADDRESSES);
         this.addresses.add(address);
     }
 
-    public void addAddress(InetSocketAddress address) {
+    void addAddress(InetSocketAddress address) {
         this.addresses.add(address);
     }
 
-    public void addAddressesFromIterator(Iterator<InetSocketAddress> iterator) {
+    void addAddressesFromIterator(Iterator<InetSocketAddress> iterator) {
         while (iterator.hasNext()) {
             this.addresses.add(iterator.next());
         }
+    }
+
+    Iterator<InetSocketAddress> getAddressIterator() {
+        return addresses.iterator();
     }
 
     /**
@@ -46,14 +50,14 @@ public class Peer {
      *
      * @return true if we have an active connection to this peer; false if not
      */
-    public boolean isConnected() {
+    boolean isConnected() {
         if (null == this.connection) {
             return false;
         }
         return this.connection.getChannel().isOpen();
     }
 
-    public void sendMessage(Message message) {
+    void sendMessage(Message message) {
         this.connection.sendMsg(message);
     }
 }
