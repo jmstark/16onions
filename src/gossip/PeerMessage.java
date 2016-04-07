@@ -26,7 +26,11 @@ import protocol.Protocol.MessageType;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class PeerMessage extends Message {
+abstract class PeerMessage extends Message {
+
+    protected PeerMessage() {
+        super();
+    }
 
     public static PeerMessage parseMessage(ByteBuffer buf)
             throws MessageParserException {

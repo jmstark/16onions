@@ -37,6 +37,7 @@ class HelloMessage extends PeerMessage {
     private final ArrayList<InetSocketAddress> addresses;
 
     HelloMessage(InetSocketAddress sock_address) {
+        super();
         this.addHeader(Protocol.MessageType.GOSSIP_HELLO);
         this.addresses = new ArrayList(Peer.DEFAULT_ADDRESSES);
         this.size += 2; //counter for addresses
@@ -64,6 +65,7 @@ class HelloMessage extends PeerMessage {
             throw new MessageSizeExceededException();
         }
         this.size += addr_size;
+        this.addresses.add(sock_address);
     }
 
     @Override
