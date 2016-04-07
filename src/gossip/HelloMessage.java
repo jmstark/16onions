@@ -114,7 +114,8 @@ class HelloMessage extends PeerMessage {
         byte[] addr_bytes;
         int port;
         int addr_size;
-        message = new HelloMessage();
+
+        message = null;
         while (0 < size) {
             addr_size = buf.getShort();
             switch (addr_size) {
@@ -136,12 +137,16 @@ class HelloMessage extends PeerMessage {
             }
             sock_address = new InetSocketAddress(address, port);
             try {
-                message.addAddress(sock_address);
+                if (null == message) {
+                    message = new HelloMessage(sock_address);
+                } else {
+                    message.addAddress(sock_address);
+                }
             } catch (MessageSizeExceededException ex) {
                 throw new RuntimeException("Control flow error; please report");
             }
         }
-        if (message.addresses.isEmpty()) {
+        if ((null == message) || (message.addresses.isEmpty())) {
             throw new MessageParserException("Invalid HelloMessage with 0 addresses");
         }
         return message;
