@@ -16,8 +16,6 @@
  */
 package gossip;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -42,61 +40,12 @@ class HelloMessage extends PeerMessage {
         this.addresses = new ArrayList(Peer.DEFAULT_ADDRESSES);
         this.size += 2; //counter for addresses
         try {
-            this.addAddress(sock_address);
+            this.addAddress(sock_address, this);
         } catch (MessageSizeExceededException ex) {
             throw new RuntimeException("this should not happen; please report it");
         }
     }
 
-    final void addAddress(InetSocketAddress sock_address) throws MessageSizeExceededException {
-        InetAddress address = sock_address.getAddress();
-        int port = sock_address.getPort();
-        int addr_size = 0;
-        addr_size += 2; //for size
-        addr_size += 2; //for port
-        if (address instanceof Inet4Address) {
-            addr_size += 4;
-        } else if (address instanceof Inet6Address) {
-            addr_size += 16;
-        } else {
-            throw new RuntimeException("Unknown address class");
-        }
-        if ((this.size + addr_size) > Protocol.MAX_MESSAGE_SIZE) {
-            throw new MessageSizeExceededException();
-        }
-        this.size += addr_size;
-        this.addresses.add(sock_address);
-    }
-
-    @Override
-    public final void send(ByteBuffer out) {
-        super.send(out);
-        out.putShort((short) this.addresses.size());
-        for (InetSocketAddress sock_address : this.addresses) {
-            InetAddress address;
-            byte[] addr_bytes;
-            int port;
-            int addr_size;
-            addr_size = 4; // for `size' and `port'
-            port = sock_address.getPort();
-            address = sock_address.getAddress();
-            if (address instanceof Inet4Address) {
-                Inet4Address ipv4;
-                ipv4 = (Inet4Address) address;
-                addr_bytes = ipv4.getAddress();
-            } else if (address instanceof Inet6Address) {
-                Inet6Address ipv6;
-                ipv6 = (Inet6Address) address;
-                addr_bytes = ipv6.getAddress();
-            } else {
-                throw new RuntimeException("Unknown address class");
-            }
-            addr_size += addr_bytes.length;
-            out.putShort((short) addr_size);
-            out.putShort((short) port);
-            out.put(addr_bytes);
-        }
-    }
 
     public final Iterator<InetSocketAddress> getAddressIterator() {
         return this.addresses.iterator();
@@ -111,46 +60,6 @@ class HelloMessage extends PeerMessage {
      */
     static HelloMessage parse(ByteBuffer buf, int size) throws MessageParserException {
         HelloMessage message;
-        InetSocketAddress sock_address;
-        InetAddress address;
-        byte[] addr_bytes;
-        int port;
-        int addr_size;
 
-        message = null;
-        while (0 < size) {
-            addr_size = buf.getShort();
-            switch (addr_size) {
-                case 8:
-                    addr_bytes = new byte[4];
-                    break;
-                case 20:
-                    addr_bytes = new byte[16];
-                    break;
-                default:
-                    throw new MessageParserException("Invalid size for address: " + addr_size + " bytes");
-            }
-            port = buf.getShort();
-            buf.get(addr_bytes);
-            try {
-                address = InetAddress.getByAddress(addr_bytes);
-            } catch (UnknownHostException unknown) {
-                throw new RuntimeException("Control flow error; please report");
-            }
-            sock_address = new InetSocketAddress(address, port);
-            try {
-                if (null == message) {
-                    message = new HelloMessage(sock_address);
-                } else {
-                    message.addAddress(sock_address);
-                }
-            } catch (MessageSizeExceededException ex) {
-                throw new RuntimeException("Control flow error; please report");
-            }
-        }
-        if ((null == message) || (message.addresses.isEmpty())) {
-            throw new MessageParserException("Invalid HelloMessage with 0 addresses");
-        }
-        return message;
     }
 }

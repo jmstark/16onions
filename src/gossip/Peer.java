@@ -45,6 +45,10 @@ final class Peer {
         return addresses.iterator();
     }
 
+    int getAddressCount() {
+        return this.addresses.size();
+    }
+
     /**
      * Return the connection status of this peer.
      *

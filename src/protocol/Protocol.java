@@ -33,8 +33,10 @@ public class Protocol {
         // Gossip API messages
         GOSSIP(700),
         //Gossip P2P Messages
-        GOSSIP_HELLO(721);
-        private int numVal;
+        GOSSIP_HELLO(721),
+        GOSSIP_NEIGHBOURS(722);
+
+        private final int numVal;
 
         MessageType(int numVal) {
             this.numVal = numVal;

@@ -16,36 +16,10 @@
  */
 package gossip;
 
-import java.nio.ByteBuffer;
-import protocol.Message;
-import protocol.MessageParserException;
-import protocol.Protocol;
-import protocol.Protocol.MessageType;
-
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-abstract class PeerMessage extends Message {
+abstract class AddressMessage extends PeerMessage {
 
-    protected PeerMessage() {
-        super();
-    }
-
-    public static PeerMessage parseMessage(ByteBuffer buf)
-            throws MessageParserException {
-        int size;
-        MessageType type;
-
-        size = buf.getShort();
-        type = MessageType.asMessageType(buf.getShort());
-        buf.limit(size);
-        switch (type) {
-            case GOSSIP_HELLO:
-                return HelloMessage.parse(buf);
-            default:
-                assert (false);
-        }
-        throw new RuntimeException("Parsing failed");
-    }
 }
