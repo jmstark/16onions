@@ -6,9 +6,12 @@
 package protocol;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import tools.Server;
 
 /**
@@ -22,55 +25,55 @@ import tools.Server;
  */
 public abstract class ProtocolServer<C> extends Server {
 
-    public ProtocolServer(SocketAddress socketAddress,
+    protected ProtocolServer(SocketAddress socketAddress,
             AsynchronousChannelGroup channelGroup) throws IOException {
         super(socketAddress, channelGroup);
     }
 
     @Override
     protected final void handleNewClient(AsynchronousSocketChannel channel) {
+        ServerClient client;
+        DisconnectHandler disconnectHandler;
         Connection connection;
         C closure;
-        ServerMessageHandler msgHandler;
 
-        connection = new Connection(channel);
+        client = new ServerClient();
+        disconnectHandler = new ClientDisconnectHandler(client);
+        connection = new Connection(channel, disconnectHandler);
         closure = handleNewClient(connection);
         if (null == closure) {
             connection.disconnect();
             return;
         }
-        connection.setDisconnectHandler(new ClientDisconnectHandler(closure));
-        msgHandler = new ServerMessageHandler(closure);
-        connection.receive(msgHandler);
+        client.shutdown = false;
     }
 
-    private class ServerMessageHandler extends MessageHandler<C, Boolean> {
+    private class ServerClient {
+        boolean shutdown;
+        C closure;
 
-        private ServerMessageHandler(C closure) {
-            super(closure);
+        ServerClient() {
+            shutdown = true;
+            closure = null;
+        }
+    }
+
+    private class ClientDisconnectHandler
+            extends DisconnectHandler<ServerClient> {
+
+        public ClientDisconnectHandler(ServerClient client) {
+            super(client);
         }
 
         @Override
-        protected Boolean handleMessage(Message message, C closure) {
-            return ProtocolServer.this.handleMessage(message, closure);
-        }
-    }
-
-    private class ClientDisconnectHandler extends DisconnectHandler<C> {
-
-        private ClientDisconnectHandler(C closure) {
-            super(closure);
-        }
-
-        @Override
-        protected void handleDisconnect(C closure) {
-            ProtocolServer.this.handleDisconnect(closure);
+        protected void handleDisconnect(ServerClient client) {
+            if (client.shutdown) {
+                return;
+            }
+            ProtocolServer.this.handleDisconnect(client.closure);
         }
 
     }
-
-    protected abstract boolean handleMessage(Message message,
-            C closure);
 
     /**
      * Override this function for handling a new connection and associating a

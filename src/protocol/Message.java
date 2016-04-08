@@ -66,35 +66,6 @@ public abstract class Message {
         out.put(zeros);
     }
 
-    public static Message parseMessage(ByteBuffer buf) throws MessageParserException {
-        int size;
-        MessageType type;
-
-        size = buf.getShort();
-        type = MessageType.asMessageType(buf.getShort());
-        buf.limit(size);
-        switch (type) {
-            case DHT_GET:
-            case DHT_PUT:
-            case DHT_TRACE:
-            case DHT_GET_REPLY:
-            case DHT_TRACE_REPLY:
-                return DhtMessage.parse(buf, type);
-            case KX_TN_BUILD_IN:
-            case KX_TN_BUILD_OUT:
-                return KxTunnelBuildMessage.parse(buf, type);
-            case KX_TN_DESTROY:
-                return KxTunnelDestroyMessage.parse(buf);
-            case KX_TN_READY:
-                return KxTunnelReadyMessage.parse(buf);
-            case GOSSIP:
-                return GossipMessage.parse(buf);
-            default:
-                assert (false);
-        }
-        return null;
-    }
-
     /**
      * @return the size
      */

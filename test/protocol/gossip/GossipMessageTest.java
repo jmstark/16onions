@@ -8,15 +8,12 @@ package protocol.gossip;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import org.junit.Assume;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -45,7 +42,7 @@ public class GossipMessageTest {
         Random rnd = new Random();
         this.pages = new LinkedList();
         int n = rnd.nextInt(10) + 1;
-        int size = 0;
+        int size;
         for (; n > 0; n--) {
             size = rnd.nextInt(200) + 1;
             byte[] content = new byte[size];
@@ -58,10 +55,6 @@ public class GossipMessageTest {
     public void tearDown() {
     }
 
-    // TODO add test methods here.
-    // The methods must be annotated with annotation @Test. For example:
-    //
-        
     public GossipMessage create() throws MessageSizeExceededException {
         GossipMessage original = new GossipMessage();
         for (byte[] page : pages) {
@@ -69,7 +62,7 @@ public class GossipMessageTest {
         }
         return original;
     }
-    
+
     @Test
     public void construct() throws MessageSizeExceededException {
         create();
@@ -88,7 +81,9 @@ public class GossipMessageTest {
         ByteBuffer buf = ByteBuffer.allocateDirect(protocol.Protocol.MAX_MESSAGE_SIZE);
         original.send(buf);
         buf.flip();
-        parsed_message = (GossipMessage) protocol.Message.parseMessage(buf);
+        //remove 4 bytes from the buffer
+        buf.position(4);
+        parsed_message = (GossipMessage) GossipMessage.parse(buf);
         Assert.assertTrue(original.equals(parsed_message));
     }
 }

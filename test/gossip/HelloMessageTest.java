@@ -66,7 +66,8 @@ public class HelloMessageTest {
         result.send(out);
         assertFalse(out.remaining() == 2048);
         out.flip();
-        HelloMessage parsed = (HelloMessage) HelloMessage.parseMessage(out);
+        out.position(4); //remove the header
+        HelloMessage parsed = HelloMessage.parse(out);
         assertTrue(parsed.peers.size() > 0);
     }
 

@@ -16,6 +16,7 @@ import org.junit.Test;
 import protocol.dht.DHTContent;
 import protocol.dht.DHTKey;
 import protocol.dht.DhtGetMessage;
+import protocol.dht.DhtMessage;
 import protocol.dht.DhtPutMessage;
 import tools.MyRandom;
 
@@ -35,8 +36,8 @@ public class StreamTokenizerTest {
     }
 
     private Object expResult;
-    private DhtGetMessage getMsg;
-    private DhtPutMessage putMsg;
+    private final DhtGetMessage getMsg;
+    private final DhtPutMessage putMsg;
 
     public StreamTokenizerTest() {
         byte[] key = MyRandom.randBytes(32);
@@ -57,6 +58,7 @@ public class StreamTokenizerTest {
 
     /**
      * Test of input method, of class StreamTokenizer.
+     * @throws java.lang.Exception
      */
     @Test
     public void testInput() throws Exception {
@@ -65,7 +67,7 @@ public class StreamTokenizerTest {
         putMsg.send(buffer);
         getMsg.send(buffer);
         buffer.flip();
-        StreamTokenizer instance = new StreamTokenizer (new MessageHandlerImpl());
+        StreamTokenizer instance = new StreamTokenizer(new MessageHandlerImpl(null));
         assertFalse("The tokenizer still expects input when complete messages are given",
                 instance.input(buffer));
         assertTrue("Messages didn't match", testResult);
@@ -73,7 +75,7 @@ public class StreamTokenizerTest {
 
     @Test
     public void testInputChunkedInput() throws Exception {
-        StreamTokenizer instance = new StreamTokenizer (new MessageHandlerImpl());
+        StreamTokenizer instance = new StreamTokenizer(new MessageHandlerImpl(null));
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         putMsg.send(buffer);
         buffer.flip();
@@ -91,24 +93,34 @@ public class StreamTokenizerTest {
         assertTrue("Messages didn't match", testResult);
     }
 
-    private class MessageHandlerImpl extends MessageHandler<Void, Void> {
+    private class MessageHandlerImpl extends MessageHandler<Void> {
         int messagesReceived;
 
+        public MessageHandlerImpl(Void closure) {
+            super(closure);
+        }
+
         @Override
-        public Void handleMessage(Message message, Void nothing) {
+        public void parseMessage(ByteBuffer buf,
+                Protocol.MessageType type,
+                Void closure) throws MessageParserException {
+            DhtMessage message;
             boolean test = false;
 
-            if (0 == messagesReceived)
+            message = DhtMessage.parse(buf, type);
+            if (0 == messagesReceived) {
                 test = message.equals(putMsg);
-            if (1 == messagesReceived)
+            }
+            if (1 == messagesReceived) {
                 test = message.equals(getMsg);
-            if (!test)
-                return null;
+            }
+            if (!test) {
+                return;
+            }
             messagesReceived++;
-            if (2 == messagesReceived)
+            if (2 == messagesReceived) {
                 testResult = true;
-            return null;
+            }
         }
     }
-
 }

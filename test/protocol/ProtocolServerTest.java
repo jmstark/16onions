@@ -8,7 +8,9 @@ package protocol;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -17,6 +19,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -50,21 +53,41 @@ public class ProtocolServerTest {
         }
 
         @Override
-        protected boolean handleMessage(Message message,
-                Connection connection) {
-            assertEquals(compareMessage, message);
-            connection.sendMsg(message);
-            return true;
-        }
-
-        @Override
         protected Connection handleNewClient(Connection connection) {
+            connection.receive(new ServerMessageHandler(connection));
             return connection;
         }
 
         @Override
         protected void handleDisconnect(Connection closure) {
-            return; //do nothing
+            //do nothing
+        }
+
+        private class ServerMessageHandler extends MessageHandler<Connection> {
+
+            public ServerMessageHandler(Connection closure) {
+                super(closure);
+            }
+
+            @Override
+            public void parseMessage(ByteBuffer buf,
+                    Protocol.MessageType type,
+                    Connection connection) throws MessageParserException {
+                switch (type) {
+                    case DHT_GET:
+                    case DHT_PUT:
+                    case DHT_TRACE:
+                    case DHT_GET_REPLY:
+                    case DHT_TRACE_REPLY:
+                        break;
+                    default:
+                        fail("unknown message received");
+                }
+                DhtMessage message = (DhtMessage) DhtMessage.parse(buf, type);
+                assertEquals(compareMessage, message);
+                connection.sendMsg(message);
+            }
+
         }
 
     }
@@ -105,11 +128,16 @@ public class ProtocolServerTest {
     @Before
     public void setUp() {
         server.start();
+        AsynchronousSocketChannel channel;
+        channel = null;
         try {
-            client = Connection.create(new InetSocketAddress(port), channelGroup);
+            channel = AsynchronousSocketChannel.open(channelGroup);
         } catch (IOException ex) {
             Assume.assumeNoException(ex);
+            throw new RuntimeException();
         }
+        channel.connect(new InetSocketAddress(port));
+        client = new Connection(channel, null);
     }
 
     @After
@@ -130,7 +158,7 @@ public class ProtocolServerTest {
         System.out.println("testing ProtocolServer");
         compareMessage = dhtGetMsg;
         client.sendMsg(dhtGetMsg);
-        client.receive(new ClientMessageHandler());
+        client.receive(new ClientMessageHandler(client));
         channelGroup.shutdown();
         try {
             assertTrue(channelGroup.awaitTermination(300, TimeUnit.SECONDS));
@@ -144,10 +172,27 @@ public class ProtocolServerTest {
 
     private boolean success = false;
 
-    private class ClientMessageHandler extends MessageHandler<Void, Boolean> {
+    private class ClientMessageHandler extends MessageHandler<Connection> {
+
+        public ClientMessageHandler(Connection closure) {
+            super(closure);
+        }
 
         @Override
-        protected Boolean handleMessage(Message message, Void nothing) {
+        public void parseMessage(ByteBuffer buf,
+                Protocol.MessageType type,
+                Connection connection) throws MessageParserException {
+            switch (type) {
+                case DHT_GET:
+                case DHT_PUT:
+                case DHT_TRACE:
+                case DHT_GET_REPLY:
+                case DHT_TRACE_REPLY:
+                    break;
+                default:
+                    fail("unknown message received");
+            }
+            DhtMessage message = (DhtMessage) DhtMessage.parse(buf, type);
             assertEquals(compareMessage, message);
             success = true;
             try {
@@ -155,7 +200,7 @@ public class ProtocolServerTest {
             } catch (IOException ex) {
                 Logger.getLogger(ProtocolServerTest.class.getName()).log(Level.SEVERE, null, ex);
             }
-            return false; //closes the connection
+            connection.disconnect();
         }
     }
 }

@@ -19,7 +19,7 @@ public class StreamTokenizer {
     }
 
     private ParseState state;
-    private final MessageHandler<?, Void> handler;
+    private final MessageHandler handler;
     private int expect;
 
     public StreamTokenizer(MessageHandler handler) {
@@ -44,10 +44,11 @@ public class StreamTokenizer {
      * provided, false is returned. If the input contains multiple messages,
      * then the sufficiency test is made for the last message in the input.
      * @throws ProtocolException
+     * @throws MessageParserException
      */
-    public boolean input(ByteBuffer buf) throws ProtocolException {
+    public boolean input(ByteBuffer buf)
+            throws ProtocolException, MessageParserException {
         ByteBuffer tokenizedCopy;
-        Message message;
 
         while (true) {
             if (buf.remaining() < this.expect) {
@@ -68,20 +69,11 @@ public class StreamTokenizer {
                 case BODY:
                     tokenizedCopy = buf.slice();
                     buf.position(buf.position() + this.expect);
-                    try {
-                        message = Message.parseMessage(tokenizedCopy);
-                    } catch (MessageParserException ex) {
-                        throw new ProtocolException("Bad protocol message given");
-                    }
-                    if (null == message) {
-                        throw new ProtocolException("Bad protocol message given");
-                    }
-                    handler.handleMessage(message);
+                    handler.parseMessage(tokenizedCopy);
                     this.reset();
                     if (buf.remaining() == 0) {
                         return false;
                     }
-                    continue;
             }
         }
     }

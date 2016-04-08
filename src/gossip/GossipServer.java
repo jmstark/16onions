@@ -14,7 +14,6 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
-import protocol.DisconnectHandler;
 import protocol.Message;
 import protocol.ProtocolServer;
 
@@ -60,14 +59,8 @@ public class GossipServer extends ProtocolServer<Peer> {
         }
         peer = new Peer((InetSocketAddress) peer_address, connection);
         this.peers.add(peer);
+        connection.receive(new ServerMessageHandler(peer));
         return peer;
-    }
-
-    @Override
-    protected boolean handleMessage(Message message,
-            Peer peer) {
-        //FIXME: Message handler for P2P messages received from peers
-        return true;
     }
 
     @Override
@@ -84,5 +77,17 @@ public class GossipServer extends ProtocolServer<Peer> {
 
     public void setMaxPeers(int max_peers) {
         this.max_peers = max_peers;
+    }
+    private class ServerMessageHandler extends GossipMessageHandler<Peer> {
+
+        public ServerMessageHandler(Peer closure) {
+            super(closure);
+        }
+
+        @Override
+        void handleMessage(PeerMessage message, Peer closure) {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
     }
 }

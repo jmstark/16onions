@@ -6,9 +6,7 @@
 package protocol;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.LinkedList;
@@ -19,7 +17,7 @@ import java.util.logging.Logger;
  *
  * @author totakura
  */
-public final class Connection<CA, CB> {
+public final class Connection {
 
     private static final Logger logger = Logger.getGlobal();
     private final AsynchronousSocketChannel channel;
@@ -27,19 +25,13 @@ public final class Connection<CA, CB> {
     private final ByteBuffer writeBuffer;
     private final ReadCompletionHandler readCompletionHandler;
     private final WriteCompletionHandler writeCompletionHandler;
-    private final StreamTokenizer tokenizer;
-    private boolean writeQueued;
     private final LinkedList<Message> writeQueue;
-    private final CB closure;
-    private MessageHandler<CA, Boolean> topLevelHandler;
-    private DisconnectHandler disconnectHandler;
-
-    public Connection(AsynchronousSocketChannel channel) {
-        this(channel, null);
-    }
+    private final DisconnectHandler disconnectHandler;
+    private StreamTokenizer tokenizer;
+    private boolean writeQueued;
 
     public Connection(AsynchronousSocketChannel channel,
-            CB closure) {
+            DisconnectHandler disconnectHandler) {
         this.channel = channel;
         readBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
         writeBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
@@ -47,20 +39,21 @@ public final class Connection<CA, CB> {
         this.writeQueue = new LinkedList();
         this.readCompletionHandler = new ReadCompletionHandler();
         this.writeCompletionHandler = new WriteCompletionHandler();
-        this.tokenizer = new StreamTokenizer(new ClientMessageHandler());
-        this.closure = closure;
+        this.disconnectHandler = disconnectHandler;
     }
 
     public final AsynchronousSocketChannel getChannel() {
         return channel;
     }
 
-    public void setDisconnectHandler(DisconnectHandler disconnectHandler) {
-        this.disconnectHandler = disconnectHandler;
-    }
-
-    public void receive(MessageHandler<CA, Boolean> topLevelHandler) {
-        this.topLevelHandler = topLevelHandler;
+    /**
+     * Start to read from this connection for messages. Once the reading is
+     * started, currently there is no way to stop it except from closing the
+     * connection.
+     * @param handler the message handler object
+     */
+    public void receive(MessageHandler handler) {
+        this.tokenizer = new StreamTokenizer(handler);
         channel.read(readBuffer, this, this.readCompletionHandler);
     }
 
@@ -117,23 +110,6 @@ public final class Connection<CA, CB> {
         }
     }
 
-    /**
-     * Simple message handler which logs each received message
-     */
-    private class ClientMessageHandler extends MessageHandler<Void, Void> {
-
-        @Override
-        public Void handleMessage(Message message, Void nothing) {
-            boolean keepAlive;
-            logger.log(Level.FINE, "Received message of type: {0}", message.getType().name());
-            keepAlive = topLevelHandler.handleMessage(message);
-            if (!keepAlive) {
-                disconnect();
-            }
-            return null;
-        }
-    }
-
     private class ReadCompletionHandler implements CompletionHandler<Integer, Connection> {
 
         @Override
@@ -149,9 +125,11 @@ public final class Connection<CA, CB> {
             try {
                 waiting = tokenizer.input(readBuffer);
             } catch (ProtocolException ex) {
-                logger.log(Level.SEVERE, "Protocol exception");
+                logger.log(Level.SEVERE, ex.toString());
                 disconnect();
                 return;
+            } catch (MessageParserException ex) {
+                logger.log(Level.SEVERE, ex.toString());
             }
             readBuffer.flip();
             readBuffer.compact();
@@ -162,16 +140,5 @@ public final class Connection<CA, CB> {
         public void failed(Throwable ex, Connection connection) {
             disconnect();
         }
-    }
-
-    public static Connection create(SocketAddress socketAddress,
-            AsynchronousChannelGroup channelGroup) throws IOException {
-        AsynchronousSocketChannel channel = AsynchronousSocketChannel.open(channelGroup);
-        channel.connect(socketAddress);
-        return new Connection(channel);
-    }
-
-    public static Connection create(SocketAddress socketAddress) throws IOException {
-        return create(socketAddress, null);
     }
 }

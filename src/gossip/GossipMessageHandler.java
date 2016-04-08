@@ -17,17 +17,40 @@
 package gossip;
 
 import java.nio.ByteBuffer;
-import protocol.Message;
+import protocol.MessageHandler;
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
+ * @param <C>
  */
-class PeerMessage extends Message {
+abstract class GossipMessageHandler<C> extends MessageHandler<C> {
 
-    protected PeerMessage() {
-        super();
+    GossipMessageHandler(C closure) {
+        super(closure);
     }
+
+    private PeerMessage dispatch(ByteBuffer buf, MessageType type)
+            throws MessageParserException {
+        switch (type) {
+            case GOSSIP_HELLO:
+                return HelloMessage.parse(buf);
+            case GOSSIP_NEIGHBORS:
+                return NeighboursMessage.parse(buf);
+            default:
+                throw new MessageParserException("Unknown message");
+        }
+    }
+
+    @Override
+    public void parseMessage(ByteBuffer buf, MessageType type, C closure) throws MessageParserException {
+        PeerMessage message;
+
+        message = dispatch(buf, type);
+        handleMessage(message, closure);
+    }
+
+    abstract void handleMessage(PeerMessage message, C closure);
 }

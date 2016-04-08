@@ -34,7 +34,7 @@ public class Protocol {
         GOSSIP(700),
         //Gossip P2P Messages
         GOSSIP_HELLO(721),
-        GOSSIP_NEIGHBOURS(722);
+        GOSSIP_NEIGHBORS(722);
 
         private final int numVal;
 

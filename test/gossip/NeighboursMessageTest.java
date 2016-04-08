@@ -79,7 +79,8 @@ public class NeighboursMessageTest {
 
         System.out.println("parse");
         ByteBuffer buf = (ByteBuffer) out.flip();
-        NeighboursMessage result = (NeighboursMessage) PeerMessage.parseMessage(buf);
+        buf.position(4); //remove the header
+        NeighboursMessage result = NeighboursMessage.parse(buf);
         assertNotNull(result.peers);
         assertTrue(result.peers.size() > 0);
         assertTrue(result.peers.getFirst().getAddressCount() > 0);
