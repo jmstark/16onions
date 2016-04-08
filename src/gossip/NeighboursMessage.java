@@ -21,6 +21,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -34,13 +35,14 @@ import protocol.Protocol;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 class NeighboursMessage extends PeerMessage {
-    LinkedList<Peer> peers;
+    protected LinkedList<Peer> peers;
 
-    NeighboursMessage(Peer peer) {
+    NeighboursMessage(Peer peer) throws MessageSizeExceededException {
         super();
         this.peers = new LinkedList();
-        this.addHeader(Protocol.MessageType.GOSSIP_NEIGHBOURS);
+        this.addHeader(Protocol.MessageType.GOSSIP_NEIGHBORS);
         this.size += 2; //field for holding the number of peers in this message
+        this.addNeighbour(peer);
     }
 
     final void addNeighbour(Peer peer) throws MessageSizeExceededException {
@@ -105,20 +107,19 @@ class NeighboursMessage extends PeerMessage {
 
     @Override
     public void send(ByteBuffer out) {
-        short peer_count = (short) this.peers.size();
         super.send(out);
+        short peer_count = (short) this.peers.size();
         out.putShort(peer_count);
         for (Peer peer : this.peers) {
             sendPeerAddresses(out, peer);
         }
     }
 
-    static NeighboursMessage parse(ByteBuffer buf)
+    protected static NeighboursMessage parse(ByteBuffer buf)
             throws MessageParserException {
         NeighboursMessage message;
         InetSocketAddress sock_address;
         InetAddress address;
-        MessageParserException exp;
         Peer peer;
         byte[] addr_bytes;
         short port;
@@ -127,19 +128,20 @@ class NeighboursMessage extends PeerMessage {
         short address_count;
 
         message = null;
-        exp = new MessageParserException();
+        peer = null;
         peer_count = buf.getShort();
         // each peer will occupy at minimum
         // 2 (counter for address) + 2 (size) + 2(port) + 4 (ipv4) = 10
         if ((peer_count * 10) > buf.remaining()) {
-            throw exp;
+            throw new MessageParserException();
         }
+        try {
         for (; 0 < peer_count; peer_count--) {
             address_count = buf.getShort();
             //each address will occupy at minimum
             //2(size) + 2(port) + 4(ipv4) = 8
             if ((address_count * 8) > buf.remaining()) {
-                throw exp;
+                throw new MessageParserException();
             }
             for (; 0 < address_count; address_count--) {
                 addr_size = buf.getShort();
@@ -151,7 +153,8 @@ class NeighboursMessage extends PeerMessage {
                         addr_bytes = new byte[16];
                         break;
                     default:
-                        throw new MessageParserException("Invalid size for address: " + addr_size + " bytes");
+                        throw new MessageParserException("Invalid size for address: "
+                                + addr_size + " bytes");
                 }
                 port = buf.getShort();
                 buf.get(addr_bytes);
@@ -161,7 +164,11 @@ class NeighboursMessage extends PeerMessage {
                     throw new RuntimeException("Control flow error; please report");
                 }
                 sock_address = new InetSocketAddress(address, port);
-                peer = new Peer(sock_address);
+                if (null == peer) {
+                    peer = new Peer(sock_address);
+                } else {
+                    peer.addAddress(sock_address);
+                }
                 try {
                     if (null == message) {
                         message = new NeighboursMessage(peer);
@@ -172,6 +179,10 @@ class NeighboursMessage extends PeerMessage {
                     throw new RuntimeException("Control flow error; please report");
                 }
             }
+            peer = null;
+            }
+        } catch (BufferUnderflowException underflow) {
+            throw new MessageParserException();
         }
         if (null == message) {
             throw new MessageParserException("Invalid HelloMessage with 0 peers");

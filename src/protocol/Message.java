@@ -37,6 +37,11 @@ public abstract class Message {
         this.size += 4;
     }
 
+    protected final void changeMessageType(MessageType type) {
+        assert (this.headerAdded);
+        this.type = type;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof Message)) {

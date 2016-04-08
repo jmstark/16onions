@@ -16,12 +16,10 @@
  */
 package gossip;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -30,25 +28,12 @@ import protocol.Protocol;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class HelloMessage extends PeerMessage {
-
-    private final ArrayList<InetSocketAddress> addresses;
-
-    HelloMessage(InetSocketAddress sock_address) {
-        super();
-        this.addHeader(Protocol.MessageType.GOSSIP_HELLO);
-        this.addresses = new ArrayList(Peer.DEFAULT_ADDRESSES);
-        this.size += 2; //counter for addresses
-        try {
-            this.addAddress(sock_address, this);
-        } catch (MessageSizeExceededException ex) {
-            throw new RuntimeException("this should not happen; please report it");
-        }
-    }
+final class HelloMessage extends NeighboursMessage {
 
 
-    public final Iterator<InetSocketAddress> getAddressIterator() {
-        return this.addresses.iterator();
+    private HelloMessage(Peer peer) throws MessageSizeExceededException {
+        super(peer);
+        this.changeMessageType(Protocol.MessageType.GOSSIP_HELLO);
     }
 
     /**
@@ -58,8 +43,30 @@ class HelloMessage extends PeerMessage {
      * @param size the size in the buffer to parse
      * @return the hello message
      */
-    static HelloMessage parse(ByteBuffer buf, int size) throws MessageParserException {
-        HelloMessage message;
+    final protected static HelloMessage parse(ByteBuffer buf) throws MessageParserException {
+        NeighboursMessage message;
+        message = NeighboursMessage.parse(buf);
+        if (message.peers.size() != 1) {
+            throw new MessageParserException();
+        }
+        Peer peer = message.peers.pop();
+        HelloMessage hello;
+        try {
+            hello = new HelloMessage(peer);
+        } catch (MessageSizeExceededException ex) {
+            throw new RuntimeException("This should not happen; please report it");
+        }
+        return hello;
+    }
 
+    static HelloMessage create(InetSocketAddress sock_address) {
+        HelloMessage message;
+        Peer peer = new Peer(sock_address);
+        try {
+            message = new HelloMessage(peer);
+        } catch (MessageSizeExceededException ex) {
+            throw new RuntimeException("This should not happen; please report it");
+        }
+        return message;
     }
 }

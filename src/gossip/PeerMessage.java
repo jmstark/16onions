@@ -19,7 +19,6 @@ package gossip;
 import java.nio.ByteBuffer;
 import protocol.Message;
 import protocol.MessageParserException;
-import protocol.Protocol;
 import protocol.Protocol.MessageType;
 
 /**
@@ -32,7 +31,7 @@ abstract class PeerMessage extends Message {
         super();
     }
 
-    public static PeerMessage parseMessage(ByteBuffer buf)
+    public static final PeerMessage parseMessage(ByteBuffer buf)
             throws MessageParserException {
         int size;
         MessageType type;
@@ -43,6 +42,8 @@ abstract class PeerMessage extends Message {
         switch (type) {
             case GOSSIP_HELLO:
                 return HelloMessage.parse(buf);
+            case GOSSIP_NEIGHBORS:
+                return NeighboursMessage.parse(buf);
             default:
                 assert (false);
         }
