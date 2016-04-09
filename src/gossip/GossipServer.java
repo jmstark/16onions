@@ -14,7 +14,6 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
-import protocol.Message;
 import protocol.ProtocolServer;
 
 /**
@@ -88,6 +87,5 @@ public class GossipServer extends ProtocolServer<Peer> {
         void handleMessage(PeerMessage message, Peer closure) {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
-
     }
 }
