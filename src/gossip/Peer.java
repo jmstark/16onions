@@ -6,8 +6,8 @@
 package gossip;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.CopyOnWriteArraySet;
 import protocol.Connection;
 import protocol.Message;
 
@@ -18,7 +18,7 @@ import protocol.Message;
 final class Peer {
 
     static final int DEFAULT_ADDRESSES = 3;
-    private ArrayList<InetSocketAddress> addresses;
+    private CopyOnWriteArraySet<InetSocketAddress> addresses;
     private Connection connection;
 
     Peer(InetSocketAddress address) {
@@ -27,7 +27,7 @@ final class Peer {
 
     Peer(InetSocketAddress address, Connection connection) {
         this.connection = connection;
-        this.addresses = new ArrayList(DEFAULT_ADDRESSES);
+        this.addresses = new CopyOnWriteArraySet();
         this.addresses.add(address);
     }
 
