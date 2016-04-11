@@ -175,6 +175,22 @@ public class Main {
         server.start();
     }
 
+    private static void bootstrap() {
+        AsynchronousSocketChannel channel;
+        Connection connection;
+
+        try {
+            channel = AsynchronousSocketChannel.open(group);
+        } catch (IOException ex) {
+            throw new RuntimeException("Cannot connect to bootstrap peer");
+        }
+        connection = new Connection(channel,
+                new PeerDisconnectHandler(bootstrapper));
+        assert (!bootstrapper.isConnected());
+        bootstrapper.setConnection(connection);
+        connection.receive(new GossipMessageHandler(bootstrapper, cache));
+    }
+
     private static void await() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
@@ -197,22 +213,6 @@ public class Main {
                 break;
             }
         } while (true);
-    }
-
-    private static void bootstrap() {
-        AsynchronousSocketChannel channel;
-        Connection connection;
-
-        try {
-            channel = AsynchronousSocketChannel.open(group);
-        } catch (IOException ex) {
-            throw new RuntimeException("Cannot connect to bootstrap peer");
-        }
-        connection = new Connection(channel,
-                new PeerDisconnectHandler(bootstrapper));
-        assert (!bootstrapper.isConnected());
-        bootstrapper.setConnection(connection);
-        connection.receive(new GossipMessageHandler(bootstrapper));
     }
 
     private static class PeerDisconnectHandler extends DisconnectHandler<Peer> {
