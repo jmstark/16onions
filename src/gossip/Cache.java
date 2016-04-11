@@ -31,20 +31,27 @@ import java.util.concurrent.locks.ReentrantLock;
 final class Cache {
     private final List<Peer> peers;
     private final ReentrantLock lock_peers;
+    private final int max_peers;
     //private final List<News> news;
 
-    Cache() {
+    Cache(int capacity) {
         this.peers = new LinkedList();
         this.lock_peers = new ReentrantLock();
+        this.max_peers = capacity;
     }
 
     boolean addPeer(Peer peer) {
+        boolean status;
         lock_peers.lock();
         try {
-            return peers.add(peer);
+            status = peers.add(peer);
+            if (status && (peers.size() > max_peers)) {
+                peers.remove(0);
+            }
         } finally {
             lock_peers.unlock();
         }
+        return status;
     }
 
     boolean removePeer(Peer peer) {

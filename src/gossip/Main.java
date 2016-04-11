@@ -153,7 +153,7 @@ public class Main {
             throw new RuntimeException("Invalid format for listen_address");
         }
         bootstrapper = new Peer(bootstrapper_address);
-        cache = new Cache();
+        cache = new Cache(max_connections / 2);
     }
 
     private static void startServer() {
@@ -225,7 +225,6 @@ public class Main {
         protected void handleDisconnect(Peer peer) {
             cache.removePeer(peer);
         }
-
     }
 
     public static void main(String[] args) {
