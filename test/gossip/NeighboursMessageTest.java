@@ -20,10 +20,10 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import org.junit.After;
 import org.junit.AfterClass;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import protocol.MessageSizeExceededException;
 
 /**
@@ -83,7 +83,7 @@ public class NeighboursMessageTest {
         NeighboursMessage result = NeighboursMessage.parse(buf);
         assertNotNull(result.peers);
         assertTrue(result.peers.size() > 0);
-        assertTrue(result.peers.getFirst().getAddressCount() > 0);
+        assertNotNull(result.peers.getFirst().getAddress());
     }
 
 }

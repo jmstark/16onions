@@ -6,8 +6,6 @@
 package gossip;
 
 import java.net.InetSocketAddress;
-import java.util.Iterator;
-import java.util.concurrent.CopyOnWriteArraySet;
 import protocol.Connection;
 import protocol.Message;
 
@@ -16,10 +14,8 @@ import protocol.Message;
  * @author totakura
  */
 final class Peer {
-
-    static final int DEFAULT_ADDRESSES = 3;
-    private CopyOnWriteArraySet<InetSocketAddress> addresses;
     private Connection connection;
+    private InetSocketAddress address;
 
     Peer(InetSocketAddress address) {
         this(address, null);
@@ -27,26 +23,11 @@ final class Peer {
 
     Peer(InetSocketAddress address, Connection connection) {
         this.connection = connection;
-        this.addresses = new CopyOnWriteArraySet();
-        this.addresses.add(address);
+        this.address = address;
     }
 
-    void addAddress(InetSocketAddress address) {
-        this.addresses.add(address);
-    }
-
-    void addAddressesFromIterator(Iterator<InetSocketAddress> iterator) {
-        while (iterator.hasNext()) {
-            this.addresses.add(iterator.next());
-        }
-    }
-
-    Iterator<InetSocketAddress> getAddressIterator() {
-        return addresses.iterator();
-    }
-
-    int getAddressCount() {
-        return this.addresses.size();
+    InetSocketAddress getAddress() {
+        return address;
     }
 
     /**

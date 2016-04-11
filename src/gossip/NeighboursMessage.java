@@ -35,6 +35,7 @@ import protocol.Protocol;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 class NeighboursMessage extends PeerMessage {
+
     protected LinkedList<Peer> peers;
 
     NeighboursMessage(Peer peer) throws MessageSizeExceededException {
@@ -46,11 +47,9 @@ class NeighboursMessage extends PeerMessage {
     }
 
     final void addNeighbour(Peer peer) throws MessageSizeExceededException {
-        int requiredSize = 2; // field for holding number of addresses
-        Iterator<InetSocketAddress> iterator = peer.getAddressIterator();
-        while (iterator.hasNext()) {
-            requiredSize += this.sizeFor(iterator.next());
-        }
+        // field for holding number of addresses; currently we hardcode this to 1
+        int requiredSize = 2;
+        requiredSize += this.sizeFor(peer.getAddress());
         if (requiredSize + this.size > Protocol.MAX_MESSAGE_SIZE) {
             throw new MessageSizeExceededException();
         }
@@ -78,34 +77,30 @@ class NeighboursMessage extends PeerMessage {
     }
 
     private static void sendPeerAddresses(ByteBuffer out, Peer peer) {
-        short address_count = (short) peer.getAddressCount();
-        out.putShort(address_count);
-        for (Iterator<InetSocketAddress> iterator = peer.getAddressIterator();
-                iterator.hasNext();) {
-            InetSocketAddress sock_address = iterator.next();
-            InetAddress address;
-            byte[] addr_bytes;
-            int port;
-            int addr_size;
-            addr_size = 4; // for `size' and `port'
-            port = sock_address.getPort();
-            address = sock_address.getAddress();
-            if (address instanceof Inet4Address) {
-                Inet4Address ipv4;
-                ipv4 = (Inet4Address) address;
-                addr_bytes = ipv4.getAddress();
-            } else if (address instanceof Inet6Address) {
-                Inet6Address ipv6;
-                ipv6 = (Inet6Address) address;
-                addr_bytes = ipv6.getAddress();
-            } else {
-                throw new RuntimeException("Unknown address class");
-            }
-            addr_size += addr_bytes.length;
-            out.putShort((short) addr_size);
-            out.putShort((short) port);
-            out.put(addr_bytes);
+        out.putShort((short) 1);
+        InetSocketAddress sock_address = peer.getAddress();
+        InetAddress address;
+        byte[] addr_bytes;
+        int port;
+        int addr_size;
+        addr_size = 4; // for `size' and `port'
+        port = sock_address.getPort();
+        address = sock_address.getAddress();
+        if (address instanceof Inet4Address) {
+            Inet4Address ipv4;
+            ipv4 = (Inet4Address) address;
+            addr_bytes = ipv4.getAddress();
+        } else if (address instanceof Inet6Address) {
+            Inet6Address ipv6;
+            ipv6 = (Inet6Address) address;
+            addr_bytes = ipv6.getAddress();
+        } else {
+            throw new RuntimeException("Unknown address class");
         }
+        addr_size += addr_bytes.length;
+        out.putShort((short) addr_size);
+        out.putShort((short) port);
+        out.put(addr_bytes);
     }
 
     @Override
@@ -131,7 +126,6 @@ class NeighboursMessage extends PeerMessage {
         short address_count;
 
         message = null;
-        peer = null;
         peer_count = buf.getShort();
         // each peer will occupy at minimum
         // 2 (counter for address) + 2 (size) + 2(port) + 4 (ipv4) = 10
@@ -139,50 +133,48 @@ class NeighboursMessage extends PeerMessage {
             throw new MessageParserException();
         }
         try {
-        for (; 0 < peer_count; peer_count--) {
-            address_count = buf.getShort();
-            //each address will occupy at minimum
-            //2(size) + 2(port) + 4(ipv4) = 8
-            if ((address_count * 8) > buf.remaining()) {
-                throw new MessageParserException();
-            }
-            for (; 0 < address_count; address_count--) {
-                addr_size = buf.getShort();
-                switch (addr_size) {
-                    case 8:
-                        addr_bytes = new byte[4];
-                        break;
-                    case 20:
-                        addr_bytes = new byte[16];
-                        break;
-                    default:
-                        throw new MessageParserException("Invalid size for address: "
-                                + addr_size + " bytes");
+            for (; 0 < peer_count; peer_count--) {
+                address_count = buf.getShort();
+                if (1 != address_count) {
+                    throw new MessageParserException("Current version expects only one address per peer");
                 }
-                port = buf.getShort();
-                buf.get(addr_bytes);
-                try {
-                    address = InetAddress.getByAddress(addr_bytes);
-                } catch (UnknownHostException unknown) {
-                    throw new RuntimeException("Control flow error; please report");
+                //each address will occupy at minimum
+                //2(size) + 2(port) + 4(ipv4) = 8
+                if ((address_count * 8) > buf.remaining()) {
+                    throw new MessageParserException();
                 }
-                sock_address = new InetSocketAddress(address, port);
-                if (null == peer) {
-                    peer = new Peer(sock_address);
-                } else {
-                    peer.addAddress(sock_address);
-                }
-                try {
-                    if (null == message) {
-                        message = new NeighboursMessage(peer);
-                    } else {
-                        message.addNeighbour(peer);
+                for (; 0 < address_count; address_count--) {
+                    addr_size = buf.getShort();
+                    switch (addr_size) {
+                        case 8:
+                            addr_bytes = new byte[4];
+                            break;
+                        case 20:
+                            addr_bytes = new byte[16];
+                            break;
+                        default:
+                            throw new MessageParserException("Invalid size for address: "
+                                    + addr_size + " bytes");
                     }
-                } catch (MessageSizeExceededException ex) {
-                    throw new RuntimeException("Control flow error; please report");
+                    port = buf.getShort();
+                    buf.get(addr_bytes);
+                    try {
+                        address = InetAddress.getByAddress(addr_bytes);
+                    } catch (UnknownHostException unknown) {
+                        throw new RuntimeException("Control flow error; please report");
+                    }
+                    sock_address = new InetSocketAddress(address, port);
+                    peer = new Peer(sock_address);
+                    try {
+                        if (null == message) {
+                            message = new NeighboursMessage(peer);
+                        } else {
+                            message.addNeighbour(peer);
+                        }
+                    } catch (MessageSizeExceededException ex) {
+                        throw new RuntimeException("Control flow error; please report");
+                    }
                 }
-            }
-            peer = null;
             }
         } catch (BufferUnderflowException underflow) {
             throw new MessageParserException();
