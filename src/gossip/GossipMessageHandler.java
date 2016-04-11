@@ -26,10 +26,10 @@ import protocol.Protocol.MessageType;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  * @param <C>
  */
-abstract class GossipMessageHandler<C> extends MessageHandler<C> {
+final class GossipMessageHandler extends MessageHandler<Peer> {
 
-    GossipMessageHandler(C closure) {
-        super(closure);
+    GossipMessageHandler(Peer peer) {
+        super(peer);
     }
 
     private PeerMessage dispatch(ByteBuffer buf, MessageType type)
@@ -45,12 +45,15 @@ abstract class GossipMessageHandler<C> extends MessageHandler<C> {
     }
 
     @Override
-    public void parseMessage(ByteBuffer buf, MessageType type, C closure) throws MessageParserException {
+    public void parseMessage(ByteBuffer buf, MessageType type, Peer peer)
+            throws MessageParserException {
         PeerMessage message;
 
         message = dispatch(buf, type);
-        handleMessage(message, closure);
+        handleMessage(message, peer);
     }
 
-    abstract void handleMessage(PeerMessage message, C closure);
+    void handleMessage(PeerMessage message, Peer peer) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

@@ -58,7 +58,7 @@ public class GossipServer extends ProtocolServer<Peer> {
         }
         peer = new Peer((InetSocketAddress) peer_address, connection);
         this.peers.add(peer);
-        connection.receive(new ServerMessageHandler(peer));
+        connection.receive(new GossipMessageHandler(peer));
         return peer;
     }
 
@@ -76,16 +76,5 @@ public class GossipServer extends ProtocolServer<Peer> {
 
     public void setMaxPeers(int max_peers) {
         this.max_peers = max_peers;
-    }
-    private class ServerMessageHandler extends GossipMessageHandler<Peer> {
-
-        public ServerMessageHandler(Peer closure) {
-            super(closure);
-        }
-
-        @Override
-        void handleMessage(PeerMessage message, Peer closure) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
     }
 }
