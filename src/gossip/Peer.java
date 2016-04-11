@@ -61,6 +61,10 @@ final class Peer {
         return this.connection.getChannel().isOpen();
     }
 
+    public void setConnection(Connection connection) {
+        this.connection = connection;
+    }
+
     void sendMessage(Message message) {
         this.connection.sendMsg(message);
     }

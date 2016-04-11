@@ -20,7 +20,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.channels.AsynchronousChannel;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -36,6 +38,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.ini4j.ConfigParser;
 import org.ini4j.ConfigParser.ConfigParserException;
+import protocol.Connection;
+import protocol.DisconnectHandler;
 
 /**
  *
@@ -195,10 +199,39 @@ public class Main {
         } while (true);
     }
 
+    private static void bootstrap() {
+        AsynchronousSocketChannel channel;
+        Connection connection;
+
+        try {
+            channel = AsynchronousSocketChannel.open(group);
+        } catch (IOException ex) {
+            throw new RuntimeException("Cannot connect to bootstrap peer");
+        }
+        connection = new Connection(channel,
+                new PeerDisconnectHandler(bootstrapper));
+        assert (!bootstrapper.isConnected());
+        bootstrapper.setConnection(connection);
+        connection.receive(new GossipMessageHandler(bootstrapper));
+    }
+
+    private static class PeerDisconnectHandler extends DisconnectHandler<Peer> {
+
+        public PeerDisconnectHandler(Peer closure) {
+            super(closure);
+        }
+
+        @Override
+        protected void handleDisconnect(Peer peer) {
+            cache.removePeer(peer);
+        }
+
+    }
+
     public static void main(String[] args) {
         configure(args);
         startServer();
-        //FIXME: connect to bootstrapper and then connect to the network
+        bootstrap();
         await();
     }
 }

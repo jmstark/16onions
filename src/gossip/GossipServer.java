@@ -10,10 +10,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
+import protocol.MessageSizeExceededException;
 import protocol.ProtocolServer;
 
 /**
@@ -63,6 +65,7 @@ public class GossipServer extends ProtocolServer<Peer> {
         peer = new Peer((InetSocketAddress) peer_address, connection);
         cache.addPeer(peer);
         connection.receive(new GossipMessageHandler(peer));
+        shareNeighbors(peer);
         return peer;
     }
 
@@ -80,5 +83,40 @@ public class GossipServer extends ProtocolServer<Peer> {
 
     public void setMaxPeers(int max_peers) {
         this.max_peers = max_peers;
+    }
+
+    private void shareNeighbors(Peer peer) {
+        NeighboursMessage message;
+        Iterator<Peer> iterator;
+        Peer neighbor;
+
+        neighbor = null;
+        message = null;
+        iterator = cache.peerIterator();
+        while (iterator.hasNext()) {
+            neighbor = iterator.next();
+            if (peer == neighbor) {
+                neighbor = null;
+            }
+        }
+        if (null == neighbor) {
+            LOGGER.log(Level.WARNING,
+                    "We do not know any peers, yet a peer is asking us for our neighbors");
+            return;
+        }
+        try {
+            message = new NeighboursMessage(neighbor);
+            while (iterator.hasNext()) {
+                message.addNeighbour(iterator.next());
+            }
+        } catch (MessageSizeExceededException ex) {
+            //ignore
+        }
+        if (null == message) {
+            LOGGER.log(Level.WARNING,
+                    "Could not construct a NeighborsMessage");
+            return;
+        }
+        peer.sendMessage(message);
     }
 }
