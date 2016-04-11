@@ -31,7 +31,8 @@ public abstract class MessageHandler<C> {
         this.closure = closure;
     }
 
-    public void parseMessage(ByteBuffer buf) throws MessageParserException {
+    public void parseMessage(ByteBuffer buf)
+            throws MessageParserException, ProtocolException {
         int size;
         MessageType type;
 
@@ -48,5 +49,5 @@ public abstract class MessageHandler<C> {
      * @throws MessageParserException
      */
     public abstract void parseMessage(ByteBuffer buf, MessageType type, C closure)
-            throws MessageParserException;
+            throws MessageParserException, ProtocolException;
 }
