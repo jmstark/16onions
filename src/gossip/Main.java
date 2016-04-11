@@ -46,6 +46,7 @@ public class Main {
     private static final Logger logger = Logger.getLogger("Gossip");
     private static int cache_size;
     private static int max_connections;
+    private static Cache cache;
     private static Peer bootstrapper;
     private static InetSocketAddress listen_address;
     private static GossipServer server;
@@ -148,6 +149,7 @@ public class Main {
             throw new RuntimeException("Invalid format for listen_address");
         }
         bootstrapper = new Peer(bootstrapper_address);
+        cache = new Cache();
     }
 
     private static void startServer() {
@@ -160,7 +162,8 @@ public class Main {
             return;
         }
         try {
-            server = new GossipServer(listen_address, group, max_connections);
+            server = new GossipServer(listen_address,
+                    group, cache, max_connections);
         } catch (IOException ex) {
             logger.log(Level.SEVERE, "Gossip service failed to initialize", ex);
         }

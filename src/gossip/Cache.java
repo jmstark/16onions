@@ -50,10 +50,10 @@ final class Cache {
         }
     }
 
-    void removePeer(Peer peer) {
+    boolean removePeer(Peer peer) {
         lock_peers.lock();
         try {
-            peers.remove(peer);
+            return peers.remove(peer);
         } finally {
             lock_peers.unlock();
         }

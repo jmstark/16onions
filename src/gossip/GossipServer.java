@@ -24,14 +24,18 @@ import protocol.ProtocolServer;
 public class GossipServer extends ProtocolServer<Peer> {
 
     private static final Logger LOGGER = Logger.getLogger("Gossip");
-    private LinkedList<Peer> peers;
+    private final Cache cache;
     private int max_peers;
+    private int neighbors;
 
     public GossipServer(SocketAddress socketAddress,
             AsynchronousChannelGroup channelGroup,
+            Cache cache,
             int max_peers) throws IOException {
         super(socketAddress, channelGroup);
+        this.cache = cache;
         this.max_peers = max_peers;
+        this.neighbors = 0;
     }
 
     @Override
@@ -40,7 +44,7 @@ public class GossipServer extends ProtocolServer<Peer> {
         SocketAddress peer_address;
         Peer peer;
 
-        if (peers.size() >= max_peers) {
+        if (neighbors >= max_peers) {
             return null;
         }
         channel = connection.getChannel();
@@ -57,15 +61,15 @@ public class GossipServer extends ProtocolServer<Peer> {
             return null;
         }
         peer = new Peer((InetSocketAddress) peer_address, connection);
-        this.peers.add(peer);
+        cache.addPeer(peer);
         connection.receive(new GossipMessageHandler(peer));
         return peer;
     }
 
     @Override
     protected void handleDisconnect(Peer peer) {
-        if (!peers.remove(peer)) {
-            LOGGER.severe("Removing an unknown peer? This is a bug; report it");
+        if (!cache.removePeer(peer)) {
+            LOGGER.severe("Removing an unknown peer? This is a bug; please report it");
         }
         LOGGER.log(Level.INFO, "Peer {0} disconnected", peer.toString());
     }
