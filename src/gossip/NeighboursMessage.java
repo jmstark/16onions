@@ -60,7 +60,6 @@ class NeighboursMessage extends PeerMessage {
 
     private int sizeFor(InetSocketAddress sock_address) {
         InetAddress address = sock_address.getAddress();
-        int port = sock_address.getPort();
         int addr_size = 0;
         addr_size += 2; //for size
         addr_size += 2; //for port
