@@ -24,6 +24,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,6 +50,7 @@ public class Main {
     private static InetSocketAddress listen_address;
     private static GossipServer server;
     private static AsynchronousChannelGroup group;
+    private static ScheduledExecutorService scheduledExecutor;
 
     private static void printHelp(HelpFormatter formatter, Options options, String header) {
         formatter.printHelp("gossip.Main",
@@ -162,6 +164,7 @@ public class Main {
         } catch (IOException ex) {
             logger.log(Level.SEVERE, "Gossip service failed to initialize", ex);
         }
+        scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
         server.start();
     }
 
