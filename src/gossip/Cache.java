@@ -38,13 +38,10 @@ final class Cache {
         this.lock_peers = new ReentrantLock();
     }
 
-    void addPeer(Peer peer) {
+    boolean addPeer(Peer peer) {
         lock_peers.lock();
         try {
-            if (peers.contains(peer)) {
-                return;
-            }
-            peers.add(peer);
+            return peers.add(peer);
         } finally {
             lock_peers.unlock();
         }

@@ -64,7 +64,7 @@ public class GossipServer extends ProtocolServer<Peer> {
         }
         peer = new Peer((InetSocketAddress) peer_address, connection);
         cache.addPeer(peer);
-        connection.receive(new GossipMessageHandler(peer));
+        connection.receive(new GossipMessageHandler(peer, cache));
         shareNeighbors(peer);
         return peer;
     }

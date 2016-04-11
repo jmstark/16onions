@@ -58,6 +58,10 @@ class NeighboursMessage extends PeerMessage {
         peers.add(peer);
     }
 
+    Iterator<Peer> getPeersAsIterator() {
+        return peers.iterator();
+    }
+
     private int sizeFor(InetSocketAddress sock_address) {
         InetAddress address = sock_address.getAddress();
         int addr_size = 0;

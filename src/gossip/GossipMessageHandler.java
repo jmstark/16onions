@@ -17,9 +17,14 @@
 package gossip;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
+import protocol.ProtocolException;
 
 /**
  *
@@ -28,8 +33,12 @@ import protocol.Protocol.MessageType;
  */
 final class GossipMessageHandler extends MessageHandler<Peer> {
 
-    GossipMessageHandler(Peer peer) {
+    final private Cache cache;
+    final static private Logger LOGGER = Logger.getLogger("Gossip");
+
+    GossipMessageHandler(Peer peer, Cache cache) {
         super(peer);
+        this.cache = cache;
     }
 
     private PeerMessage dispatch(ByteBuffer buf, MessageType type)
@@ -46,14 +55,29 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
 
     @Override
     public void parseMessage(ByteBuffer buf, MessageType type, Peer peer)
-            throws MessageParserException {
+            throws MessageParserException, ProtocolException {
         PeerMessage message;
 
         message = dispatch(buf, type);
         handleMessage(message, peer);
     }
 
-    void handleMessage(PeerMessage message, Peer peer) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    void handleMessage(PeerMessage message, Peer peer) throws ProtocolException {
+        if (message instanceof NeighboursMessage) {
+            NeighboursMessage nm = (NeighboursMessage) message;
+            Iterator<Peer> iterator = nm.getPeersAsIterator();
+            LOGGER.log(Level.FINER, "Received NeighboursMessage");
+            while (iterator.hasNext()) {
+                Peer new_peer = iterator.next();
+                if (cache.addPeer(new_peer)) {
+                    LOGGER.log(Level.FINE, "Added a new peer: {0}", new_peer);
+                }
+            }
+            return;
+        }
+        if (message instanceof HelloMessage) {
+            throw new ProtocolException("We do not expect a HelloMessage in this protocol version");
+        }
+        throw new ProtocolException("Unknown message");
     }
 }
