@@ -155,6 +155,9 @@ public class Main {
         if (!bootstrapper_address.equals(listen_address)) {
             bootstrapper = new Peer(bootstrapper_address);
         }
+        logger.log(Level.FINE,
+                "Creating cache with {0} entries",
+                max_connections / 2);
         cache = new Cache(max_connections / 2);
     }
 
@@ -171,7 +174,9 @@ public class Main {
             server = new GossipServer(listen_address,
                     group, cache, max_connections);
         } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Gossip service failed to initialize", ex);
+            logger.log(Level.SEVERE, "Gossip service failed to initialize: {0}",
+                    ex.toString());
+            System.exit(1);
         }
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
         server.start();

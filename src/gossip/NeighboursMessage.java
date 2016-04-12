@@ -106,8 +106,7 @@ class NeighboursMessage extends PeerMessage {
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        short peer_count = (short) this.peers.size();
-        out.putShort(peer_count);
+        out.putShort((short) this.peers.size());
         for (Peer peer : this.peers) {
             sendPeerAddresses(out, peer);
         }

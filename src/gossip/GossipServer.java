@@ -66,6 +66,7 @@ public class GossipServer extends ProtocolServer<Peer> {
         cache.addPeer(peer);
         connection.receive(new GossipMessageHandler(peer, cache));
         shareNeighbors(peer);
+        neighbors++;
         return peer;
     }
 
@@ -96,25 +97,21 @@ public class GossipServer extends ProtocolServer<Peer> {
         while (iterator.hasNext()) {
             neighbor = iterator.next();
             if (peer == neighbor) {
-                neighbor = null;
+                continue;
             }
-        }
-        if (null == neighbor) {
-            LOGGER.log(Level.WARNING,
-                    "We do not know any peers, yet a peer is asking us for our neighbors");
-            return;
-        }
-        try {
-            message = new NeighboursMessage(neighbor);
-            while (iterator.hasNext()) {
-                message.addNeighbour(iterator.next());
+            try {
+                if (null == message) {
+                    message = new NeighboursMessage(neighbor);
+                } else {
+                    message.addNeighbour(peer);
+                }
+            } catch (MessageSizeExceededException ex) {
+                break;
             }
-        } catch (MessageSizeExceededException ex) {
-            //ignore
         }
         if (null == message) {
             LOGGER.log(Level.WARNING,
-                    "Could not construct a NeighborsMessage");
+                    "We do not know any peers, yet a peer is asking us for our neighbors");
             return;
         }
         peer.sendMessage(message);
