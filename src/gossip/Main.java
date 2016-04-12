@@ -20,9 +20,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.channels.AsynchronousChannel;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -152,7 +152,9 @@ public class Main {
         } catch (URISyntaxException ex) {
             throw new RuntimeException("Invalid format for listen_address");
         }
-        bootstrapper = new Peer(bootstrapper_address);
+        if (!bootstrapper_address.equals(listen_address)) {
+            bootstrapper = new Peer(bootstrapper_address);
+        }
         cache = new Cache(max_connections / 2);
     }
 
@@ -177,18 +179,40 @@ public class Main {
 
     private static void bootstrap() {
         AsynchronousSocketChannel channel;
-        Connection connection;
 
+        if (null == bootstrapper) {
+            logger.log(Level.INFO,
+                    "We are the bootstrap peer");
+            return;
+        }
         try {
             channel = AsynchronousSocketChannel.open(group);
         } catch (IOException ex) {
             throw new RuntimeException("Cannot connect to bootstrap peer");
         }
-        connection = new Connection(channel,
-                new PeerDisconnectHandler(bootstrapper));
-        assert (!bootstrapper.isConnected());
-        bootstrapper.setConnection(connection);
-        connection.receive(new GossipMessageHandler(bootstrapper, cache));
+        channel.connect(bootstrapper.getAddress(), channel,
+                new CompletionHandler<Void, AsynchronousSocketChannel>() {
+            @Override
+            public void completed(Void arg0, AsynchronousSocketChannel channel) {
+                Connection connection;
+                connection = new Connection(channel,
+                        new PeerDisconnectHandler(bootstrapper));
+                assert (!bootstrapper.isConnected());
+                bootstrapper.setConnection(connection);
+                connection.receive(new GossipMessageHandler(bootstrapper, cache));
+            }
+
+            @Override
+            public void failed(Throwable arg0, AsynchronousSocketChannel channel) {
+                logger.log(Level.SEVERE, "Connection to bootstrapper failed");
+                try {
+                    channel.close();
+                } catch (IOException ex) {
+                    logger.log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+
     }
 
     private static void await() {
