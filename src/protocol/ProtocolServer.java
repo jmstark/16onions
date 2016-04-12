@@ -42,6 +42,7 @@ public abstract class ProtocolServer<C> extends Server {
             connection.disconnect();
             return;
         }
+        client.closure = closure;
         client.shutdown = false;
     }
 
