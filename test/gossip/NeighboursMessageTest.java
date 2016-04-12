@@ -86,4 +86,27 @@ public class NeighboursMessageTest {
         assertNotNull(result.peers.getFirst().getAddress());
     }
 
+    /**
+     * Test message parsing with a message containing multiple peers in it
+     * @throws Exception
+     */
+    @Test
+    public void testMultipleNeighbors() throws Exception {
+        ByteBuffer out = ByteBuffer.allocate(2048);
+        Peer peer = new Peer(new InetSocketAddress("localhost", 6001));
+        NeighboursMessage instance = new NeighboursMessage(peer);
+        peer = new Peer(new InetSocketAddress("192.168.1.1", 6001));
+        instance.addNeighbour(peer);
+        instance.send(out);
+        assertFalse(out.remaining() == 2048);
+
+        ByteBuffer buf = (ByteBuffer) out.flip();
+        buf.position(4); //remove the header
+        NeighboursMessage result = NeighboursMessage.parse(buf);
+        assertNotNull(result.peers);
+        assertTrue(2 == result.peers.size());
+        assertNotNull(result.peers.getFirst().getAddress());
+        assertNotNull(result.peers.getLast().getAddress());
+    }
+
 }
