@@ -204,6 +204,7 @@ public class Main {
                         new PeerDisconnectHandler(bootstrapper));
                 assert (!bootstrapper.isConnected());
                 bootstrapper.setConnection(connection);
+                connection.sendMsg(HelloMessage.create(listen_address));
                 connection.receive(new GossipMessageHandler(bootstrapper, cache));
             }
 
@@ -217,7 +218,6 @@ public class Main {
                 }
             }
         });
-
     }
 
     private static void await() {
