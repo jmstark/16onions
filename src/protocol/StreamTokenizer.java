@@ -58,7 +58,7 @@ public class StreamTokenizer {
                 case SIZE:
                     assert (Protocol.SIZE_LENGTH == this.expect);
                     buf.mark();
-                    this.expect = buf.getShort();
+                    this.expect = Message.getUnsignedShort(buf);
                     buf.reset();
                     if (Protocol.MAX_MESSAGE_SIZE < this.expect) {
                         this.reset();

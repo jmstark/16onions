@@ -7,11 +7,6 @@ package protocol;
 
 import java.nio.ByteBuffer;
 import protocol.Protocol.MessageType;
-import protocol.dht.DhtMessage;
-import protocol.gossip.GossipMessage;
-import protocol.kx.KxTunnelBuildMessage;
-import protocol.kx.KxTunnelDestroyMessage;
-import protocol.kx.KxTunnelReadyMessage;
 
 /**
  *
@@ -78,5 +73,21 @@ public abstract class Message {
      */
     public MessageType getType() {
         return type;
+    }
+
+    public static short unsignedShortFromByte(byte value) {
+        return (short) (value & ((short) 0xff));
+    }
+
+    public static int unsignedIntFromShort(short value) {
+        return ((int)value) & 0xffff;
+    }
+
+    public static long unsignedLongFromInt(int value) {
+        return value & 0xffffffffL;
+    }
+
+    public static int getUnsignedShort(ByteBuffer buf) {
+        return unsignedIntFromShort(buf.getShort());
     }
 }

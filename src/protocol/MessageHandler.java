@@ -36,8 +36,8 @@ public abstract class MessageHandler<C> {
         int size;
         MessageType type;
 
-        size = buf.getShort();
-        type = MessageType.asMessageType(buf.getShort());
+        size = Message.getUnsignedShort(buf);
+        type = MessageType.asMessageType(Message.getUnsignedShort(buf));
         buf.limit(size);
         this.parseMessage(buf, type, this.closure);
     }

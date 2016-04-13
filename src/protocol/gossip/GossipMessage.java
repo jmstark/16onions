@@ -9,8 +9,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Objects;
-import protocol.MessageSizeExceededException;
 import protocol.MessageParserException;
+import protocol.MessageSizeExceededException;
 import protocol.Protocol;
 
 /**
@@ -48,7 +48,7 @@ public class GossipMessage extends protocol.Message {
 
     static public GossipMessage parse(final ByteBuffer buf)
             throws MessageParserException {
-        short page_size;
+        int page_size;
         byte[] page;
         GossipMessage message;
         MessageParserException parser_exp;
@@ -56,7 +56,7 @@ public class GossipMessage extends protocol.Message {
         message = new GossipMessage();
         parser_exp = new MessageParserException("Invalid Gossip message");
         while (buf.hasRemaining()) {
-            page_size = buf.getShort();
+            page_size = getUnsignedShort(buf);
             if (page_size > (Protocol.MAX_MESSAGE_SIZE
                     - Protocol.HEADER_LENGTH
                     - (2 * message.pages.size()))) {

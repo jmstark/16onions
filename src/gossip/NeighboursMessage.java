@@ -119,13 +119,13 @@ class NeighboursMessage extends PeerMessage {
         InetAddress address;
         Peer peer;
         byte[] addr_bytes;
-        short port;
-        short addr_size;
-        short peer_count;
-        short address_count;
+        int port;
+        int addr_size;
+        int peer_count;
+        int address_count;
 
         message = null;
-        peer_count = buf.getShort();
+        peer_count = getUnsignedShort(buf);
         // each peer will occupy at minimum
         // 2 (counter for address) + 2 (size) + 2(port) + 4 (ipv4) = 10
         if ((peer_count * 10) > buf.remaining()) {
@@ -133,7 +133,7 @@ class NeighboursMessage extends PeerMessage {
         }
         try {
             for (; 0 < peer_count; peer_count--) {
-                address_count = buf.getShort();
+                address_count = getUnsignedShort(buf);
                 if (1 != address_count) {
                     throw new MessageParserException("Current version expects only one address per peer");
                 }
@@ -143,7 +143,7 @@ class NeighboursMessage extends PeerMessage {
                     throw new MessageParserException();
                 }
                 for (; 0 < address_count; address_count--) {
-                    addr_size = buf.getShort();
+                    addr_size = getUnsignedShort(buf);
                     switch (addr_size) {
                         case 8:
                             addr_bytes = new byte[4];
@@ -155,7 +155,7 @@ class NeighboursMessage extends PeerMessage {
                             throw new MessageParserException("Invalid size for address: "
                                     + addr_size + " bytes");
                     }
-                    port = buf.getShort();
+                    port = getUnsignedShort(buf);
                     buf.get(addr_bytes);
                     try {
                         address = InetAddress.getByAddress(addr_bytes);

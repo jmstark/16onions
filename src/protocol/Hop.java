@@ -7,7 +7,6 @@ package protocol;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 /**
  *
@@ -16,12 +15,14 @@ import java.nio.charset.StandardCharsets;
 public final class Hop {
 
     private final byte[] ID, IPv4, IPv6;
-    private final short KX_port;
+    private final int KX_port;
 
-    Hop(byte[] ID, byte[] IPv4, byte[] IPv6, short KX_port) {
+    Hop(byte[] ID, byte[] IPv4, byte[] IPv6, int KX_port) {
         assert (Protocol.IDENTITY_LENGTH == ID.length);
         assert (4 == IPv4.length);
         assert (16 == IPv6.length);
+        assert (0 < KX_port);
+        assert (KX_port <= 65535);
         this.ID = ID;
         this.IPv4 = IPv4;
         this.IPv6 = IPv6;
@@ -76,8 +77,8 @@ public final class Hop {
 
     public static Hop parse(final ByteBuffer buf) {
         byte[] ID, ipv4, ipv6;
-        short port;
-        port = buf.getShort();
+        int port;
+        port = Message.getUnsignedShort(buf);
         buf.position(buf.position() + 2); //skip 2 reserved bytes
         ID = new byte[Protocol.IDENTITY_LENGTH];
         buf.get(ID);
