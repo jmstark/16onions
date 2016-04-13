@@ -26,6 +26,10 @@ final class Peer {
         this.address = address;
     }
 
+    public void setAddress(InetSocketAddress address) {
+        this.address = address;
+    }
+
     InetSocketAddress getAddress() {
         return address;
     }
@@ -52,5 +56,14 @@ final class Peer {
 
     void disconnect() {
         this.connection.disconnect();
+    }
+
+    @Override
+    public String toString() {
+        if (null != address) {
+            return String.format("Peer@[%s]:%d",
+                    address.getHostString(), address.getPort());
+        }
+        return super.toString();
     }
 }

@@ -10,12 +10,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
-import protocol.MessageSizeExceededException;
 import protocol.ProtocolServer;
 
 /**
@@ -62,17 +59,15 @@ public class GossipServer extends ProtocolServer<Peer> {
                     "Peer connected via invalid socket address; dropping");
             return null;
         }
-        peer = new Peer((InetSocketAddress) peer_address, connection);
-        cache.addPeer(peer);
+        peer = new Peer(null, connection);
         connection.receive(new GossipMessageHandler(peer, cache));
-        shareNeighbors(peer);
         neighbors++;
         return peer;
     }
 
     @Override
     protected void handleDisconnect(Peer peer) {
-        if (!cache.removePeer(peer)) {
+        if ((null != peer.getAddress()) && (!cache.removePeer(peer))) {
             LOGGER.severe("Removing an unknown peer? This is a bug; please report it");
         }
         LOGGER.log(Level.INFO, "Peer {0} disconnected", peer.toString());
@@ -84,36 +79,5 @@ public class GossipServer extends ProtocolServer<Peer> {
 
     public void setMaxPeers(int max_peers) {
         this.max_peers = max_peers;
-    }
-
-    private void shareNeighbors(Peer peer) {
-        NeighboursMessage message;
-        Iterator<Peer> iterator;
-        Peer neighbor;
-
-        neighbor = null;
-        message = null;
-        iterator = cache.peerIterator();
-        while (iterator.hasNext()) {
-            neighbor = iterator.next();
-            if (peer == neighbor) {
-                continue;
-            }
-            try {
-                if (null == message) {
-                    message = new NeighboursMessage(neighbor);
-                } else {
-                    message.addNeighbour(peer);
-                }
-            } catch (MessageSizeExceededException ex) {
-                break;
-            }
-        }
-        if (null == message) {
-            LOGGER.log(Level.WARNING,
-                    "We do not know any peers, yet a peer is asking us for our neighbors");
-            return;
-        }
-        peer.sendMessage(message);
     }
 }
