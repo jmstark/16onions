@@ -4,13 +4,6 @@
  */
 package protocol;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.DataInputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
-
 /**
  *
  * @author Emertat
@@ -33,8 +26,9 @@ public class Protocol {
         // Gossip API messages
         GOSSIP(700),
         //Gossip P2P Messages
-        GOSSIP_HELLO(721),
-        GOSSIP_NEIGHBORS(722);
+        GOSSIP_HELLO(9700),
+        GOSSIP_NEIGHBORS(9701),
+        GOSSIP_DATA(9702);
 
         private final int numVal;
 

@@ -49,6 +49,8 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
                 return HelloMessage.parse(buf);
             case GOSSIP_NEIGHBORS:
                 return NeighboursMessage.parse(buf);
+            case GOSSIP_DATA:
+                return DataMessage.parse(buf);
             default:
                 throw new MessageParserException("Unknown message");
         }
@@ -88,6 +90,9 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
                     LOGGER.log(Level.FINE, "Adding {0} to cache", peer.toString());
                 }
                 shareNeighbors(peer);
+                return;
+            case GOSSIP_DATA:
+                //FIXME: Add this data to our local knowledge (probabilistically?)
                 return;
             default:
                 throw new RuntimeException("Control should not reach here; please report this as a bug");
