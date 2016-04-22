@@ -42,6 +42,15 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
         this.cache = cache;
     }
 
+    /**
+     * Dispatch the buffer to corresponding message parser. Add parsing hooks
+     * for new message types here.
+     *
+     * @param buf
+     * @param type
+     * @return parsed peer message
+     * @throws MessageParserException
+     */
     private PeerMessage dispatch(ByteBuffer buf, MessageType type)
             throws MessageParserException {
         switch (type) {
