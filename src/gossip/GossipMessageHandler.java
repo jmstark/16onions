@@ -19,6 +19,7 @@ package gossip;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageHandler;
@@ -36,10 +37,12 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
 
     final private Cache cache;
     final static private Logger LOGGER = Logger.getLogger("Gossip");
+    private final ScheduledExecutorService scheduled_executor;
 
-    GossipMessageHandler(Peer peer, Cache cache) {
+    GossipMessageHandler(Peer peer, ScheduledExecutorService scheduled_executor, Cache cache) {
         super(peer);
         this.cache = cache;
+        this.scheduled_executor = scheduled_executor;
     }
 
     /**

@@ -55,7 +55,7 @@ public class Main {
     private static InetSocketAddress listen_address;
     private static GossipServer server;
     private static AsynchronousChannelGroup group;
-    private static ScheduledExecutorService scheduledExecutor;
+    private static ScheduledExecutorService scheduled_executor;
 
     private static void printHelp(HelpFormatter formatter, Options options, String header) {
         formatter.printHelp("gossip.Main",
@@ -170,15 +170,16 @@ public class Main {
             System.exit(1);
             return;
         }
+        scheduled_executor = Executors.newScheduledThreadPool(
+                (Runtime.getRuntime().availableProcessors() > 1) ? 2 : 1);
         try {
             server = new GossipServer(listen_address,
-                    group, cache, max_connections);
+                    group, scheduled_executor, cache, max_connections);
         } catch (IOException ex) {
             logger.log(Level.SEVERE, "Gossip service failed to initialize: {0}",
                     ex.toString());
             System.exit(1);
         }
-        scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
         server.start();
     }
 
@@ -205,7 +206,8 @@ public class Main {
                 assert (!bootstrapper.isConnected());
                 bootstrapper.setConnection(connection);
                 connection.sendMsg(HelloMessage.create(listen_address));
-                connection.receive(new GossipMessageHandler(bootstrapper, cache));
+                connection.receive(new GossipMessageHandler(bootstrapper,
+                        scheduled_executor, cache));
             }
 
             @Override
