@@ -24,7 +24,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
-import protocol.MessageSizeExceededException;
 import protocol.Protocol.MessageType;
 import protocol.ProtocolException;
 
@@ -33,16 +32,16 @@ import protocol.ProtocolException;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  * @param <C>
  */
-final class GossipMessageHandler extends MessageHandler<Peer> {
+final class GossipMessageHandler extends MessageHandler<PeerContext> {
 
     final private Cache cache;
     final static private Logger LOGGER = Logger.getLogger("Gossip");
-    private final ScheduledExecutorService scheduled_executor;
 
-    GossipMessageHandler(Peer peer, ScheduledExecutorService scheduled_executor, Cache cache) {
-        super(peer);
+    GossipMessageHandler(Peer peer,
+            ScheduledExecutorService scheduled_executor,
+            Cache cache) {
+        super(new PeerContext(peer, scheduled_executor, cache));
         this.cache = cache;
-        this.scheduled_executor = scheduled_executor;
     }
 
     /**
@@ -69,15 +68,19 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
     }
 
     @Override
-    public void parseMessage(ByteBuffer buf, MessageType type, Peer peer)
+    public void parseMessage(ByteBuffer buf,
+            MessageType type,
+            PeerContext context)
             throws MessageParserException, ProtocolException {
         PeerMessage message;
 
         message = dispatch(buf, type);
-        handleMessage(message, type, peer);
+        handleMessage(message, type, context);
     }
 
-    void handleMessage(PeerMessage message, MessageType type, Peer peer)
+    void handleMessage(PeerMessage message,
+            MessageType type,
+            PeerContext context)
             throws ProtocolException {
         switch (type) {
             case GOSSIP_NEIGHBORS:
@@ -93,6 +96,7 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
                 return;
             case GOSSIP_HELLO:
                 HelloMessage hello = (HelloMessage) message;
+                Peer peer = context.getPeer();
                 if (hello.peers.size() != 1) {
                     throw new ProtocolException("Mismatched number of peers in Hello");
                 }
@@ -101,7 +105,7 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
                 if (cache.addPeer(peer)) {
                     LOGGER.log(Level.FINE, "Adding {0} to cache", peer.toString());
                 }
-                shareNeighbors(peer);
+                context.shareNeighbours();
                 return;
             case GOSSIP_DATA:
                 //FIXME: Add this data to our local knowledge (probabilistically?)
@@ -109,34 +113,5 @@ final class GossipMessageHandler extends MessageHandler<Peer> {
             default:
                 throw new RuntimeException("Control should not reach here; please report this as a bug");
         }
-    }
-
-    private void shareNeighbors(Peer peer) {
-        NeighboursMessage message;
-        Iterator<Peer> iterator;
-        Peer neighbor;
-        neighbor = null;
-        message = null;
-        iterator = cache.peerIterator();
-        while (iterator.hasNext()) {
-            neighbor = iterator.next();
-            if (peer == neighbor) {
-                continue;
-            }
-            try {
-                if (null == message) {
-                    message = new NeighboursMessage(neighbor);
-                } else {
-                    message.addNeighbour(neighbor);
-                }
-            } catch (MessageSizeExceededException ex) {
-                break;
-            }
-        }
-        if (null == message) {
-            LOGGER.log(Level.WARNING, "We do not know any peers, yet a peer is asking us for our neighbors");
-            return;
-        }
-        peer.sendMessage(message);
     }
 }
