@@ -90,7 +90,6 @@ public final class Connection {
                 disconnect();
             }
             if (writeBuffer.hasRemaining()) {
-                writeBuffer.compact();
                 channel.write(writeBuffer, connection, writeCompletionHandler);
                 return;
             }
@@ -101,6 +100,7 @@ public final class Connection {
             }
             Message message = writeQueue.remove();
             message.send(writeBuffer);
+            writeBuffer.flip();
             channel.write(writeBuffer, connection, writeCompletionHandler);
         }
 
@@ -124,15 +124,19 @@ public final class Connection {
             readBuffer.flip();
             try {
                 waiting = tokenizer.input(readBuffer);
-            } catch (ProtocolException ex) {
+            } catch (ProtocolException | MessageParserException ex) {
                 logger.log(Level.SEVERE, ex.toString());
                 disconnect();
                 return;
-            } catch (MessageParserException ex) {
-                logger.log(Level.SEVERE, ex.toString());
             }
-            readBuffer.flip();
-            readBuffer.compact();
+            if (waiting) {
+                //unflip the buffer so that we can use it for writing
+                readBuffer.compact(); //move contents to beginning
+                readBuffer.position(readBuffer.limit());
+                readBuffer.limit(readBuffer.capacity());
+            } else {
+                readBuffer.clear();
+            }
             channel.read(readBuffer, connection, readCompletionHandler);
         }
 
