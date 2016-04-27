@@ -65,8 +65,13 @@ public class ProtocolServerTest {
 
         private class ServerMessageHandler extends MessageHandler<Connection> {
 
+            private int gets_received;
+            private int puts_received;
+
             public ServerMessageHandler(Connection closure) {
                 super(closure);
+                this.gets_received = 0;
+                this.puts_received = 0;
             }
 
             @Override
@@ -75,7 +80,11 @@ public class ProtocolServerTest {
                     Connection connection) throws MessageParserException {
                 switch (type) {
                     case DHT_GET:
+                        gets_received++;
+                        break;
                     case DHT_PUT:
+                        puts_received++;
+                        break;
                     case DHT_TRACE:
                     case DHT_GET_REPLY:
                     case DHT_TRACE_REPLY:
@@ -161,7 +170,7 @@ public class ProtocolServerTest {
         client.receive(new ClientMessageHandler(client));
         channelGroup.shutdown();
         try {
-            assertTrue(channelGroup.awaitTermination(300, TimeUnit.SECONDS));
+            assertTrue(channelGroup.awaitTermination(3, TimeUnit.SECONDS));
         } catch (InterruptedException ex) {
             Assume.assumeNoException(ex);
         }
@@ -173,9 +182,13 @@ public class ProtocolServerTest {
     private boolean success = false;
 
     private class ClientMessageHandler extends MessageHandler<Connection> {
+        private int gets_received;
+        private int puts_received;
 
         public ClientMessageHandler(Connection closure) {
             super(closure);
+            gets_received = 0;
+            puts_received = 0;
         }
 
         @Override
@@ -184,7 +197,11 @@ public class ProtocolServerTest {
                 Connection connection) throws MessageParserException {
             switch (type) {
                 case DHT_GET:
+                    gets_received++;
+                    break;
                 case DHT_PUT:
+                    puts_received++;
+                    break;
                 case DHT_TRACE:
                 case DHT_GET_REPLY:
                 case DHT_TRACE_REPLY:
@@ -194,6 +211,11 @@ public class ProtocolServerTest {
             }
             DhtMessage message = (DhtMessage) DhtMessage.parse(buf, type);
             assertEquals(compareMessage, message);
+            if ((1 == gets_received) && (0 == puts_received)) {
+                compareMessage = dhtPutMsg;
+                connection.sendMsg(dhtPutMsg);
+                return;
+            }
             success = true;
             try {
                 server.stop();
