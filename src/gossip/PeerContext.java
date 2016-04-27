@@ -44,6 +44,7 @@ class PeerContext {
         this.peer = peer;
         this.executor = scheduled_executor;
         this.cache = cache;
+        this.future_shareNeighbours = null;
     }
 
     Peer getPeer() {
@@ -72,21 +73,30 @@ class PeerContext {
             }
         }
         if (null == message) {
-            LOGGER.log(Level.WARNING, "We do not know any peers to share them");
+            LOGGER.log(Level.WARNING,
+                    "We do not know any other peers to share with {0}",
+                    peer.toString());
             return;
         }
         peer.sendMessage(message);
     }
 
     void shareNeighbours() {
-        ScheduledFuture future;
-
-        future = executor.scheduleWithFixedDelay(new Runnable() {
+        if (null != future_shareNeighbours) {
+            return;
+        }
+        future_shareNeighbours = executor.scheduleWithFixedDelay(
+                new Runnable() {
             @Override
             public void run() {
                 PeerContext.this._shareNeighbors();
             }
         }, 0, 30, TimeUnit.SECONDS);
-        this.future_shareNeighbours = future;
+    }
+
+    void shutdown() {
+        if (null != future_shareNeighbours) {
+            future_shareNeighbours.cancel(true);
+        }
     }
 }
