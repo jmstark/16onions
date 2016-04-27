@@ -17,6 +17,7 @@
 
 package gossip;
 
+import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -37,6 +38,7 @@ class PeerContext {
     final private ScheduledExecutorService executor;
     final private Cache cache;
     private ScheduledFuture future_shareNeighbours;
+    private boolean helloSent;
 
     PeerContext(Peer peer,
             ScheduledExecutorService scheduled_executor,
@@ -45,6 +47,7 @@ class PeerContext {
         this.executor = scheduled_executor;
         this.cache = cache;
         this.future_shareNeighbours = null;
+        this.helloSent = false;
     }
 
     Peer getPeer() {
@@ -98,5 +101,15 @@ class PeerContext {
         if (null != future_shareNeighbours) {
             future_shareNeighbours.cancel(true);
         }
+    }
+
+    /**
+     * Send HELLO message on the peer's connection.
+     */
+    void sendHello(InetSocketAddress listen_address) {
+        assert (peer.isConnected());
+        assert (!helloSent); //Check we only send this once
+        peer.sendMessage(HelloMessage.create(listen_address));
+        helloSent = true;
     }
 }

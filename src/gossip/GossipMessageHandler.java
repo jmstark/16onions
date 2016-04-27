@@ -36,9 +36,17 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
     final private Cache cache;
     final static private Logger LOGGER = Logger.getLogger("Gossip");
 
+    private enum State {
+        INIT,
+        HELLO_RECEIVED
+    };
+
+    private State state;
+
     GossipMessageHandler(PeerContext context, Cache cache) {
         super(context);
         this.cache = cache;
+        this.state = State.INIT;
     }
 
     /**
@@ -97,8 +105,15 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 return;
             case GOSSIP_HELLO:
                 LOGGER.log(Level.FINE, "Received HELLO");
-                HelloMessage hello = (HelloMessage) message;
                 Peer peer = context.getPeer();
+                //HELLO is received as first message
+                if (State.INIT != state) {
+                    LOGGER.log(Level.WARNING,
+                            "Bad peer {0} sent HELLO more than once",
+                            peer);
+                    throw new ProtocolException("HELLO sent more than once");
+                }
+                HelloMessage hello = (HelloMessage) message;
                 Peer orig;
                 if (hello.peers.size() != 1) {
                     throw new ProtocolException("Mismatched number of peers in Hello");
@@ -119,15 +134,15 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
                                 peer.toString());
                         throw new ProtocolException(
                                 "Peer cannot be connect twice at the same time");
-                    } else {
-                        /**
+                    } else
+                        /*
                          * Here we may have known about the orig peer from some
                          * other peer but not yet connected to it. And in the
                          * mean time it has connected to us. We allow this.
                          */
                         cache.replacePeer(orig, peer);
-                    }
                 }
+                state = State.HELLO_RECEIVED;
                 context.shareNeighbours();
                 return;
             case GOSSIP_DATA:

@@ -209,7 +209,7 @@ public class Main {
                         new PeerDisconnectHandler(context));
                 assert (!bootstrapper.isConnected());
                 bootstrapper.setConnection(connection);
-                connection.sendMsg(HelloMessage.create(listen_address));
+                context.sendHello(listen_address);
                 connection.receive(new GossipMessageHandler(context, cache));
             }
 

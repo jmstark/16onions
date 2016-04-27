@@ -28,8 +28,9 @@ public class GossipServer extends ProtocolServer<PeerContext> {
     private int max_peers;
     private int neighbors;
     private final ScheduledExecutorService scheduled_executor;
+    private InetSocketAddress listen_address;
 
-    public GossipServer(SocketAddress socketAddress,
+    public GossipServer(InetSocketAddress socketAddress,
             AsynchronousChannelGroup channelGroup,
             ScheduledExecutorService scheduled_executor,
             Cache cache,
@@ -39,6 +40,7 @@ public class GossipServer extends ProtocolServer<PeerContext> {
         this.max_peers = max_peers;
         this.neighbors = 0;
         this.scheduled_executor = scheduled_executor;
+        this.listen_address = socketAddress;
     }
 
     @Override
@@ -68,6 +70,7 @@ public class GossipServer extends ProtocolServer<PeerContext> {
         context = new PeerContext(peer,
                 this.scheduled_executor,
                 this.cache);
+        context.sendHello(listen_address);
         connection.receive(new GossipMessageHandler(context, cache));
         neighbors++;
         return context;
