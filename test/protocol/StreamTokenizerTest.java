@@ -70,6 +70,8 @@ public class StreamTokenizerTest {
         StreamTokenizer instance = new StreamTokenizer(new MessageHandlerImpl(null));
         assertFalse("The tokenizer still expects input when complete messages are given",
                 instance.input(buffer));
+        assertTrue("The tokenizer did not move the position in the given buffer",
+                   instance.input(buffer));
         assertTrue("Messages didn't match", testResult);
     }
 
