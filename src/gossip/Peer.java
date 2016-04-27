@@ -6,6 +6,7 @@
 package gossip;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 import protocol.Connection;
 import protocol.Message;
 
@@ -65,5 +66,31 @@ final class Peer {
                     address.getHostString(), address.getPort());
         }
         return super.toString();
+    }
+
+    /**
+     * Compare if given object is same as this peer.
+     *
+     * We term two Peer objects as equal if they have the same socket address.
+     *
+     * @param obj the other object to compare
+     * @return true if the peer object has the same socket address; false if not
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Peer other = (Peer) obj;
+        if (!Objects.equals(this.address, other.address)) {
+            return false;
+        }
+        return true;
     }
 }

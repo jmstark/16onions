@@ -86,8 +86,12 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 LOGGER.log(Level.FINER, "Received NeighboursMessage");
                 while (iterator.hasNext()) {
                     Peer new_peer = iterator.next();
-                    if (cache.addPeer(new_peer)) {
+                    if (null == cache.addPeer(new_peer)) {
                         LOGGER.log(Level.FINE, "Added a new peer: {0}", new_peer);
+                    } else {
+                        LOGGER.log(Level.FINE,
+                                "Peer {0} already in cache; not adding",
+                                new_peer.toString());
                     }
                 }
                 return;
@@ -95,13 +99,34 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 LOGGER.log(Level.FINE, "Received HELLO");
                 HelloMessage hello = (HelloMessage) message;
                 Peer peer = context.getPeer();
+                Peer orig;
                 if (hello.peers.size() != 1) {
                     throw new ProtocolException("Mismatched number of peers in Hello");
                 }
                 InetSocketAddress address = hello.peers.getFirst().getAddress();
                 peer.setAddress(address);
-                if (cache.addPeer(peer)) {
+                orig = cache.addPeer(peer);
+                if (null == orig) {
                     LOGGER.log(Level.FINE, "Adding {0} to cache", peer.toString());
+                } else {
+                    /**
+                     * peer is already in cache. This may happen when the peer
+                     * is connecting to use twice; we do not allow this.
+                     */
+                    if (orig.isConnected()) {
+                        LOGGER.log(Level.WARNING,
+                                "{0} trying to connect twice when it is already connected",
+                                peer.toString());
+                        throw new ProtocolException(
+                                "Peer cannot be connect twice at the same time");
+                    } else {
+                        /**
+                         * Here we may have known about the orig peer from some
+                         * other peer but not yet connected to it. And in the
+                         * mean time it has connected to us. We allow this.
+                         */
+                        cache.replacePeer(orig, peer);
+                    }
                 }
                 context.shareNeighbours();
                 return;

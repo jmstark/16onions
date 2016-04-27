@@ -40,24 +40,50 @@ final class Cache {
         this.max_peers = capacity;
     }
 
-    boolean addPeer(Peer peer) {
+    /**
+     * Add the given peer into the peer cache.
+     *
+     * If the peer is already present in the cache, it is not added again. If a
+     * new peer is added when the cache is full, the older peer will be removed.
+     *
+     * @param peer the peer to add to the cache
+     * @return null when the peer is added to the cache; the existing peer
+     *         object when the given peer is already present in the cache
+     */
+    Peer addPeer(Peer peer) {
+        int index;
         boolean status;
         lock_peers.lock();
         try {
+            index = peers.indexOf(peer);
+            if (-1 != index) {
+                return peers.get(index);
+            }
             status = peers.add(peer);
-            if (status && (peers.size() > max_peers)) {
+            assert (status); //adding should succeed because we checked it before
+            if (peers.size() > max_peers) {
                 peers.remove(0);
             }
+            return null;
         } finally {
             lock_peers.unlock();
         }
-        return status;
     }
 
     boolean removePeer(Peer peer) {
         lock_peers.lock();
         try {
             return peers.remove(peer);
+        } finally {
+            lock_peers.unlock();
+        }
+    }
+
+    void replacePeer(Peer older, Peer newer) {
+        lock_peers.lock();
+        try {
+            peers.remove(older);
+            peers.add(newer);
         } finally {
             lock_peers.unlock();
         }

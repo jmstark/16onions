@@ -59,7 +59,7 @@ class PeerContext {
         iterator = cache.peerIterator();
         while (iterator.hasNext()) {
             neighbor = iterator.next();
-            if (peer == neighbor) {
+            if (peer.equals(neighbor)) {
                 continue;
             }
             try {
