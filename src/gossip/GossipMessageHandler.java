@@ -19,7 +19,6 @@ package gossip;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageHandler;
@@ -37,10 +36,8 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
     final private Cache cache;
     final static private Logger LOGGER = Logger.getLogger("Gossip");
 
-    GossipMessageHandler(Peer peer,
-            ScheduledExecutorService scheduled_executor,
-            Cache cache) {
-        super(new PeerContext(peer, scheduled_executor, cache));
+    GossipMessageHandler(PeerContext context, Cache cache) {
+        super(context);
         this.cache = cache;
     }
 
@@ -95,6 +92,7 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 }
                 return;
             case GOSSIP_HELLO:
+                LOGGER.log(Level.FINE, "Received HELLO");
                 HelloMessage hello = (HelloMessage) message;
                 Peer peer = context.getPeer();
                 if (hello.peers.size() != 1) {

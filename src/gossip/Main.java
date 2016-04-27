@@ -201,13 +201,16 @@ public class Main {
             @Override
             public void completed(Void arg0, AsynchronousSocketChannel channel) {
                 Connection connection;
+                PeerContext context;
+
+                context = new PeerContext(bootstrapper, scheduled_executor,
+                        cache);
                 connection = new Connection(channel,
-                        new PeerDisconnectHandler(bootstrapper));
+                        new PeerDisconnectHandler(context));
                 assert (!bootstrapper.isConnected());
                 bootstrapper.setConnection(connection);
                 connection.sendMsg(HelloMessage.create(listen_address));
-                connection.receive(new GossipMessageHandler(bootstrapper,
-                        scheduled_executor, cache));
+                connection.receive(new GossipMessageHandler(context, cache));
             }
 
             @Override
@@ -234,27 +237,31 @@ public class Main {
                     logger.log(Level.INFO, "You may have to kill the process");
                 }
                 group.shutdown();
+                scheduled_executor.shutdown();
                 logger.log(Level.INFO, "Shutting down; this may take a while...");
             }
         });
         do {
             try {
                 group.awaitTermination(1, TimeUnit.DAYS);
+                scheduled_executor.awaitTermination(1, TimeUnit.SECONDS);
             } catch (InterruptedException ex) {
                 break;
             }
         } while (true);
     }
 
-    private static class PeerDisconnectHandler extends DisconnectHandler<Peer> {
+    private static class PeerDisconnectHandler
+            extends DisconnectHandler<PeerContext> {
 
-        public PeerDisconnectHandler(Peer closure) {
+        public PeerDisconnectHandler(PeerContext closure) {
             super(closure);
         }
 
         @Override
-        protected void handleDisconnect(Peer peer) {
-            cache.removePeer(peer);
+        protected void handleDisconnect(PeerContext context) {
+            context.shutdown();
+            cache.removePeer(context.getPeer());
         }
     }
 

@@ -21,7 +21,7 @@ import protocol.ProtocolServer;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class GossipServer extends ProtocolServer<Peer> {
+public class GossipServer extends ProtocolServer<PeerContext> {
 
     private static final Logger LOGGER = Logger.getLogger("Gossip");
     private final Cache cache;
@@ -42,10 +42,11 @@ public class GossipServer extends ProtocolServer<Peer> {
     }
 
     @Override
-    protected Peer handleNewClient(Connection connection) {
+    protected PeerContext handleNewClient(Connection connection) {
         AsynchronousSocketChannel channel;
         SocketAddress peer_address;
         Peer peer;
+        PeerContext context;
 
         if (neighbors >= max_peers) {
             return null;
@@ -64,14 +65,18 @@ public class GossipServer extends ProtocolServer<Peer> {
             return null;
         }
         peer = new Peer(null, connection);
-        connection.receive(new GossipMessageHandler(peer,
-                this.scheduled_executor, cache));
+        context = new PeerContext(peer,
+                this.scheduled_executor,
+                this.cache);
+        connection.receive(new GossipMessageHandler(context, cache));
         neighbors++;
-        return peer;
+        return context;
     }
 
     @Override
-    protected void handleDisconnect(Peer peer) {
+    protected void handleDisconnect(PeerContext context) {
+        Peer peer = context.getPeer();
+        context.shutdown();
         if ((null != peer.getAddress()) && (!cache.removePeer(peer))) {
             LOGGER.severe("Removing an unknown peer? This is a bug; please report it");
         }
