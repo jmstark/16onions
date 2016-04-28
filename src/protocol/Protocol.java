@@ -12,23 +12,25 @@ public class Protocol {
 
     public enum MessageType {
 
-        DHT_PUT(500),
-        DHT_GET(501),
-        DHT_TRACE(502),
-        DHT_GET_REPLY(503),
-        DHT_TRACE_REPLY(504),
-        DHT_ERROR(505),
-        KX_TN_BUILD_IN(600),
-        KX_TN_BUILD_OUT(601),
-        KX_TN_READY(602),
-        KX_TN_DESTROY(603),
-        KX_ERROR(604),
+        DHT_PUT(100),
+        DHT_GET(101),
+        DHT_TRACE(102),
+        DHT_GET_REPLY(103),
+        DHT_TRACE_REPLY(104),
+        DHT_ERROR(105),
+        KX_TN_BUILD_IN(200),
+        KX_TN_BUILD_OUT(201),
+        KX_TN_READY(202),
+        KX_TN_DESTROY(203),
+        KX_ERROR(204),
         // Gossip API messages
-        GOSSIP(700),
+        API_GOSSIP_ANNOUNCE(500),
+        API_GOSSIP_NOTIFY(501),
+        API_GOSSIP_NOTIFICATION(502),
         //Gossip P2P Messages
-        GOSSIP_HELLO(9700),
-        GOSSIP_NEIGHBORS(9701),
-        GOSSIP_DATA(9702);
+        GOSSIP_HELLO(9500),
+        GOSSIP_NEIGHBORS(9501),
+        GOSSIP_DATA(9502);
 
         private final int numVal;
 
