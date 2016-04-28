@@ -17,7 +17,6 @@
 package gossip.api;
 
 import gossip.Cache;
-import gossip.api.ApiMessageHandler;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;

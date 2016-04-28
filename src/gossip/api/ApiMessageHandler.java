@@ -39,8 +39,20 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
     @Override
     public void parseMessage(ByteBuffer buf,
             Protocol.MessageType type,
-            ClientContext closure) throws
+            ClientContext context) throws
             MessageParserException, ProtocolException {
+        ApiMessage message;
+
+        message = dispatch(buf, type);
+        handleMessage(message, type, context);
+    }
+
+    private ApiMessage dispatch(ByteBuffer buf, Protocol.MessageType type) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void handleMessage(ApiMessage message,
+            Protocol.MessageType type, ClientContext context) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
