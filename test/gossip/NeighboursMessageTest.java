@@ -16,6 +16,7 @@
  */
 package gossip;
 
+import gossip.p2p.NeighboursMessage;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import org.junit.After;
@@ -81,9 +82,8 @@ public class NeighboursMessageTest {
         ByteBuffer buf = (ByteBuffer) out.flip();
         buf.position(4); //remove the header
         NeighboursMessage result = NeighboursMessage.parse(buf);
-        assertNotNull(result.peers);
-        assertTrue(result.peers.size() > 0);
-        assertNotNull(result.peers.getFirst().getAddress());
+        assertTrue(result.getPeers().size() > 0);
+        assertNotNull(result.getPeers().get(0).getAddress());
     }
 
     /**
@@ -103,10 +103,9 @@ public class NeighboursMessageTest {
         ByteBuffer buf = (ByteBuffer) out.flip();
         buf.position(4); //remove the header
         NeighboursMessage result = NeighboursMessage.parse(buf);
-        assertNotNull(result.peers);
-        assertTrue(2 == result.peers.size());
-        assertNotNull(result.peers.getFirst().getAddress());
-        assertNotNull(result.peers.getLast().getAddress());
+        assertTrue(2 == result.getPeers().size());
+        assertNotNull(result.getPeers().get(0).getAddress());
+        assertNotNull(result.getPeers().get(1).getAddress());
     }
 
 }

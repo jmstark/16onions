@@ -14,8 +14,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package gossip;
+package gossip.p2p;
 
+import gossip.Peer;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -23,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import protocol.MessageParserException;
@@ -34,11 +36,11 @@ import protocol.Protocol;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class NeighboursMessage extends PeerMessage {
+public class NeighboursMessage extends PeerMessage {
 
-    protected LinkedList<Peer> peers;
+    LinkedList<Peer> peers;
 
-    NeighboursMessage(Peer peer) throws MessageSizeExceededException {
+    public NeighboursMessage(Peer peer) throws MessageSizeExceededException {
         super();
         this.peers = new LinkedList();
         this.addHeader(Protocol.MessageType.GOSSIP_NEIGHBORS);
@@ -46,7 +48,8 @@ class NeighboursMessage extends PeerMessage {
         this.addNeighbour(peer);
     }
 
-    final void addNeighbour(Peer peer) throws MessageSizeExceededException {
+    final public void addNeighbour(Peer peer) throws
+            MessageSizeExceededException {
         // field for holding number of addresses; currently we hardcode this to 1
         int requiredSize = 2;
         requiredSize += this.sizeFor(peer.getAddress());
@@ -112,7 +115,13 @@ class NeighboursMessage extends PeerMessage {
         }
     }
 
-    protected static NeighboursMessage parse(ByteBuffer buf)
+    public ArrayList<Peer> getPeers() {
+        ArrayList out;
+        out = new ArrayList(this.peers);
+        return out;
+    }
+
+    public static NeighboursMessage parse(ByteBuffer buf)
             throws MessageParserException {
         NeighboursMessage message;
         InetSocketAddress sock_address;

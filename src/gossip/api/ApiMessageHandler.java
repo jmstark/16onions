@@ -14,41 +14,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package gossip;
+package gossip.api;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.channels.AsynchronousChannelGroup;
-import protocol.Connection;
-import protocol.ProtocolServer;
+import gossip.Cache;
+import java.nio.ByteBuffer;
+import protocol.MessageHandler;
+import protocol.MessageParserException;
+import protocol.Protocol;
+import protocol.ProtocolException;
 
 /**
- * Class for handling API requests
  *
  * @author totakura
  */
-public class ApiServer extends ProtocolServer<ClientContext> {
+class ApiMessageHandler extends MessageHandler<ClientContext> {
 
     private final Cache cache;
 
-    ApiServer(SocketAddress address,
-            AsynchronousChannelGroup group,
-            Cache cache) throws IOException {
-        super(address, group);
+    ApiMessageHandler(ClientContext context, Cache cache) {
+        super(context);
         this.cache = cache;
     }
 
     @Override
-    protected ClientContext handleNewClient(Connection connection) {
-        ClientContext context;
-        context = new ClientContext(connection);
-        connection.receive(new ApiMessageHandler(context, cache));
-        return context;
-    }
-
-    @Override
-    protected void handleDisconnect(ClientContext context) {
-        context.close();
+    public void parseMessage(ByteBuffer buf,
+            Protocol.MessageType type,
+            ClientContext closure) throws
+            MessageParserException, ProtocolException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
 }

@@ -16,6 +16,7 @@
  */
 package gossip;
 
+import gossip.p2p.HelloMessage;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import org.junit.After;
@@ -24,6 +25,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import protocol.Message;
 import protocol.MessageParserException;
 
 /**
@@ -68,7 +70,7 @@ public class HelloMessageTest {
         out.flip();
         out.position(4); //remove the header
         HelloMessage parsed = HelloMessage.parse(out);
-        assertTrue(parsed.peers.size() > 0);
+        assertTrue(parsed.getPeers().size() > 0);
     }
 
 }

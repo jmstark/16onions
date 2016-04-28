@@ -16,6 +16,9 @@
  */
 package gossip;
 
+import gossip.p2p.GossipMessageHandler;
+import gossip.p2p.PeerContext;
+import gossip.p2p.GossipServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;

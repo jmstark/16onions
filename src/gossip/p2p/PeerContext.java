@@ -15,8 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gossip;
+package gossip.p2p;
 
+import gossip.Cache;
+import gossip.Peer;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,7 +33,7 @@ import protocol.MessageSizeExceededException;
  *
  * @author totakura
  */
-class PeerContext {
+public final class PeerContext {
 
     final static private Logger LOGGER = Logger.getLogger("Gossip");
     final private Peer peer;
@@ -40,7 +42,7 @@ class PeerContext {
     private ScheduledFuture future_shareNeighbours;
     private boolean helloSent;
 
-    PeerContext(Peer peer,
+    public PeerContext(Peer peer,
             ScheduledExecutorService scheduled_executor,
             Cache cache) {
         this.peer = peer;
@@ -50,7 +52,7 @@ class PeerContext {
         this.helloSent = false;
     }
 
-    Peer getPeer() {
+    public Peer getPeer() {
         return peer;
     }
 
@@ -84,7 +86,7 @@ class PeerContext {
         peer.sendMessage(message);
     }
 
-    void shareNeighbours() {
+    public void shareNeighbours() {
         if (null != future_shareNeighbours) {
             return;
         }
@@ -97,7 +99,7 @@ class PeerContext {
         }, 0, 30, TimeUnit.SECONDS);
     }
 
-    void shutdown() {
+    public void shutdown() {
         if (null != future_shareNeighbours) {
             future_shareNeighbours.cancel(true);
         }
@@ -106,7 +108,7 @@ class PeerContext {
     /**
      * Send HELLO message on the peer's connection.
      */
-    void sendHello(InetSocketAddress listen_address) {
+    public void sendHello(InetSocketAddress listen_address) {
         assert (peer.isConnected());
         assert (!helloSent); //Check we only send this once
         peer.sendMessage(HelloMessage.create(listen_address));

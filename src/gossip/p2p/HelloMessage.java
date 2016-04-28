@@ -14,8 +14,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package gossip;
+package gossip.p2p;
 
+import gossip.Peer;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import protocol.MessageParserException;
@@ -26,10 +27,9 @@ import protocol.Protocol;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-final class HelloMessage extends NeighboursMessage {
+public final class HelloMessage extends NeighboursMessage {
 
-
-    private HelloMessage(Peer peer) throws MessageSizeExceededException {
+    public HelloMessage(Peer peer) throws MessageSizeExceededException {
         super(peer);
         this.changeMessageType(Protocol.MessageType.GOSSIP_HELLO);
     }
@@ -41,7 +41,8 @@ final class HelloMessage extends NeighboursMessage {
      * @param size the size in the buffer to parse
      * @return the hello message
      */
-    final protected static HelloMessage parse(ByteBuffer buf) throws MessageParserException {
+    public static HelloMessage parse(ByteBuffer buf) throws
+            MessageParserException {
         NeighboursMessage message;
         message = NeighboursMessage.parse(buf);
         if (message.peers.size() != 1) {
@@ -57,7 +58,7 @@ final class HelloMessage extends NeighboursMessage {
         return hello;
     }
 
-    static HelloMessage create(InetSocketAddress sock_address) {
+    public static HelloMessage create(InetSocketAddress sock_address) {
         HelloMessage message;
         Peer peer = new Peer(sock_address);
         try {

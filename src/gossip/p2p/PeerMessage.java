@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 totakura
+ * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,33 +14,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package gossip;
+package gossip.p2p;
 
 import java.nio.ByteBuffer;
-import protocol.MessageHandler;
+import protocol.Message;
 import protocol.MessageParserException;
-import protocol.Protocol;
-import protocol.ProtocolException;
+import protocol.Protocol.MessageType;
 
 /**
  *
- * @author totakura
+ * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class ApiMessageHandler extends MessageHandler<ClientContext> {
+class PeerMessage extends Message {
 
-    private final Cache cache;
-
-    ApiMessageHandler(ClientContext context, Cache cache) {
-        super(context);
-        this.cache = cache;
+    protected PeerMessage() {
+        super();
     }
-
-    @Override
-    public void parseMessage(ByteBuffer buf,
-            Protocol.MessageType type,
-            ClientContext closure) throws
-            MessageParserException, ProtocolException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
 }

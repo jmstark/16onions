@@ -14,15 +14,15 @@ import protocol.Message;
  *
  * @author totakura
  */
-final class Peer {
+public final class Peer {
     private Connection connection;
     private InetSocketAddress address;
 
-    Peer(InetSocketAddress address) {
+    public Peer(InetSocketAddress address) {
         this(address, null);
     }
 
-    Peer(InetSocketAddress address, Connection connection) {
+    public Peer(InetSocketAddress address, Connection connection) {
         this.connection = connection;
         this.address = address;
     }
@@ -31,7 +31,7 @@ final class Peer {
         this.address = address;
     }
 
-    InetSocketAddress getAddress() {
+    public InetSocketAddress getAddress() {
         return address;
     }
 
@@ -40,22 +40,22 @@ final class Peer {
      *
      * @return true if we have an active connection to this peer; false if not
      */
-    boolean isConnected() {
+    public boolean isConnected() {
         if (null == this.connection) {
             return false;
         }
         return this.connection.getChannel().isOpen();
     }
 
-    void setConnection(Connection connection) {
+    public void setConnection(Connection connection) {
         this.connection = connection;
     }
 
-    void sendMessage(Message message) {
+    public void sendMessage(Message message) {
         this.connection.sendMsg(message);
     }
 
-    void disconnect() {
+    public void disconnect() {
         this.connection.disconnect();
     }
 

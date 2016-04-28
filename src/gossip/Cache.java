@@ -28,13 +28,13 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-final class Cache {
+public final class Cache {
     private final List<Peer> peers;
     private final ReentrantLock lock_peers;
     private final int max_peers;
     //private final List<News> news;
 
-    Cache(int capacity) {
+    protected Cache(int capacity) {
         this.peers = new LinkedList();
         this.lock_peers = new ReentrantLock();
         this.max_peers = capacity;
@@ -50,7 +50,7 @@ final class Cache {
      * @return null when the peer is added to the cache; the existing peer
      *         object when the given peer is already present in the cache
      */
-    Peer addPeer(Peer peer) {
+    public Peer addPeer(Peer peer) {
         int index;
         boolean status;
         lock_peers.lock();
@@ -70,7 +70,7 @@ final class Cache {
         }
     }
 
-    boolean removePeer(Peer peer) {
+    public boolean removePeer(Peer peer) {
         lock_peers.lock();
         try {
             return peers.remove(peer);
@@ -79,7 +79,7 @@ final class Cache {
         }
     }
 
-    void replacePeer(Peer older, Peer newer) {
+    public void replacePeer(Peer older, Peer newer) {
         lock_peers.lock();
         try {
             peers.remove(older);
@@ -89,7 +89,7 @@ final class Cache {
         }
     }
 
-    Iterator peerIterator() {
+    public Iterator peerIterator() {
         ArrayList<Peer> list;
         lock_peers.lock(); //FIXME: Change this to ReadWriteLock
         try {

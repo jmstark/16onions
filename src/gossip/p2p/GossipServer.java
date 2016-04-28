@@ -3,8 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package gossip;
+package gossip.p2p;
 
+import gossip.Cache;
+import gossip.Peer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;

@@ -14,8 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package gossip;
+package gossip.p2p;
 
+import gossip.Cache;
+import gossip.Peer;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -31,7 +33,7 @@ import protocol.ProtocolException;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  * @param <C>
  */
-final class GossipMessageHandler extends MessageHandler<PeerContext> {
+public final class GossipMessageHandler extends MessageHandler<PeerContext> {
 
     final private Cache cache;
     final static private Logger LOGGER = Logger.getLogger("Gossip");
@@ -43,7 +45,7 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
 
     private State state;
 
-    GossipMessageHandler(PeerContext context, Cache cache) {
+    public GossipMessageHandler(PeerContext context, Cache cache) {
         super(context);
         this.cache = cache;
         this.state = State.INIT;
@@ -83,7 +85,7 @@ final class GossipMessageHandler extends MessageHandler<PeerContext> {
         handleMessage(message, type, context);
     }
 
-    void handleMessage(PeerMessage message,
+    private void handleMessage(PeerMessage message,
             MessageType type,
             PeerContext context)
             throws ProtocolException {
