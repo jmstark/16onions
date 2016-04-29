@@ -43,13 +43,14 @@ public class AnnounceMessageTest {
     private final int datatype;
     private final byte[] data;
     private final Random random;
-    private ByteBuffer out;
+    private final ByteBuffer out;
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
 
     public AnnounceMessageTest() {
+        out = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
         random = new Random();
         ttl = (short) random.nextInt(255);
         datatype = random.nextInt(65535);
@@ -92,6 +93,7 @@ public class AnnounceMessageTest {
      */
     @Test
     public void testSend() {
+        out.clear();
         AnnounceMessage instance = null;
         try {
             instance = new AnnounceMessage(this.ttl, this.datatype, this.data);
@@ -99,7 +101,6 @@ public class AnnounceMessageTest {
             fail(ex.toString() + " should not be thrown");
         }
         assertNotNull(instance);
-        out = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
         instance.send(out);
     }
 
