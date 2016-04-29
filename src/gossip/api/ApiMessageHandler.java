@@ -20,7 +20,7 @@ import gossip.Cache;
 import java.nio.ByteBuffer;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
-import protocol.Protocol;
+import protocol.Protocol.MessageType;
 import protocol.ProtocolException;
 
 /**
@@ -38,7 +38,7 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
 
     @Override
     public void parseMessage(ByteBuffer buf,
-            Protocol.MessageType type,
+            MessageType type,
             ClientContext context) throws
             MessageParserException, ProtocolException {
         ApiMessage message;
@@ -47,13 +47,27 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
         handleMessage(message, type, context);
     }
 
-    private ApiMessage dispatch(ByteBuffer buf, Protocol.MessageType type) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private ApiMessage dispatch(ByteBuffer buf, MessageType type)
+            throws MessageParserException {
+        switch (type) {
+            case API_GOSSIP_ANNOUNCE:
+                return AnnounceMessage.parse(buf);
+            case API_GOSSIP_NOTIFY:
+                throw new UnsupportedOperationException("Not supported yet.");
+            //return NotifyMessage.parse(buf);
+            default:
+                throw new MessageParserException("Unknown message");
+        }
     }
 
     private void handleMessage(ApiMessage message,
-            Protocol.MessageType type, ClientContext context) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            MessageType type, ClientContext context) {
+        switch (type) {
+            case API_GOSSIP_ANNOUNCE:
+                throw new UnsupportedOperationException("Not supported yet.");
+            case API_GOSSIP_NOTIFY:
+                throw new UnsupportedOperationException("Not supported yet.");
+        }
     }
 
 }
