@@ -17,6 +17,7 @@
 package gossip.api;
 
 import java.nio.ByteBuffer;
+import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -49,6 +50,18 @@ public class AnnounceMessage extends ApiMessage {
         this.data = data;
     }
 
+    public short getTtl() {
+        return ttl;
+    }
+
+    public int getDatatype() {
+        return datatype;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
+
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
@@ -59,6 +72,23 @@ public class AnnounceMessage extends ApiMessage {
     }
 
     public static AnnounceMessage parse(ByteBuffer buf) throws MessageParserException {
-        return null;
+        short ttl;
+        int datatype;
+        byte[] data;
+        AnnounceMessage message;
+
+        ttl = Message.unsignedShortFromByte(buf.get());
+        buf.position(buf.position() + 1); // reserved byte field
+        datatype = Message.unsignedIntFromShort(buf.getShort());
+        data = new byte[buf.remaining()];
+        buf.get(data);
+        try {
+            message = new AnnounceMessage(ttl, datatype, data);
+        } catch (MessageSizeExceededException ex) {
+            throw new RuntimeException(
+                    "We parsed well, but failed to deserialize."
+                    + "  This is a bug; please report it");
+        }
+        return message;
     }
 }

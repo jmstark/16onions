@@ -35,7 +35,7 @@ class DataMessage extends PeerMessage {
         int data_size;
         byte[] data;
 
-        data_size = buf.remaining() - 2;
+        data_size = buf.remaining() - 2; // 2 bytes for datatype
         if (data_size < 0) {
             throw new MessageParserException();
         }
