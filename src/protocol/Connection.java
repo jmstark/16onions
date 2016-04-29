@@ -132,8 +132,6 @@ public final class Connection {
             if (waiting) {
                 //unflip the buffer so that we can use it for writing
                 readBuffer.compact(); //move contents to beginning
-                readBuffer.position(readBuffer.limit());
-                readBuffer.limit(readBuffer.capacity());
             } else {
                 readBuffer.clear();
             }
