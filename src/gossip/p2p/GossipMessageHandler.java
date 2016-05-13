@@ -21,6 +21,7 @@ import gossip.Peer;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageHandler;
@@ -148,7 +149,9 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 context.shareNeighbours();
                 return;
             case GOSSIP_DATA:
-                //FIXME: Add this data to our local knowledge (probabilistically?)
+                DataMessage dm = (DataMessage) message;
+                Page page = dm.getPage();
+                cache.addPage(page); //FIXME: make this either probabalistic or rate-limited
                 return;
             default:
                 throw new RuntimeException("Control should not reach here; please report this as a bug");

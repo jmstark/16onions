@@ -43,40 +43,41 @@ class DataMessage extends PeerMessage {
         data_type = Message.getUnsignedShort(buf);
         buf.get(data);
         try {
-            message = new DataMessage(data_type, data);
+            message = DataMessage.create(data_type, data);
         } catch (MessageSizeExceededException ex) {
             throw new RuntimeException("This should not happen; please report this.");
         }
         return message;
     }
 
-    final private byte[] data;
-    final private int data_type;
+    private final Page page;
 
-    DataMessage(int data_type, byte[] data) throws MessageSizeExceededException {
+    DataMessage(Page page) throws MessageSizeExceededException {
         super();
+        byte[] data = page.getData();
+        this.page = page;
+        int datatype = page.getDatatype();
         this.addHeader(Protocol.MessageType.GOSSIP_DATA);
         this.size += 2; //data_type as short
         this.size += data.length;
         if (this.size > Protocol.MAX_MESSAGE_SIZE) {
             throw new MessageSizeExceededException();
         }
-        this.data = data;
-        this.data_type = data_type;
     }
 
-    public byte[] getData() {
-        return data;
-    }
-
-    public int getData_type() {
-        return data_type;
+    public Page getPage() {
+        return page;
     }
 
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        out.putShort((short) this.data_type);
-        out.put(out);
+        out.putShort((short) this.page.getDatatype());
+        out.put(this.page.getData());
+    }
+
+    static DataMessage create(int datatype, byte[] data) throws
+            MessageSizeExceededException {
+        return new DataMessage(new Page(datatype, data));
     }
 }

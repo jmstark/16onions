@@ -16,6 +16,7 @@
  */
 package gossip;
 
+import gossip.p2p.Page;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -30,14 +31,20 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public final class Cache {
     private final List<Peer> peers;
+    private final List<Page> pages;
     private final ReentrantLock lock_peers;
+    private final ReentrantLock lock_pages;
     private final int max_peers;
+    private final int max_pages;
     //private final List<News> news;
 
     protected Cache(int capacity) {
         this.peers = new LinkedList();
+        this.pages = new LinkedList();
         this.lock_peers = new ReentrantLock();
+        this.lock_pages = new ReentrantLock();
         this.max_peers = capacity;
+        this.max_pages = 5 * capacity;
     }
 
     /**
@@ -98,5 +105,17 @@ public final class Cache {
             lock_peers.unlock();
         }
         return list.iterator();
+    }
+
+    public void addPage(Page page) {
+        lock_pages.lock();
+        try {
+            if (max_pages == pages.size()) {
+                pages.remove(0);
+            }
+            pages.add(page);
+        } finally {
+            lock_pages.unlock();
+        }
     }
 }
