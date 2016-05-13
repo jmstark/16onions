@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2016 totakura
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,45 +20,55 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import protocol.Message;
 import protocol.MessageParserException;
+import protocol.MessageSizeExceededException;
 import protocol.Protocol;
 
 /**
  *
- * @author Sree Harsha Totakura <sreeharsha@totakura.in>
+ * @author totakura
  */
-public class NotifyMessage extends ApiMessage {
-    int datatype;
+public class NotificationMessage extends NotifyMessage {
 
-    public NotifyMessage(int datatype) {
-        assert (65535 >= datatype);
-        super.addHeader(Protocol.MessageType.API_GOSSIP_NOTIFY);
-        this.datatype = datatype;
-        this.size += 2 + 2; //2 reserved; 2 datatype
-    }
+    byte[] data;
 
-    public int getDatatype() {
-        return datatype;
+    public NotificationMessage(int datatype, byte[] data)
+            throws MessageSizeExceededException {
+        super(datatype);
+        this.changeMessageType(Protocol.MessageType.API_GOSSIP_NOTIFICATION);
+        this.data = data;
+        if (Protocol.MAX_MESSAGE_SIZE < (this.size + data.length)) {
+            throw new MessageSizeExceededException();
+        }
+        this.size += data.length;
     }
 
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        super.sendEmptyBytes(out, 2); //2 bytes reserved
-        out.putShort((short) datatype);
+        out.put(data);
     }
 
+    /**
+     * Parse a tokenized buffer to construct this message
+     *
+     * @param buf
+     * @return
+     */
     static ApiMessage parse(ByteBuffer buf) throws MessageParserException {
-        ApiMessage message;
+        byte[] data;
         int datatype;
+        ApiMessage message;
 
         try {
-        buf.position(buf.position() + 2);//skip over the reserved part
+        buf.position(buf.position() + 2); //skip over the reserved part
         datatype = Message.unsignedIntFromShort(buf.getShort());
-            message = new NotifyMessage(datatype);
-        } catch (BufferUnderflowException | IllegalArgumentException exp) {
+        data = new byte[buf.remaining()];
+            buf.get(data);
+            message = new NotificationMessage(datatype, data);
+        } catch (BufferUnderflowException | IllegalArgumentException |
+                MessageSizeExceededException exp) {
             throw new MessageParserException();
         }
         return message;
     }
-
 }
