@@ -16,6 +16,7 @@
  */
 package gossip.api;
 
+import gossip.Bus;
 import gossip.Cache;
 import java.nio.ByteBuffer;
 import protocol.MessageHandler;
@@ -30,6 +31,7 @@ import protocol.ProtocolException;
 class ApiMessageHandler extends MessageHandler<ClientContext> {
 
     private final Cache cache;
+    private static final Bus BUS = Bus.getGlobal();
 
     ApiMessageHandler(ClientContext context, Cache cache) {
         super(context);

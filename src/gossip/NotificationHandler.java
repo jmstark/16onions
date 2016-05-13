@@ -16,6 +16,8 @@
  */
 package gossip;
 
+import gossip.p2p.Page;
+
 /**
  *
  * @author totakura
@@ -23,19 +25,12 @@ package gossip;
 public interface NotificationHandler {
 
     /**
-     * Returns the datatype this notification handler is interested in
-     *
-     * @return the datatype
-     */
-    public abstract int getDatatype();
-
-    /**
      * Handle the data.
      *
      * This method is called by the dispatcher when data with interested
      * datatype is available
      *
-     * @param data the data corresponding to our interest
+     * @param page the data corresponding to our interest
      */
-    public abstract void handleData(byte[] data);
+    public void handleData(Page page);
 }

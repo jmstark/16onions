@@ -37,19 +37,21 @@ public final class Bus {
         this.handlerMap = new HashMap();
     }
 
-    public synchronized void addHandler(NotificationHandler handler) {
+    public synchronized void addHandler(int datatype,
+            NotificationHandler handler) {
         List<NotificationHandler> handlers;
-        handlers = this.handlerMap.get(handler.getDatatype());
+        handlers = this.handlerMap.get(datatype);
         if (null == handlers) {
             handlers = new LinkedList();
-            this.handlerMap.put(handler.getDatatype(), handlers);
+            this.handlerMap.put(datatype, handlers);
         }
         handlers.add(handler);
     }
 
-    public synchronized void removeHandler(NotificationHandler handler) {
+    public synchronized void removeHandler(int datatype,
+            NotificationHandler handler) {
         List<NotificationHandler> handlers;
-        handlers = this.handlerMap.get(handler.getDatatype());
+        handlers = this.handlerMap.get(datatype);
         if (null == handlers) {
             return;
         }
@@ -66,7 +68,7 @@ public final class Bus {
             handlers = new ArrayList(handlers); //required due to concurrent access
         }
         for (NotificationHandler handler : handlers) {
-            handler.handleData(page.getData());
+            handler.handleData(page);
         }
     }
 

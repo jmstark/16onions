@@ -16,13 +16,15 @@
  */
 package gossip.api;
 
+import gossip.NotificationHandler;
+import gossip.p2p.Page;
 import protocol.Connection;
 
 /**
  *
  * @author totakura
  */
-public class ClientContext {
+public class ClientContext implements NotificationHandler {
 
     private final Connection connection;
 
@@ -34,6 +36,11 @@ public class ClientContext {
      * Shutdown all tasks and prepare for touchdown
      */
     void close() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void handleData(Page page) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
