@@ -16,8 +16,10 @@
  */
 package gossip.api;
 
+import gossip.p2p.Page;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -42,10 +44,42 @@ public class NotificationMessage extends NotifyMessage {
         this.size += data.length;
     }
 
+    public NotificationMessage(Page page) throws MessageSizeExceededException {
+        this(page.getDatatype(), page.getData());
+    }
+
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
         out.put(data);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = datatype;
+        hash = 67 * hash + Arrays.hashCode(this.data);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final NotificationMessage other = (NotificationMessage) obj;
+        if (this.datatype != other.datatype) {
+            return false;
+        }
+        if (!Arrays.equals(this.data, other.data)) {
+            return false;
+        }
+        return true;
     }
 
     /**

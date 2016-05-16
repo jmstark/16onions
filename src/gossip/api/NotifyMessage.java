@@ -27,7 +27,7 @@ import protocol.Protocol;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 public class NotifyMessage extends ApiMessage {
-    int datatype;
+    protected int datatype;
 
     public NotifyMessage(int datatype) {
         assert (65535 >= datatype);
