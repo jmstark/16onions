@@ -31,7 +31,7 @@ import protocol.ProtocolException;
 class ApiMessageHandler extends MessageHandler<ClientContext> {
 
     private final Cache cache;
-    private static final Bus BUS = Bus.getGlobal();
+    private static final Bus BUS = Bus.getInstance();
 
     ApiMessageHandler(ClientContext context, Cache cache) {
         super(context);

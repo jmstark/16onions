@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Minimalistic dispatcher for Gossip notifications
+ * Singleton minimalistic dispatcher for Gossip notifications
  *
  * @author totakura
  */
@@ -33,14 +33,24 @@ public final class Bus {
     private static final Bus BUS = new Bus();
     private final Map<Integer, List<NotificationHandler>> handlerMap;
 
-    public Bus() {
+    private Bus() {
         this.handlerMap = new HashMap();
     }
 
+    /**
+     * Adds a handler for a datatype.
+     *
+     * A datatype can have multiple handlers. In that case all of the handlers
+     * will be called sequentially when the matching data is available
+     *
+     * @param datatype
+     * @param handler
+     */
     public synchronized void addHandler(int datatype,
             NotificationHandler handler) {
         List<NotificationHandler> handlers;
         handlers = this.handlerMap.get(datatype);
+        // create a new list if none exists
         if (null == handlers) {
             handlers = new LinkedList();
             this.handlerMap.put(datatype, handlers);
@@ -48,6 +58,12 @@ public final class Bus {
         handlers.add(handler);
     }
 
+    /**
+     * Remove a handler from being triggered upon a datatype
+     *
+     * @param datatype
+     * @param handler
+     */
     public synchronized void removeHandler(int datatype,
             NotificationHandler handler) {
         List<NotificationHandler> handlers;
@@ -58,8 +74,14 @@ public final class Bus {
         handlers.remove(handler);
     }
 
+    /**
+     * Trigger handlers which are interested in the given page
+     *
+     * @param page
+     */
     public void trigger(Page page) {
         List<NotificationHandler> handlers;
+        // synchronize on the hashmap
         synchronized (handlerMap) {
             handlers = handlerMap.get(page.getDatatype());
             if (null == handlers) {
@@ -72,7 +94,12 @@ public final class Bus {
         }
     }
 
-    public static Bus getGlobal() {
+    /**
+     * Function to get the singleton
+     *
+     * @return the singleton object of this class
+     */
+    public static Bus getInstance() {
         return BUS;
     }
 }
