@@ -16,6 +16,7 @@
  */
 package gossip.p2p;
 
+import gossip.Bus;
 import gossip.Cache;
 import gossip.Peer;
 import java.net.InetSocketAddress;
@@ -152,6 +153,7 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 DataMessage dm = (DataMessage) message;
                 Page page = dm.getPage();
                 cache.addPage(page); //FIXME: make this either probabalistic or rate-limited
+                Bus.getInstance().trigger(page);
                 return;
             default:
                 throw new RuntimeException("Control should not reach here; please report this as a bug");
