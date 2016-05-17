@@ -56,7 +56,7 @@ class DataMessage extends PeerMessage {
         super();
         byte[] data = page.getData();
         this.page = page;
-        int datatype = page.getDatatype();
+        int datatype = page.getType();
         this.addHeader(Protocol.MessageType.GOSSIP_DATA);
         this.size += 2; //data_type as short
         this.size += data.length;
@@ -72,7 +72,7 @@ class DataMessage extends PeerMessage {
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        out.putShort((short) this.page.getDatatype());
+        out.putShort((short) this.page.getType());
         out.put(this.page.getData());
     }
 

@@ -45,7 +45,7 @@ public class NotificationMessage extends NotifyMessage {
     }
 
     public NotificationMessage(Page page) throws MessageSizeExceededException {
-        this(page.getDatatype(), page.getData());
+        this(page.getType(), page.getData());
     }
 
     @Override

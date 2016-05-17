@@ -16,11 +16,13 @@
  */
 package gossip.p2p;
 
+import gossip.DataItem;
+
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class Page {
+public class Page implements DataItem {
     private final int datatype;
     private final byte[] data;
 
@@ -29,10 +31,12 @@ public class Page {
         this.data = data;
     }
 
-    public int getDatatype() {
+    @Override
+    public int getType() {
         return datatype;
     }
 
+    @Override
     public byte[] getData() {
         return data;
     }

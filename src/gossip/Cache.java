@@ -31,20 +31,20 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public final class Cache {
     private final List<Peer> peers;
-    private final List<Page> pages;
+    private final List<DataItem> dataitems;
     private final ReentrantLock lock_peers;
-    private final ReentrantLock lock_pages;
+    private final ReentrantLock lock_dataitems;
     private final int max_peers;
-    private final int max_pages;
+    private final int max_dataitems;
     //private final List<News> news;
 
     protected Cache(int capacity) {
         this.peers = new LinkedList();
-        this.pages = new LinkedList();
+        this.dataitems = new LinkedList();
         this.lock_peers = new ReentrantLock();
-        this.lock_pages = new ReentrantLock();
+        this.lock_dataitems = new ReentrantLock();
         this.max_peers = capacity;
-        this.max_pages = 5 * capacity;
+        this.max_dataitems = 5 * capacity;
     }
 
     /**
@@ -107,15 +107,15 @@ public final class Cache {
         return list.iterator();
     }
 
-    public void addPage(Page page) {
-        lock_pages.lock();
+    public void addDataItem(DataItem item) {
+        lock_dataitems.lock();
         try {
-            if (max_pages == pages.size()) {
-                pages.remove(0);
+            if (max_dataitems == dataitems.size()) {
+                dataitems.remove(0);
             }
-            pages.add(page);
+            dataitems.add(item);
         } finally {
-            lock_pages.unlock();
+            lock_dataitems.unlock();
         }
     }
 }

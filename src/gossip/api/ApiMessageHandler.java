@@ -74,7 +74,7 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
                 AnnounceMessage announce = (AnnounceMessage) message;
                 Page page = new Page(announce.getDatatype(),
                         announce.getData());
-                cache.addPage(page);
+                cache.addDataItem(page);
                 break;
             case API_GOSSIP_NOTIFY:
                 LOGGER.log(Level.FINE, "Processing NotifyMessage");
