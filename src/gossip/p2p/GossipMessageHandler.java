@@ -81,82 +81,91 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
             MessageType type,
             PeerContext context)
             throws MessageParserException, ProtocolException {
-        PeerMessage message;
-
-        message = dispatch(buf, type);
-        handleMessage(message, type, context);
-    }
-
-    private void handleMessage(PeerMessage message,
-            MessageType type,
-            PeerContext context)
-            throws ProtocolException {
         switch (type) {
-            case GOSSIP_NEIGHBORS:
-                NeighboursMessage nm = (NeighboursMessage) message;
-                Iterator<Peer> iterator = nm.getPeersAsIterator();
-                LOGGER.log(Level.FINER, "Received NeighboursMessage");
-                while (iterator.hasNext()) {
-                    Peer new_peer = iterator.next();
-                    if (null == cache.addPeer(new_peer)) {
-                        LOGGER.log(Level.FINE, "Added a new peer: {0}", new_peer);
-                    } else {
-                        LOGGER.log(Level.FINE,
-                                "Peer {0} already in cache; not adding",
-                                new_peer.toString());
-                    }
-                }
-                return;
             case GOSSIP_HELLO:
-                LOGGER.log(Level.FINE, "Received HELLO");
-                Peer peer = context.getPeer();
-                //HELLO is received as first message
-                if (State.INIT != state) {
-                    LOGGER.log(Level.WARNING,
-                            "Bad peer {0} sent HELLO more than once",
-                            peer);
-                    throw new ProtocolException("HELLO sent more than once");
-                }
-                HelloMessage hello = (HelloMessage) message;
-                Peer orig;
-                if (hello.peers.size() != 1) {
-                    throw new ProtocolException("Mismatched number of peers in Hello");
-                }
-                InetSocketAddress address = hello.peers.getFirst().getAddress();
-                peer.setAddress(address);
-                orig = cache.addPeer(peer);
-                if (null == orig) {
-                    LOGGER.log(Level.FINE, "Adding {0} to cache", peer.toString());
-                } else {
-                    /**
-                     * peer is already in cache. This may happen when the peer
-                     * is connecting to use twice; we do not allow this.
-                     */
-                    if (orig.isConnected()) {
-                        LOGGER.log(Level.WARNING,
-                                "{0} trying to connect twice when it is already connected",
-                                peer.toString());
-                        throw new ProtocolException(
-                                "Peer cannot be connect twice at the same time");
-                    } else
-                        /*
-                         * Here we may have known about the orig peer from some
-                         * other peer but not yet connected to it. And in the
-                         * mean time it has connected to us. We allow this.
-                         */
-                        cache.replacePeer(orig, peer);
-                }
-                state = State.HELLO_RECEIVED;
-                context.shareNeighbours();
+                HelloMessage hello = HelloMessage.parse(buf);
+                handleHello(hello, context);
+                return;
+            case GOSSIP_NEIGHBORS:
+                NeighboursMessage nm = NeighboursMessage.parse(buf);
+                handleNeighboursMessage(nm, context);
                 return;
             case GOSSIP_DATA:
-                DataMessage dm = (DataMessage) message;
-                Page page = dm.getPage();
-                cache.addPage(page); //FIXME: make this either probabalistic or rate-limited
-                Bus.getInstance().trigger(page);
-                return;
+                DataMessage message;
+                message = DataMessage.parse(buf);
+                handleDataMessage(message, context);
             default:
-                throw new RuntimeException("Control should not reach here; please report this as a bug");
+                throw new MessageParserException("Unknown message");
         }
+    }
+
+    private void handleHello(HelloMessage hello, PeerContext context)
+            throws ProtocolException {
+        LOGGER.log(Level.FINE, "Received HELLO");
+        Peer peer = context.getPeer();
+        //HELLO is received as first message
+        if (State.INIT != state) {
+            LOGGER.log(Level.WARNING,
+                    "Bad peer {0} sent HELLO more than once",
+                    peer);
+            throw new ProtocolException("HELLO sent more than once");
+        }
+        Peer orig;
+        if (hello.peers.size() != 1) {
+            throw new ProtocolException("Mismatched number of peers in Hello");
+        }
+        InetSocketAddress address = hello.peers.getFirst().getAddress();
+        peer.setAddress(address);
+        orig = cache.addPeer(peer);
+        if (null == orig) {
+            LOGGER.log(Level.FINE, "Adding {0} to cache", peer.toString());
+        } else /**
+         * peer is already in cache. This may happen when the peer is connecting
+         * to use twice; we do not allow this.
+         */
+        if (orig.isConnected()) {
+            LOGGER.log(Level.WARNING,
+                    "{0} trying to connect twice when it is already connected",
+                    peer.toString());
+            throw new ProtocolException(
+                    "Peer cannot be connect twice at the same time");
+        } else /*
+        * Here we may have known about the orig peer from some
+        * other peer but not yet connected to it. And in the
+        * mean time it has connected to us. We allow this.
+        */ {
+            cache.replacePeer(orig, peer);
+        }
+        state = State.HELLO_RECEIVED;
+        context.shareNeighbours();
+    }
+
+    private void handleNeighboursMessage(NeighboursMessage nm,
+            PeerContext context) throws ProtocolException {
+        if (state.HELLO_RECEIVED != state) {
+            throw new ProtocolException("Diverting from protocol");
+        }
+        Iterator<Peer> iterator = nm.getPeersAsIterator();
+        LOGGER.log(Level.FINER, "Received NeighboursMessage");
+        while (iterator.hasNext()) {
+            Peer new_peer = iterator.next();
+            if (null == cache.addPeer(new_peer)) {
+                LOGGER.log(Level.FINE, "Added a new peer: {0}", new_peer);
+            } else {
+                LOGGER.log(Level.FINE,
+                        "Peer {0} already in cache; not adding",
+                        new_peer.toString());
+            }
+        }
+    }
+
+    private void handleDataMessage(DataMessage message, PeerContext context)
+            throws ProtocolException {
+        if (state.HELLO_RECEIVED != state) {
+            throw new ProtocolException("Diverted from protocol");
+        }
+        Page page = message.getPage();
+        cache.addPage(page); //FIXME: make this either probabalistic or rate-limited
+        Bus.getInstance().trigger(page);
     }
 }

@@ -29,8 +29,8 @@ import protocol.Protocol;
  */
 class DataMessage extends PeerMessage {
 
-    static PeerMessage parse(ByteBuffer buf) throws MessageParserException {
-        PeerMessage message;
+    static DataMessage parse(ByteBuffer buf) throws MessageParserException {
+        DataMessage message;
         int data_type;
         int data_size;
         byte[] data;
