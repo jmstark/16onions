@@ -72,7 +72,12 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
             case API_GOSSIP_ANNOUNCE:
                 throw new UnsupportedOperationException("Not supported yet.");
             case API_GOSSIP_NOTIFY:
-                throw new UnsupportedOperationException("Not supported yet.");
+                LOGGER.log(Level.FINE, "Processing NotifyMessage");
+                NotifyMessage notify = (NotifyMessage) message;
+                context.addInterest(notify.getDatatype());
+                break;
+            default:
+                assert (false);
         }
     }
 

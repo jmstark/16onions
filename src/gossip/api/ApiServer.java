@@ -16,10 +16,12 @@
  */
 package gossip.api;
 
+import gossip.Bus;
 import gossip.Cache;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.util.List;
 import protocol.Connection;
 import protocol.ProtocolServer;
 
@@ -31,6 +33,7 @@ import protocol.ProtocolServer;
 public class ApiServer extends ProtocolServer<ClientContext> {
 
     private final Cache cache;
+    static final Bus BUS = Bus.getInstance();
 
     ApiServer(SocketAddress address,
             AsynchronousChannelGroup group,
@@ -47,8 +50,21 @@ public class ApiServer extends ProtocolServer<ClientContext> {
         return context;
     }
 
+    /**
+     * Handle API connection disconnects.
+     *
+     * Cleanups notification handlers associated with this context
+     *
+     * @param context
+     */
     @Override
     protected void handleDisconnect(ClientContext context) {
+        List<Integer> interests;
+
+        interests = context.getInterests();
+        for (int interest : interests) {
+            BUS.removeHandler(interest, context);
+        }
         context.close();
     }
 
