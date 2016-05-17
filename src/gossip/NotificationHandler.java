@@ -16,8 +16,6 @@
  */
 package gossip;
 
-import gossip.p2p.Page;
-
 /**
  *
  * @author totakura
@@ -32,5 +30,5 @@ public interface NotificationHandler {
      *
      * @param page the data corresponding to our interest
      */
-    public void handleData(Page page);
+    public void handleData(DataItem item);
 }

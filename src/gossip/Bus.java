@@ -84,11 +84,11 @@ public final class Bus {
      *
      * @param page
      */
-    public void trigger(Page page) {
+    public void trigger(DataItem item) {
         List<NotificationHandler> handlers;
         // synchronize on the hashmap
         synchronized (handlerMap) {
-            handlers = handlerMap.get(page.getDatatype());
+            handlers = handlerMap.get(item.getType());
             if (null == handlers) {
                 return;
             }
@@ -97,7 +97,7 @@ public final class Bus {
         for (NotificationHandler handler : handlers) {
             LOGGER.log(Level.FINEST,
                     "Triggering notification handler {0}", handler.toString());
-            handler.handleData(page);
+            handler.handleData(item);
         }
     }
 
