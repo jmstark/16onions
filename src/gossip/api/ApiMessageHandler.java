@@ -18,6 +18,7 @@ package gossip.api;
 
 import gossip.Bus;
 import gossip.Cache;
+import gossip.p2p.Page;
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,8 +59,7 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
             case API_GOSSIP_ANNOUNCE:
                 return AnnounceMessage.parse(buf);
             case API_GOSSIP_NOTIFY:
-                throw new UnsupportedOperationException("Not supported yet.");
-            //return NotifyMessage.parse(buf);
+                return NotifyMessage.parse(buf);
             default:
                 LOGGER.log(Level.WARNING, "Unknown message received");
                 throw new MessageParserException("Unknown message");
@@ -70,7 +70,12 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
             MessageType type, ClientContext context) {
         switch (type) {
             case API_GOSSIP_ANNOUNCE:
-                throw new UnsupportedOperationException("Not supported yet.");
+                LOGGER.log(Level.FINE, "Processing AnnounceMessage");
+                AnnounceMessage announce = (AnnounceMessage) message;
+                Page page = new Page(announce.getDatatype(),
+                        announce.getData());
+                cache.addPage(page);
+                break;
             case API_GOSSIP_NOTIFY:
                 LOGGER.log(Level.FINE, "Processing NotifyMessage");
                 NotifyMessage notify = (NotifyMessage) message;

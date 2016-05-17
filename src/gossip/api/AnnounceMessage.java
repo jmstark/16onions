@@ -29,9 +29,8 @@ import protocol.Protocol;
 public class AnnounceMessage extends ApiMessage {
 
     final private short ttl;
-    final int datatype;
-    final byte[] data;
-
+    final private int datatype;
+    final private byte[] data;
 
     public AnnounceMessage(short ttl, int datatype, byte[] data)
             throws MessageSizeExceededException {
