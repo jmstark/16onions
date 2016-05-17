@@ -165,7 +165,7 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
             throw new ProtocolException("Diverted from protocol");
         }
         Page page = message.getPage();
-        cache.addDataItem(page); //FIXME: make this either probabalistic or rate-limited
+        cache.addItem(page); //FIXME: make this either probabalistic or rate-limited
         Bus.getInstance().trigger(page);
     }
 }

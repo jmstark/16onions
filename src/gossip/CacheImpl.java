@@ -34,7 +34,6 @@ class CacheImpl extends Cache {
     private final int max_peers;
     private final int max_dataitems;
 
-    //private final List<News> news;
     protected CacheImpl(int capacity) {
         this.peers = new LinkedList();
         this.dataitems = new LinkedList();
@@ -99,7 +98,7 @@ class CacheImpl extends Cache {
     }
 
     @Override
-    public void addDataItem(Item item) {
+    public void addItem(Item item) {
         lock_dataitems.lock();
         try {
             if (max_dataitems == dataitems.size()) {
@@ -109,5 +108,17 @@ class CacheImpl extends Cache {
         } finally {
             lock_dataitems.unlock();
         }
+    }
+
+    @Override
+    public List<Item> getItems() {
+        ArrayList<Item> items;
+        lock_dataitems.lock();
+        try {
+            items = new ArrayList(dataitems);
+        } finally {
+            lock_dataitems.unlock();
+        }
+        return items;
     }
 }

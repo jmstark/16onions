@@ -51,7 +51,9 @@ public abstract class Cache {
 
     public abstract Iterator peerIterator();
 
-    public abstract void addDataItem(Item item);
+    public abstract void addItem(Item item);
+
+    public abstract List<Item> getItems();
 
     public static Cache initialize(int capacity) {
         if (null != CACHE) {
