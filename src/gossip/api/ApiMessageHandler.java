@@ -19,6 +19,8 @@ package gossip.api;
 import gossip.Bus;
 import gossip.Cache;
 import java.nio.ByteBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
@@ -32,6 +34,7 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
 
     private final Cache cache;
     private static final Bus BUS = Bus.getInstance();
+    private static final Logger LOGGER = Logger.getLogger("API");
 
     ApiMessageHandler(ClientContext context, Cache cache) {
         super(context);
@@ -58,6 +61,7 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
                 throw new UnsupportedOperationException("Not supported yet.");
             //return NotifyMessage.parse(buf);
             default:
+                LOGGER.log(Level.WARNING, "Unknown message received");
                 throw new MessageParserException("Unknown message");
         }
     }

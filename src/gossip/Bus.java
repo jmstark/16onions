@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Singleton minimalistic dispatcher for Gossip notifications
@@ -32,6 +34,7 @@ public final class Bus {
 
     private static final Bus BUS = new Bus();
     private final Map<Integer, List<NotificationHandler>> handlerMap;
+    private static final Logger LOGGER = Logger.getLogger("Gossip");
 
     private Bus() {
         this.handlerMap = new HashMap();
@@ -56,6 +59,7 @@ public final class Bus {
             this.handlerMap.put(datatype, handlers);
         }
         handlers.add(handler);
+        LOGGER.log(Level.FINER, "Added a notification handler");
     }
 
     /**
@@ -72,6 +76,7 @@ public final class Bus {
             return;
         }
         handlers.remove(handler);
+        LOGGER.log(Level.FINER, "Removed a notification handler");
     }
 
     /**
@@ -90,6 +95,8 @@ public final class Bus {
             handlers = new ArrayList(handlers); //required due to concurrent access
         }
         for (NotificationHandler handler : handlers) {
+            LOGGER.log(Level.FINEST,
+                    "Triggering notification handler {0}", handler.toString());
             handler.handleData(page);
         }
     }
