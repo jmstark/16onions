@@ -18,12 +18,16 @@
 package gossip.p2p;
 
 import gossip.Cache;
+import gossip.Item;
 import gossip.Peer;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageSizeExceededException;
@@ -39,7 +43,10 @@ public final class PeerContext {
     final private Peer peer;
     final private ScheduledExecutorService executor;
     final private Cache cache;
+    final private Random rand;
+    final private ReentrantLock lock_itemExchange;
     private ScheduledFuture future_shareNeighbours;
+    private ScheduledFuture future_itemExchange;
     private boolean helloSent;
 
     public PeerContext(Peer peer,
@@ -49,6 +56,8 @@ public final class PeerContext {
         this.cache = Cache.getInstance();
         this.future_shareNeighbours = null;
         this.helloSent = false;
+        this.rand = new Random();
+        this.lock_itemExchange = new ReentrantLock();
     }
 
     public Peer getPeer() {
@@ -85,6 +94,36 @@ public final class PeerContext {
         peer.sendMessage(message);
     }
 
+    private void doItemExchange() {
+        List<Item> items;
+        DataMessage message;
+
+        items = cache.getItems();
+        for (Item item : items) {
+            if (item.isKnownTo(this.peer)) {
+                continue;
+            }
+            try {
+                message = DataMessage.create(item.getType(), item.getData());
+            } catch (MessageSizeExceededException ex) {
+                LOGGER.log(Level.SEVERE,
+                        "Unexpected exception thrown; please report. Exception: {0}",
+                        ex.toString());
+                continue;
+            }
+            peer.sendMessage(message);
+            item.knownTo(peer);
+            break;
+        }
+        this.lock_itemExchange.lock();
+        try {
+            future_itemExchange = null;
+            scheduleItemExchange();
+        } finally {
+            this.lock_itemExchange.unlock();
+        }
+    }
+
     public void shareNeighbours() {
         if (null != future_shareNeighbours) {
             return;
@@ -102,6 +141,14 @@ public final class PeerContext {
         if (null != future_shareNeighbours) {
             future_shareNeighbours.cancel(true);
         }
+        this.lock_itemExchange.lock();
+        try {
+            if (null != future_itemExchange) {
+                future_itemExchange.cancel(true);
+            }
+        } finally {
+            this.lock_itemExchange.unlock();
+        }
     }
 
     /**
@@ -112,5 +159,24 @@ public final class PeerContext {
         assert (!helloSent); //Check we only send this once
         peer.sendMessage(HelloMessage.create(listen_address));
         helloSent = true;
+    }
+
+    public void scheduleItemExchange() {
+        assert (peer.isConnected());
+        this.lock_itemExchange.lock();
+        try {
+            if (null != future_itemExchange) {
+                return;
+            }
+            future_itemExchange = executor.schedule(
+                    new Runnable() {
+                @Override
+                public void run() {
+                    PeerContext.this.doItemExchange();
+                }
+            }, rand.nextInt(60000) + 1, TimeUnit.MILLISECONDS);
+        } finally {
+            this.lock_itemExchange.unlock();
+        }
     }
 }
