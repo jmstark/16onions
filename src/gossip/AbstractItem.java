@@ -19,6 +19,7 @@ package gossip;
 import java.util.HashSet;
 
 /**
+ * Abstract Item which implements handling of known peers of the Item interface
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */

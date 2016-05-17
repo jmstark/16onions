@@ -28,7 +28,7 @@ public interface NotificationHandler {
      * This method is called by the dispatcher when data with interested
      * datatype is available
      *
-     * @param page the data corresponding to our interest
+     * @param item the dataitem corresponding to our interest
      */
-    public void handleData(DataItem item);
+    public void handleData(Item item);
 }

@@ -17,7 +17,6 @@
 package gossip.api;
 
 import gossip.Bus;
-import gossip.DataItem;
 import gossip.NotificationHandler;
 import gossip.p2p.Page;
 import java.util.LinkedList;
@@ -26,6 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
 import protocol.MessageSizeExceededException;
+import gossip.Item;
 
 /**
  *
@@ -73,7 +73,7 @@ public class ClientContext implements NotificationHandler {
      * @param page
      */
     @Override
-    public void handleData(DataItem item) {
+    public void handleData(Item item) {
         NotificationMessage notification;
 
         try {

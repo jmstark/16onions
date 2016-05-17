@@ -43,11 +43,10 @@ public final class PeerContext {
     private boolean helloSent;
 
     public PeerContext(Peer peer,
-            ScheduledExecutorService scheduled_executor,
-            Cache cache) {
+            ScheduledExecutorService scheduled_executor) {
         this.peer = peer;
         this.executor = scheduled_executor;
-        this.cache = cache;
+        this.cache = Cache.getInstance();
         this.future_shareNeighbours = null;
         this.helloSent = false;
     }
@@ -56,7 +55,7 @@ public final class PeerContext {
         return peer;
     }
 
-    protected void _shareNeighbors() {
+    private void doShareNeighbors() {
         NeighboursMessage message;
         Iterator<Peer> iterator;
         Peer neighbor;
@@ -94,7 +93,7 @@ public final class PeerContext {
                 new Runnable() {
             @Override
             public void run() {
-                PeerContext.this._shareNeighbors();
+                PeerContext.this.doShareNeighbors();
             }
         }, 0, 30, TimeUnit.SECONDS);
     }

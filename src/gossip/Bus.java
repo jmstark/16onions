@@ -84,7 +84,7 @@ public final class Bus {
      *
      * @param page
      */
-    public void trigger(DataItem item) {
+    public void trigger(Item item) {
         List<NotificationHandler> handlers;
         // synchronize on the hashmap
         synchronized (handlerMap) {

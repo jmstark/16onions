@@ -20,39 +20,37 @@ package gossip;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface DataItem {
+public interface Item {
 
     /**
-     * Is the given peer aware of this dataitem?
+     * Is the given peer aware of this item?
      *
-     * We believe the given peer is aware of this dataitem if we learnt this
-     * dataitem from that peer, or if we had earlier sent this data item to that
-     * peer
+     * We believe the given peer is aware of this item if we learnt this item
+     * from that peer, or if we had earlier sent this data item to that     * peer
      *
      * @param peer
-     * @return true if we belive that the given peer knows this dataitem; false
-     *         if not.
+     * @return true if we belive that the given peer knows this item; false     *         if not.
      */
     public boolean isKnownTo(Peer peer);
 
     /**
-     * Mark that the given peer is aware of this dataitem
+     * Mark that the given peer is aware of this item
      *
      * @param peer
      */
     public void knownTo(Peer peer);
 
     /**
-     * Returns the datatype of this dataitem
+     * Returns the datatype of this item
      *
      * @return the datatype
      */
     public int getType();
 
     /**
-     * returns the data of this dataitem
+     * returns the data of this item
      *
-     * @return the data associated with this dataitem
+     * @return the data associated with this item
      */
     public byte[] getData();
 }

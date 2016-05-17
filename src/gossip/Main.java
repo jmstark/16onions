@@ -158,10 +158,8 @@ public class Main {
         if (!bootstrapper_address.equals(listen_address)) {
             bootstrapper = new Peer(bootstrapper_address);
         }
-        logger.log(Level.FINE,
-                "Creating cache with {0} entries",
-                max_connections / 2);
-        cache = new Cache(max_connections / 2);
+        logger.log(Level.FINE, "Creating cache with {0} entries", cache_size);
+        cache = Cache.initialize(cache_size);
     }
 
     private static void startServer() {
@@ -177,7 +175,7 @@ public class Main {
                 (Runtime.getRuntime().availableProcessors() > 1) ? 2 : 1);
         try {
             server = new GossipServer(listen_address,
-                    group, scheduled_executor, cache, max_connections);
+                    group, scheduled_executor, max_connections);
         } catch (IOException ex) {
             logger.log(Level.SEVERE, "Gossip service failed to initialize: {0}",
                     ex.toString());
@@ -206,14 +204,13 @@ public class Main {
                 Connection connection;
                 PeerContext context;
 
-                context = new PeerContext(bootstrapper, scheduled_executor,
-                        cache);
+                context = new PeerContext(bootstrapper, scheduled_executor);
                 connection = new Connection(channel,
                         new PeerDisconnectHandler(context));
                 assert (!bootstrapper.isConnected());
                 bootstrapper.setConnection(connection);
                 context.sendHello(listen_address);
-                connection.receive(new GossipMessageHandler(context, cache));
+                connection.receive(new GossipMessageHandler(context));
             }
 
             @Override

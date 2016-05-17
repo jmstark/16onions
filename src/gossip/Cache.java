@@ -24,28 +24,14 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Class for local cache. The cache is used to store items(news) and information
- * about peers, both currently connected and known
+ * Singleton class for local cache. The cache is used to store items(news) and
+ * information about peers, both currently connected and known
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public final class Cache {
-    private final List<Peer> peers;
-    private final List<DataItem> dataitems;
-    private final ReentrantLock lock_peers;
-    private final ReentrantLock lock_dataitems;
-    private final int max_peers;
-    private final int max_dataitems;
-    //private final List<News> news;
+public abstract class Cache {
 
-    protected Cache(int capacity) {
-        this.peers = new LinkedList();
-        this.dataitems = new LinkedList();
-        this.lock_peers = new ReentrantLock();
-        this.lock_dataitems = new ReentrantLock();
-        this.max_peers = capacity;
-        this.max_dataitems = 5 * capacity;
-    }
+    private static Cache CACHE;
 
     /**
      * Add the given peer into the peer cache.
@@ -57,65 +43,25 @@ public final class Cache {
      * @return null when the peer is added to the cache; the existing peer
      *         object when the given peer is already present in the cache
      */
-    public Peer addPeer(Peer peer) {
-        int index;
-        boolean status;
-        lock_peers.lock();
-        try {
-            index = peers.indexOf(peer);
-            if (-1 != index) {
-                return peers.get(index);
-            }
-            status = peers.add(peer);
-            assert (status); //adding should succeed because we checked it before
-            if (peers.size() > max_peers) {
-                peers.remove(0);
-            }
-            return null;
-        } finally {
-            lock_peers.unlock();
+    public abstract Peer addPeer(Peer peer);
+
+    public abstract boolean removePeer(Peer peer);
+
+    public abstract void replacePeer(Peer older, Peer newer);
+
+    public abstract Iterator peerIterator();
+
+    public abstract void addDataItem(Item item);
+
+    public static Cache initialize(int capacity) {
+        if (null != CACHE) {
+            return CACHE;
         }
+        CACHE = new CacheImpl(capacity);
+        return CACHE;
     }
 
-    public boolean removePeer(Peer peer) {
-        lock_peers.lock();
-        try {
-            return peers.remove(peer);
-        } finally {
-            lock_peers.unlock();
-        }
-    }
-
-    public void replacePeer(Peer older, Peer newer) {
-        lock_peers.lock();
-        try {
-            peers.remove(older);
-            peers.add(newer);
-        } finally {
-            lock_peers.unlock();
-        }
-    }
-
-    public Iterator peerIterator() {
-        ArrayList<Peer> list;
-        lock_peers.lock(); //FIXME: Change this to ReadWriteLock
-        try {
-            list = new ArrayList(peers);
-        } finally {
-            lock_peers.unlock();
-        }
-        return list.iterator();
-    }
-
-    public void addDataItem(DataItem item) {
-        lock_dataitems.lock();
-        try {
-            if (max_dataitems == dataitems.size()) {
-                dataitems.remove(0);
-            }
-            dataitems.add(item);
-        } finally {
-            lock_dataitems.unlock();
-        }
+    public static Cache getInstance() {
+        return CACHE;
     }
 }

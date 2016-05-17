@@ -16,13 +16,14 @@
  */
 package gossip.p2p;
 
-import gossip.DataItem;
+import gossip.Peer;
+import gossip.AbstractItem;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class Page implements DataItem {
+public class Page extends AbstractItem {
     private final int datatype;
     private final byte[] data;
 

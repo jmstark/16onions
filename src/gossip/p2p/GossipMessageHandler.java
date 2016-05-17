@@ -47,9 +47,9 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
 
     private State state;
 
-    public GossipMessageHandler(PeerContext context, Cache cache) {
+    public GossipMessageHandler(PeerContext context) {
         super(context);
-        this.cache = cache;
+        this.cache = Cache.getInstance();
         this.state = State.INIT;
     }
 

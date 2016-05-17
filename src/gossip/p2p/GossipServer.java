@@ -35,10 +35,9 @@ public class GossipServer extends ProtocolServer<PeerContext> {
     public GossipServer(InetSocketAddress socketAddress,
             AsynchronousChannelGroup channelGroup,
             ScheduledExecutorService scheduled_executor,
-            Cache cache,
             int max_peers) throws IOException {
         super(socketAddress, channelGroup);
-        this.cache = cache;
+        this.cache = Cache.getInstance();
         this.max_peers = max_peers;
         this.neighbors = 0;
         this.scheduled_executor = scheduled_executor;
@@ -69,11 +68,9 @@ public class GossipServer extends ProtocolServer<PeerContext> {
             return null;
         }
         peer = new Peer(null, connection);
-        context = new PeerContext(peer,
-                this.scheduled_executor,
-                this.cache);
+        context = new PeerContext(peer, this.scheduled_executor);
         context.sendHello(listen_address);
-        connection.receive(new GossipMessageHandler(context, cache));
+        connection.receive(new GossipMessageHandler(context));
         neighbors++;
         return context;
     }
