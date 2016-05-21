@@ -22,7 +22,6 @@ import gossip.Peer;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageHandler;
@@ -31,9 +30,9 @@ import protocol.Protocol.MessageType;
 import protocol.ProtocolException;
 
 /**
+ * Handler for handling Gossip P2P messages
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
- * @param <C>
  */
 public final class GossipMessageHandler extends MessageHandler<PeerContext> {
 
@@ -138,11 +137,12 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
         }
         state = State.HELLO_RECEIVED;
         context.shareNeighbours();
+        context.scheduleItemExchange();
     }
 
     private void handleNeighboursMessage(NeighboursMessage nm,
             PeerContext context) throws ProtocolException {
-        if (state.HELLO_RECEIVED != state) {
+        if (State.HELLO_RECEIVED != state) {
             throw new ProtocolException("Diverting from protocol");
         }
         Iterator<Peer> iterator = nm.getPeersAsIterator();
@@ -161,7 +161,7 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
 
     private void handleDataMessage(DataMessage message, PeerContext context)
             throws ProtocolException {
-        if (state.HELLO_RECEIVED != state) {
+        if (State.HELLO_RECEIVED != state) {
             throw new ProtocolException("Diverted from protocol");
         }
         Page page = message.getPage();

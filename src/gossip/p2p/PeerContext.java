@@ -94,11 +94,26 @@ public final class PeerContext {
         peer.sendMessage(message);
     }
 
+    private void rescheduleItemExchange() {
+        this.lock_itemExchange.lock();
+        try {
+            future_itemExchange = null;
+            scheduleItemExchange();
+        } finally {
+            this.lock_itemExchange.unlock();
+        }
+    }
+
     private void doItemExchange() {
         List<Item> items;
         DataMessage message;
 
         items = cache.getItems();
+        if ((null == items) || (0 == items.size())) {
+            LOGGER.log(Level.FINE, "There are no items to share; rescheduling");
+            rescheduleItemExchange();
+            return;
+        }
         for (Item item : items) {
             if (item.isKnownTo(this.peer)) {
                 continue;
@@ -115,13 +130,7 @@ public final class PeerContext {
             item.knownTo(peer);
             break;
         }
-        this.lock_itemExchange.lock();
-        try {
-            future_itemExchange = null;
-            scheduleItemExchange();
-        } finally {
-            this.lock_itemExchange.unlock();
-        }
+        rescheduleItemExchange();
     }
 
     public void shareNeighbours() {
@@ -141,6 +150,7 @@ public final class PeerContext {
         if (null != future_shareNeighbours) {
             future_shareNeighbours.cancel(true);
         }
+        // cancel item exchange task
         this.lock_itemExchange.lock();
         try {
             if (null != future_itemExchange) {
@@ -162,21 +172,26 @@ public final class PeerContext {
     }
 
     public void scheduleItemExchange() {
+        int delayms;
+
+        delayms = 0;
         assert (peer.isConnected());
         this.lock_itemExchange.lock();
         try {
             if (null != future_itemExchange) {
                 return;
             }
-            future_itemExchange = executor.schedule(
-                    new Runnable() {
+            delayms = rand.nextInt(60000) + 1;
+            future_itemExchange = executor.schedule(new Runnable() {
                 @Override
                 public void run() {
                     PeerContext.this.doItemExchange();
                 }
-            }, rand.nextInt(60000) + 1, TimeUnit.MILLISECONDS);
+            }, delayms, TimeUnit.MILLISECONDS);
         } finally {
             this.lock_itemExchange.unlock();
         }
+        LOGGER.log(Level.FINE, "Scheduled item exchange to run after {1} ms",
+                delayms);
     }
 }
