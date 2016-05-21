@@ -191,7 +191,7 @@ public final class PeerContext {
         } finally {
             this.lock_itemExchange.unlock();
         }
-        LOGGER.log(Level.FINE, "Scheduled item exchange to run after {1} ms",
+        LOGGER.log(Level.FINE, "Scheduled item exchange to run after {0} ms",
                 delayms);
     }
 }
