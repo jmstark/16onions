@@ -57,6 +57,7 @@ public final class Peer {
 
     public void disconnect() {
         this.connection.disconnect();
+        this.connection = null;
     }
 
     @Override

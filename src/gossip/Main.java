@@ -27,10 +27,12 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ScheduledFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
@@ -50,7 +52,7 @@ import protocol.DisconnectHandler;
  */
 public class Main {
 
-    private static final Logger logger = Logger.getLogger("Gossip");
+    private static final Logger LOGGER = Logger.getLogger("Gossip");
     private static int cache_size;
     private static int max_connections;
     private static Cache cache;
@@ -59,6 +61,7 @@ public class Main {
     private static GossipServer server;
     private static AsynchronousChannelGroup group;
     private static ScheduledExecutorService scheduled_executor;
+    private static ScheduledFuture future_overlay;
 
     private static void printHelp(HelpFormatter formatter, Options options, String header) {
         formatter.printHelp("gossip.Main",
@@ -127,7 +130,7 @@ public class Main {
         try {
             config_parser.read(config_filename);
         } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Unable to read config file: {0}",
+            LOGGER.log(Level.SEVERE, "Unable to read config file: {0}",
                     config_filename);
             System.exit(1);
         }
@@ -140,7 +143,7 @@ public class Main {
             bootstrapper_addr_str = config_parser.get(section, "bootstrapper");
             listen_addr_str = config_parser.get(section, "listen_address");
         } catch (ConfigParserException ex) {
-            logger.severe(ex.toString());
+            LOGGER.severe(ex.toString());
             System.exit(1);
             return;
         }
@@ -158,7 +161,7 @@ public class Main {
         if (!bootstrapper_address.equals(listen_address)) {
             bootstrapper = new Peer(bootstrapper_address);
         }
-        logger.log(Level.FINE, "Creating cache with {0} entries", cache_size);
+        LOGGER.log(Level.FINE, "Creating cache with {0} entries", cache_size);
         cache = Cache.initialize(cache_size);
     }
 
@@ -167,7 +170,7 @@ public class Main {
             group = AsynchronousChannelGroup
                     .withFixedThreadPool(1, Executors.defaultThreadFactory());
         } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Please report this bug:\n{0}", ex);
+            LOGGER.log(Level.SEVERE, "Please report this bug:\n{0}", ex);
             System.exit(1);
             return;
         }
@@ -177,7 +180,7 @@ public class Main {
             server = new GossipServer(listen_address,
                     group, scheduled_executor, max_connections);
         } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Gossip service failed to initialize: {0}",
+            LOGGER.log(Level.SEVERE, "Gossip service failed to initialize: {0}",
                     ex.toString());
             System.exit(1);
         }
@@ -188,7 +191,7 @@ public class Main {
         AsynchronousSocketChannel channel;
 
         if (null == bootstrapper) {
-            logger.log(Level.INFO,
+            LOGGER.log(Level.INFO,
                     "We are the bootstrap peer");
             return;
         }
@@ -215,14 +218,51 @@ public class Main {
 
             @Override
             public void failed(Throwable arg0, AsynchronousSocketChannel channel) {
-                logger.log(Level.SEVERE, "Connection to bootstrapper failed");
+                LOGGER.log(Level.SEVERE, "Connection to bootstrapper failed");
                 try {
                     channel.close();
                 } catch (IOException ex) {
-                    logger.log(Level.SEVERE, null, ex);
+                    LOGGER.log(Level.SEVERE, null, ex);
                 }
             }
         });
+    }
+
+    /**
+     * Start a periodic task to maintain overlay connections
+     */
+    private static void maintainOverlay() {
+        future_overlay = scheduled_executor.scheduleWithFixedDelay(
+                new Runnable() {
+            /**
+             * Connect to a minimum number of peers
+             */
+            @Override
+                    public void run() {
+                        int connected = 0;
+                LOGGER.log(Level.FINE, "Starting topology maintenance");
+                Iterator<Peer> iter = cache.peerIterator();
+                while (iter.hasNext()) {
+                    Peer peer = iter.next();
+                    if (peer.isConnected()) {
+                        connected++;
+                    }
+                }
+                if (connected >= max_connections) {
+                    LOGGER.log(Level.FINE, "We maxed out our connections");
+                    return;
+                }
+                iter = cache.peerIterator();
+                while (iter.hasNext() && (connected < max_connections)) {
+                    Peer peer = iter.next();
+                    if (peer.isConnected()) {
+                        continue;
+                    }
+                    Connection connection = new Connection(); //FIXME
+                    peer.setConnection(connection);
+                }
+            }
+        }, 30, 30, TimeUnit.SECONDS);
     }
 
     private static void await() {
@@ -232,13 +272,16 @@ public class Main {
                 try {
                     server.stop();
                 } catch (IOException ex) {
-                    logger.log(Level.SEVERE, "Stopping server failed: {0}",
+                    LOGGER.log(Level.SEVERE, "Stopping server failed: {0}",
                             ex.toString());
-                    logger.log(Level.INFO, "You may have to kill the process");
+                    LOGGER.log(Level.INFO, "You may have to kill the process");
                 }
+                future_overlay.cancel(true);
                 group.shutdown();
                 scheduled_executor.shutdown();
-                logger.log(Level.INFO, "Shutting down; this may take a while...");
+                LOGGER.
+                        log(Level.INFO,
+                                "Shutting down; this may take a while...");
             }
         });
         do {
