@@ -115,6 +115,7 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
         }
         InetSocketAddress address = hello.peers.getFirst().getAddress();
         peer.setAddress(address);
+        LOGGER.log(Level.FINE, "Peer''s address resolved: {0}", peer);
         orig = cache.addPeer(peer);
         if (null == orig) {
             LOGGER.log(Level.FINE, "Adding {0} to cache", peer.toString());
@@ -128,11 +129,14 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
                     peer.toString());
             throw new ProtocolException(
                     "Peer cannot be connected twice at the same time");
-        } else {
+        } else if (orig != peer) {
             /**
              * Here we may have known about the orig peer from some other peer
              * but not yet connected to it. And in the mean time it has
              * connected to us. We allow this.
+             *
+             * (orig == peer) happens when the peer is already in cache but we
+             * established a connection to it and it has sent its hello to us
              */
             cache.replacePeer(orig, peer);
         }
@@ -147,7 +151,7 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
             throw new ProtocolException("Diverting from protocol");
         }
         Iterator<Peer> iterator = nm.getPeersAsIterator();
-        LOGGER.log(Level.FINER, "Received NeighboursMessage");
+        LOGGER.log(Level.FINER, "Received NeighboursMessage from ");
         while (iterator.hasNext()) {
             Peer new_peer = iterator.next();
             if (null == cache.addPeer(new_peer)) {

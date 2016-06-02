@@ -63,6 +63,7 @@ public final class Client {
             Connection connection;
             PeerContext context;
 
+            LOGGER.log(Level.FINE, "Connected to {0}", peer);
             context = new PeerContext(peer, scheduled_executor);
             connection = new Connection(channel,
                     new PeerDisconnectHandler(context));

@@ -110,7 +110,8 @@ public final class PeerContext {
 
         items = cache.getItems();
         if ((null == items) || (0 == items.size())) {
-            LOGGER.log(Level.FINE, "There are no items to share; rescheduling");
+            LOGGER.log(Level.FINE,
+                    "There are no items to share with {0}; rescheduling", peer);
             rescheduleItemExchange();
             return;
         }
