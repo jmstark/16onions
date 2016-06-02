@@ -16,8 +16,7 @@
  */
 package gossip;
 
-import gossip.p2p.GossipMessageHandler;
-import gossip.p2p.PeerContext;
+import gossip.p2p.Client;
 import gossip.p2p.GossipServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -25,7 +24,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -44,7 +42,6 @@ import org.apache.commons.cli.ParseException;
 import org.ini4j.ConfigParser;
 import org.ini4j.ConfigParser.ConfigParserException;
 import protocol.Connection;
-import protocol.DisconnectHandler;
 
 /**
  *
@@ -188,44 +185,16 @@ public class Main {
     }
 
     private static void bootstrap() {
-        AsynchronousSocketChannel channel;
-
         if (null == bootstrapper) {
             LOGGER.log(Level.INFO,
                     "We are the bootstrap peer");
             return;
         }
         try {
-            channel = AsynchronousSocketChannel.open(group);
+            new Client(bootstrapper, listen_address, group, scheduled_executor);
         } catch (IOException ex) {
             throw new RuntimeException("Cannot connect to bootstrap peer");
         }
-        channel.connect(bootstrapper.getAddress(), channel,
-                new CompletionHandler<Void, AsynchronousSocketChannel>() {
-            @Override
-            public void completed(Void arg0, AsynchronousSocketChannel channel) {
-                Connection connection;
-                PeerContext context;
-
-                context = new PeerContext(bootstrapper, scheduled_executor);
-                connection = new Connection(channel,
-                        new PeerDisconnectHandler(context));
-                assert (!bootstrapper.isConnected());
-                bootstrapper.setConnection(connection);
-                context.sendHello(listen_address);
-                connection.receive(new GossipMessageHandler(context));
-            }
-
-            @Override
-            public void failed(Throwable arg0, AsynchronousSocketChannel channel) {
-                LOGGER.log(Level.SEVERE, "Connection to bootstrapper failed");
-                try {
-                    channel.close();
-                } catch (IOException ex) {
-                    LOGGER.log(Level.SEVERE, null, ex);
-                }
-            }
-        });
     }
 
     /**
@@ -258,8 +227,14 @@ public class Main {
                     if (peer.isConnected()) {
                         continue;
                     }
-                    Connection connection = new Connection(); //FIXME
-                    peer.setConnection(connection);
+                    try {
+                        new Client(peer, listen_address, group,
+                                scheduled_executor);
+                    } catch (IOException ex) {
+                        LOGGER.log(Level.WARNING,
+                                "Connecting to new peer {0} failed: {1}",
+                                new Object[]{peer, ex.toString()});
+                    }
                 }
             }
         }, 30, 30, TimeUnit.SECONDS);
@@ -294,19 +269,6 @@ public class Main {
         } while (true);
     }
 
-    private static class PeerDisconnectHandler
-            extends DisconnectHandler<PeerContext> {
-
-        public PeerDisconnectHandler(PeerContext closure) {
-            super(closure);
-        }
-
-        @Override
-        protected void handleDisconnect(PeerContext context) {
-            context.shutdown();
-            cache.removePeer(context.getPeer());
-        }
-    }
 
     public static void main(String[] args) {
         configure(args);
