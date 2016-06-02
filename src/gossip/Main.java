@@ -274,6 +274,7 @@ public class Main {
         configure(args);
         startServer();
         bootstrap();
+        maintainOverlay();
         await();
     }
 }

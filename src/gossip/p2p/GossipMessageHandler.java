@@ -100,8 +100,8 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
 
     private void handleHello(HelloMessage hello, PeerContext context)
             throws ProtocolException {
-        LOGGER.log(Level.FINE, "Received HELLO");
         Peer peer = context.getPeer();
+        LOGGER.log(Level.FINE, "Received HELLO from {0}", peer);
         //HELLO is received as first message
         if (State.INIT != state) {
             LOGGER.log(Level.WARNING,
@@ -127,7 +127,7 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
                     "{0} trying to connect twice when it is already connected",
                     peer.toString());
             throw new ProtocolException(
-                    "Peer cannot be connect twice at the same time");
+                    "Peer cannot be connected twice at the same time");
         } else {
             /**
              * Here we may have known about the orig peer from some other peer
