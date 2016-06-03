@@ -237,7 +237,7 @@ public class Main {
                     }
                 }
             }
-        }, 30, 30, TimeUnit.SECONDS);
+        }, 5, 30, TimeUnit.SECONDS);
     }
 
     private static void await() {

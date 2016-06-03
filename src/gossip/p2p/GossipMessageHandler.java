@@ -119,16 +119,19 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
         orig = cache.addPeer(peer);
         if (null == orig) {
             LOGGER.log(Level.FINE, "Adding {0} to cache", peer.toString());
-        } else /**
-         * peer is already in cache. This may happen when the peer is connecting
-         * to use twice; we do not allow this.
-         */
-        if (orig.isConnected()) {
-            LOGGER.log(Level.WARNING,
-                    "{0} trying to connect twice when it is already connected",
-                    peer.toString());
-            throw new ProtocolException(
-                    "Peer cannot be connected twice at the same time");
+        } else if (orig.isConnected()) {
+            if (orig != peer) {
+                /**
+                 * peer is already in cache and we are connected to it. This may
+                 * happen when the peer is connecting to use twice; we do not
+                 * allow this.
+                 */
+                LOGGER.log(Level.WARNING,
+                        "{0} trying to connect twice when it is already connected",
+                        peer.toString());
+                throw new ProtocolException(
+                        "Peer cannot be connected twice at the same time");
+            }
         } else if (orig != peer) {
             /**
              * Here we may have known about the orig peer from some other peer
