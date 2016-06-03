@@ -132,14 +132,11 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 throw new ProtocolException(
                         "Peer cannot be connected twice at the same time");
             }
-        } else if (orig != peer) {
+        } else {
             /**
              * Here we may have known about the orig peer from some other peer
              * but not yet connected to it. And in the mean time it has
              * connected to us. We allow this.
-             *
-             * (orig == peer) happens when the peer is already in cache but we
-             * established a connection to it and it has sent its hello to us
              */
             cache.replacePeer(orig, peer);
         }
