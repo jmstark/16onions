@@ -56,7 +56,7 @@ public class Main {
     private static Cache cache;
     private static Peer bootstrapper;
     private static InetSocketAddress listen_address;
-    private static GossipServer server;
+    private static GossipServer p2p_server;
     private static AsynchronousChannelGroup group;
     private static ScheduledExecutorService scheduled_executor;
     private static ScheduledFuture future_overlay;
@@ -165,14 +165,14 @@ public class Main {
         scheduled_executor = Executors.newScheduledThreadPool(
                 (Runtime.getRuntime().availableProcessors() > 1) ? 2 : 1);
         try {
-            server = new GossipServer(listen_address,
+            p2p_server = new GossipServer(listen_address,
                     group, scheduled_executor, max_connections);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Gossip service failed to initialize: {0}",
                     ex.toString());
             System.exit(1);
         }
-        server.start();
+        p2p_server.start();
     }
 
     private static void bootstrap() {
@@ -236,7 +236,7 @@ public class Main {
             @Override
             public void run() {
                 try {
-                    server.stop();
+                    p2p_server.stop();
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Stopping server failed: {0}",
                             ex.toString());
