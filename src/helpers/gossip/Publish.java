@@ -64,7 +64,7 @@ public class Publish {
 
     private static Map<String, String> getDefaultConfig() {
         HashMap<String, String> map = new HashMap(5);
-        map.put("listen_address", "127.0.0.1:4433");
+        map.put("api_address", "127.0.0.1:7001");
         return map;
     }
 
@@ -131,7 +131,7 @@ public class Publish {
         String section = "gossip";
         String server_addr_str;
         try {
-            server_addr_str = config_parser.get(section, "listen_address");
+            server_addr_str = config_parser.get(section, "api_address");
         } catch (ConfigParserException ex) {
             LOGGER.severe(ex.toString());
             System.exit(1);
