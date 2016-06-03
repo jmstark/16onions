@@ -1,4 +1,47 @@
+Requirements
+============
 
+You need Java SDK version 7 and above.
+
+Additionally, you need Apache Ant to be installed as that is used as a build
+system.
+
+
+Building
+========
+
+Before you use the testing framework, you should build the code:
+  ant build
+
+To check if you didn't pull any terribly broken commit (other could be broken as
+well but may not be that bad), you should run the test suites which test the
+testing suite --- how ironical!
+  ant check
+
+Note that the testcases create TCP clients and servers on ports which are not
+chosen randomly, so if a testsuite fails please try to understand where it fails
+in the code and see if it is due to another program occupying that port.  The
+sockets they use are usually bound to localhost (127.0.0.1 by default); they can
+also use IPv6 when available.  Additionally refer to the Testing Caveats section
+below.
+
+The build does not produce any JAR, which is actually useful, to do that:
+  ant jar
+
+
+Running
+=======
+
+The run the sample Gossip module of the bootstrap peer:
+  java -cp dist/voip.jar gossip.Main --config config/bootstrap.conf
+
+The framework is equipped with flexible logging mechanism.  For example to
+increase the verbosity of Gossip module try:
+  java -Djava.util.logging.config.file=logging.properties -cp dist/voip.jar \
+    gossip.Main --config config/peer-2.conf
+
+You can edit the logging.properties file to set the verbosity of different
+componenets.
 
 
 Testing Caveats
