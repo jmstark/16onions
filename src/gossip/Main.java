@@ -42,6 +42,7 @@ import org.apache.commons.cli.ParseException;
 import org.ini4j.ConfigParser;
 import org.ini4j.ConfigParser.ConfigParserException;
 import protocol.Connection;
+import tools.Misc;
 
 /**
  *
@@ -75,16 +76,6 @@ public class Main {
         map.put("bootstrapper", "131.159.20.52:4433");
         map.put("listen_address", "127.0.0.1:4433");
         return map;
-    }
-
-    static InetSocketAddress fromAddressString(String address)
-            throws URISyntaxException {
-        URI uri;
-
-        uri = new URI("gossip://" + address);
-        String hostname = uri.getHost();
-        int port = uri.getPort();
-        return new InetSocketAddress(hostname, port);
     }
 
     private static void configure(String[] args) {
@@ -146,12 +137,12 @@ public class Main {
         }
         InetSocketAddress bootstrapper_address;
         try {
-            bootstrapper_address = fromAddressString(bootstrapper_addr_str);
+            bootstrapper_address = Misc.fromAddressString(bootstrapper_addr_str);
         } catch (URISyntaxException ex) {
             throw new RuntimeException("Invalid address for bootstrapper");
         }
         try {
-            listen_address = fromAddressString(listen_addr_str);
+            listen_address = Misc.fromAddressString(listen_addr_str);
         } catch (URISyntaxException ex) {
             throw new RuntimeException("Invalid format for listen_address");
         }
