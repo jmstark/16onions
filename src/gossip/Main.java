@@ -16,6 +16,7 @@
  */
 package gossip;
 
+import gossip.api.ApiServer;
 import gossip.p2p.Client;
 import gossip.p2p.GossipServer;
 import java.io.IOException;
@@ -56,7 +57,9 @@ public class Main {
     private static Cache cache;
     private static Peer bootstrapper;
     private static InetSocketAddress listen_address;
+    private static InetSocketAddress api_address;
     private static GossipServer p2p_server;
+    private static ApiServer api_server;
     private static AsynchronousChannelGroup group;
     private static ScheduledExecutorService scheduled_executor;
     private static ScheduledFuture future_overlay;
@@ -75,6 +78,7 @@ public class Main {
         map.put("max_connections", "20");
         map.put("bootstrapper", "131.159.20.52:4433");
         map.put("listen_address", "127.0.0.1:4433");
+        map.put("api_address", "127.0.0.1:7001");
         return map;
     }
 
@@ -125,11 +129,13 @@ public class Main {
         String section = "gossip";
         String bootstrapper_addr_str;
         String listen_addr_str;
+        String api_addr_str;
         try {
             cache_size = config_parser.getInt(section, "cache_size");
             max_connections = config_parser.getInt(section, "max_connections");
             bootstrapper_addr_str = config_parser.get(section, "bootstrapper");
             listen_addr_str = config_parser.get(section, "listen_address");
+            api_addr_str = config_parser.get(section, "api_address");
         } catch (ConfigParserException ex) {
             LOGGER.severe(ex.toString());
             System.exit(1);
@@ -149,6 +155,11 @@ public class Main {
         if (!bootstrapper_address.equals(listen_address)) {
             bootstrapper = new Peer(bootstrapper_address);
         }
+        try {
+            api_address = Misc.fromAddressString(api_addr_str);
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException("Invalid address for API socket");
+        }
         LOGGER.log(Level.FINE, "Creating cache with {0} entries", cache_size);
         cache = Cache.initialize(cache_size);
     }
@@ -164,15 +175,27 @@ public class Main {
         }
         scheduled_executor = Executors.newScheduledThreadPool(
                 (Runtime.getRuntime().availableProcessors() > 1) ? 2 : 1);
+        //start p2p server
         try {
             p2p_server = new GossipServer(listen_address,
                     group, scheduled_executor, max_connections);
         } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Gossip service failed to initialize: {0}",
+            LOGGER.log(Level.SEVERE, "P2P server failed to initialize: {0}",
                     ex.toString());
             System.exit(1);
         }
         p2p_server.start();
+        LOGGER.fine("P2P server started");
+        //start api server
+        try {
+            api_server = new ApiServer(api_address, group);
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "API server failed to initialize: {0}",
+                    ex.toString());
+            System.exit(1);
+        }
+        api_server.start();
+        LOGGER.fine("API server started");
     }
 
     private static void bootstrap() {
@@ -237,8 +260,9 @@ public class Main {
             public void run() {
                 try {
                     p2p_server.stop();
+                    api_server.stop();
                 } catch (IOException ex) {
-                    LOGGER.log(Level.SEVERE, "Stopping server failed: {0}",
+                    LOGGER.log(Level.SEVERE, "Stopping servers failed: {0}",
                             ex.toString());
                     LOGGER.log(Level.INFO, "You may have to kill the process");
                 }
@@ -266,6 +290,8 @@ public class Main {
         startServer();
         bootstrap();
         maintainOverlay();
+        LOGGER.info("All systems up and running. Send SIGINT, SIGTERM or press"
+                + " Ctrl+C to initiate shutdown");
         await();
     }
 }

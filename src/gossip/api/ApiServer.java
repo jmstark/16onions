@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.util.List;
+import java.util.logging.Logger;
 import protocol.Connection;
 import protocol.ProtocolServer;
 
@@ -32,19 +33,19 @@ import protocol.ProtocolServer;
  */
 public class ApiServer extends ProtocolServer<ClientContext> {
 
-    private final Cache cache;
-    static final Bus BUS = Bus.getInstance();
+    private static final Cache cache = Cache.getInstance();
+    private static final Bus BUS = Bus.getInstance();
+    private static final Logger LOGGER = Logger.getLogger("Gossip.API");
 
-    ApiServer(SocketAddress address,
-            AsynchronousChannelGroup group,
-            Cache cache) throws IOException {
+    public ApiServer(SocketAddress address,
+            AsynchronousChannelGroup group) throws IOException {
         super(address, group);
-        this.cache = cache;
     }
 
     @Override
     protected ClientContext handleNewClient(Connection connection) {
         ClientContext context;
+        LOGGER.fine("API connection accepted");
         context = new ClientContext(connection);
         connection.receive(new ApiMessageHandler(context, cache));
         return context;
