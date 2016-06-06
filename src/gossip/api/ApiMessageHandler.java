@@ -35,7 +35,7 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
 
     private final Cache cache;
     private static final Bus BUS = Bus.getInstance();
-    private static final Logger LOGGER = Logger.getLogger("API");
+    private static final Logger LOGGER = Logger.getLogger("Gossip.API");
 
     ApiMessageHandler(ClientContext context, Cache cache) {
         super(context);

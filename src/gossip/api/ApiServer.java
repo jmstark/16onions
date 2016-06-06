@@ -67,6 +67,7 @@ public class ApiServer extends ProtocolServer<ClientContext> {
             BUS.removeHandler(interest, context);
         }
         context.close();
+        LOGGER.fine("API Connection closed");
     }
 
 }
