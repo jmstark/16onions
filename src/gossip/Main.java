@@ -269,21 +269,20 @@ public class Main {
                 future_overlay.cancel(true);
                 group.shutdown();
                 scheduled_executor.shutdown();
-                LOGGER.
-                        log(Level.INFO,
-                                "Shutting down; this may take a while...");
+                LOGGER.info("Shutting down; this may take a while...");
             }
         });
+        boolean terminated = false;
         do {
             try {
-                group.awaitTermination(1, TimeUnit.DAYS);
-                scheduled_executor.awaitTermination(1, TimeUnit.SECONDS);
+                terminated = scheduled_executor.awaitTermination(5,
+                        TimeUnit.MINUTES);
+                terminated &= group.awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException ex) {
-                break;
+                //do nothing
             }
-        } while (true);
+        } while (!terminated);
     }
-
 
     public static void main(String[] args) {
         configure(args);
