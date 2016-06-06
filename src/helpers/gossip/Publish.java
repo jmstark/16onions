@@ -196,6 +196,14 @@ public class Publish {
         }
         connection.sendMsg(announce);
         success = true;
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Publish.class.getName()).
+                    log(Level.SEVERE, null, ex);
+        }
+        LOGGER.info("Message announced to Gossip");
+        shutdown();
     }
 
     public static void main(String[] args) throws IOException {
@@ -226,7 +234,6 @@ public class Publish {
                     if (!success) {
                         LOGGER.log(Level.SEVERE, "Publishing failed");
                     }
-                    shutdown();
                 }
             });
             sendMessage();
