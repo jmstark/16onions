@@ -41,7 +41,19 @@ increase the verbosity of Gossip module try:
     gossip.Main --config config/peer-2.conf
 
 You can edit the logging.properties file to set the verbosity of different
-componenets.
+components.
+
+
+Debugging
+=========
+
+If you'd like to debug the code it is helpful to run the code and then attach a
+debugger to it.
+
+To start the debugger run the Java VM with options:
+  -Xdebug -Xrunjdwp:transport=dt_socket,address=4001,server=y
+
+Now you can attach JPDA debugger to the socket 4001 on localhost.
 
 
 Testing Caveats
