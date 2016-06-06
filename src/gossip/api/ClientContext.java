@@ -64,7 +64,9 @@ public class ClientContext implements NotificationHandler {
      * Shutdown all tasks and prepare for touchdown
      */
     void close() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        for (Integer interest : interests) {
+            BUS.removeHandler(interest, this);
+        }
     }
 
     /**
