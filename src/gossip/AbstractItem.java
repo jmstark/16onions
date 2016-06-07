@@ -16,6 +16,7 @@
  */
 package gossip;
 
+import java.util.Arrays;
 import java.util.HashSet;
 
 /**
@@ -38,6 +39,35 @@ public abstract class AbstractItem implements Item {
     @Override
     public void knownTo(Peer peer) {
         peers.add(peer);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 37 * hash + this.getType();
+        hash = 37 * hash + Arrays.hashCode(this.getData());
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Item other = (Item) obj;
+        if (this.getType() != other.getType()) {
+            return false;
+        }
+        if (!Arrays.equals(this.getData(), other.getData())) {
+            return false;
+        }
+        return true;
     }
 
 }

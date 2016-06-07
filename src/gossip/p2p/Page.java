@@ -16,7 +16,6 @@
  */
 package gossip.p2p;
 
-import gossip.Peer;
 import gossip.AbstractItem;
 
 /**
