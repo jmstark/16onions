@@ -93,6 +93,7 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
                 DataMessage message;
                 message = DataMessage.parse(buf);
                 handleDataMessage(message, context);
+                return;
             default:
                 throw new MessageParserException("Unknown message");
         }
@@ -170,6 +171,8 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
             throw new ProtocolException("Diverted from protocol");
         }
         Page page = message.getPage();
+        LOGGER.log(Level.FINE, "We received a new item from {0}",
+                context.getPeer());
         cache.addItem(page); //FIXME: make this either probabalistic or rate-limited
         Bus.getInstance().trigger(page);
     }
