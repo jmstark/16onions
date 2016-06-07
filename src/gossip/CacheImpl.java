@@ -21,12 +21,16 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 class CacheImpl extends Cache {
+
+    private final static Logger LOGGER = Logger.getLogger("gossip.Cache");
     private final List<Peer> peers;
     private final List<Item> dataitems;
     private final ReentrantLock lock_peers;
@@ -51,11 +55,15 @@ class CacheImpl extends Cache {
         try {
             index = peers.indexOf(peer);
             if (-1 != index) {
+                LOGGER.log(Level.FINEST, "{0} already exists in cache", peer);
                 return peers.get(index);
             }
+            LOGGER.log(Level.FINEST, "Adding {0} to cache", peer);
             status = peers.add(peer);
             assert (status); //adding should succeed because we checked it before
             if (peers.size() > max_peers) {
+                LOGGER.log(Level.FINE,
+                        "Removing an older peer to accommodate new ones");
                 peers.remove(0);
             }
             return null;
@@ -102,8 +110,10 @@ class CacheImpl extends Cache {
         lock_dataitems.lock();
         try {
             if (max_dataitems == dataitems.size()) {
+                LOGGER.finest("Removing an older item to accommodate new one");
                 dataitems.remove(0);
             }
+            LOGGER.finest("Adding an item to cache");
             dataitems.add(item);
         } finally {
             lock_dataitems.unlock();

@@ -127,6 +127,7 @@ public final class PeerContext {
                         ex.toString());
                 continue;
             }
+            LOGGER.log(Level.FINE, "Sending a data item to {0}", peer);
             peer.sendMessage(message);
             item.knownTo(peer);
             break;
@@ -164,6 +165,7 @@ public final class PeerContext {
 
     /**
      * Send HELLO message on the peer's connection.
+     * @param listen_address address to use in the hello message
      */
     public void sendHello(InetSocketAddress listen_address) {
         assert (peer.isConnected());
