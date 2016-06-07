@@ -106,9 +106,15 @@ class CacheImpl extends Cache {
     }
 
     @Override
-    public void addItem(Item item) {
+    public Item addItem(Item item) {
+        int index;
         lock_dataitems.lock();
         try {
+            index = this.dataitems.indexOf(item);
+            if (-1 != index) {
+                LOGGER.finest("An existing item is found; not adding new one");
+                return dataitems.get(index);
+            }
             if (max_dataitems == dataitems.size()) {
                 LOGGER.finest("Removing an older item to accommodate new one");
                 dataitems.remove(0);
@@ -118,6 +124,7 @@ class CacheImpl extends Cache {
         } finally {
             lock_dataitems.unlock();
         }
+        return null;
     }
 
     @Override

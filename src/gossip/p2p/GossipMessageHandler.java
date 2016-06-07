@@ -18,6 +18,7 @@ package gossip.p2p;
 
 import gossip.Bus;
 import gossip.Cache;
+import gossip.Item;
 import gossip.Peer;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -170,10 +171,18 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
         if (State.HELLO_RECEIVED != state) {
             throw new ProtocolException("Diverted from protocol");
         }
+        Item item;
+        Peer peer;
+        peer = context.getPeer();
         Page page = message.getPage();
-        LOGGER.log(Level.FINE, "We received a new item from {0}",
-                context.getPeer());
-        cache.addItem(page); //FIXME: make this either probabalistic or rate-limited
+        LOGGER.log(Level.FINE, "We received a new item from {0}", peer);
+        item = cache.addItem(page); //FIXME: make this either probabalistic or rate-limited
+        if (null != item) {
+            LOGGER.fine("\t But we already know this message");
+        } else {
+            item = page;
+        }
+        item.knownTo(peer);
         Bus.getInstance().trigger(page);
     }
 }

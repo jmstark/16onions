@@ -16,12 +16,8 @@
  */
 package gossip;
 
-import gossip.p2p.Page;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Singleton class for local cache. The cache is used to store items(news) and
@@ -51,7 +47,17 @@ public abstract class Cache {
 
     public abstract Iterator peerIterator();
 
-    public abstract void addItem(Item item);
+    /**
+     * Add the given item into the cache.
+     *
+     * If the given item is already present in the cache, it is not added again.
+     * Instead the older object representing the same item is returned.
+     *
+     * @param item the item to add
+     * @return null when the given item is new and is added into the cache; the
+     * existing item object when the given item is already present in the cache.
+     */
+    public abstract Item addItem(Item item);
 
     public abstract List<Item> getItems();
 

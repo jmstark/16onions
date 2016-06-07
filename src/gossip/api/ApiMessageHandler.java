@@ -18,6 +18,7 @@ package gossip.api;
 
 import gossip.Bus;
 import gossip.Cache;
+import gossip.Item;
 import gossip.p2p.Page;
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
@@ -70,11 +71,17 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
             MessageType type, ClientContext context) {
         switch (type) {
             case API_GOSSIP_ANNOUNCE:
+                Item older;
                 LOGGER.log(Level.FINE, "Processing AnnounceMessage");
                 AnnounceMessage announce = (AnnounceMessage) message;
                 Page page = new Page(announce.getDatatype(),
                         announce.getData());
-                cache.addItem(page);
+                older = cache.addItem(page);
+                if (null != older) {
+                    LOGGER.warning("Ignoring new announce as a similar message is already in the cache");
+                } else {
+                    LOGGER.fine("Added a new announce message to cache; it will spread shortly");
+                }
                 break;
             case API_GOSSIP_NOTIFY:
                 LOGGER.log(Level.FINE, "Processing NotifyMessage");
