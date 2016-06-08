@@ -52,7 +52,7 @@ public class Publish {
 
     private static final Logger LOGGER = Logger.getLogger(
             "helpers.gossip.Publish");
-    private static final int DATATYPE = 7881;
+    public static final int DATATYPE = 7881;
     private static final AtomicBoolean inShutdown = new AtomicBoolean();
 
     private static InetSocketAddress api_address;
@@ -77,13 +77,13 @@ public class Publish {
                 true);
     }
 
-    private static void configure(String[] args) {
-        DefaultParser cli_parser;
-        CommandLine commandline;
-        Options options;
-        HelpFormatter formatter;
-
-        options = new Options();
+    /**
+     * Generate options for config (-c, --config )and help (-h, --help)
+     *
+     * @return the options object
+     */
+    public static Options defaultOptions() {
+        Options options = new Options();
         options.addOption(Option.builder("c")
                 .required(false)
                 .longOpt("config")
@@ -97,13 +97,23 @@ public class Publish {
                 .longOpt("help")
                 .desc("show usage help")
                 .build());
-        options.addOption(Option.builder("m")
-                .required(true)
-                .hasArg(true)
-                .longOpt("msg")
-                .desc("message to publish through Gossip")
-                .argName("MESSAGE")
-                .build());
+        return options;
+    }
+
+    /**
+     * Parses the given arguments for default options (-c, -h).
+     *
+     * @param options the options. They may contain options additional to
+     * default options
+     * @param args the command line arguments
+     * @return the commandLine object which can be used to read the parsed
+     * argument values
+     */
+    public static CommandLine defaultConfigure(Options options, String[] args) {
+        DefaultParser cli_parser;
+        CommandLine commandline;
+        HelpFormatter formatter;
+
         formatter = new HelpFormatter();
         cli_parser = new DefaultParser();
 
@@ -113,25 +123,39 @@ public class Publish {
             printHelp(formatter, options,
                     "Insufficient or wrong arguments given");
             System.exit(1);
-            return;
+            return null;
         }
         if (commandline.hasOption('h')) {
             printHelp(formatter, options, "Publishes a message through Gossip");
             System.exit(1);
         }
+        return commandline;
+    }
+
+    /**
+     * Read the config file
+     *
+     * @param commandline the object to parse the config filename
+     * @return ConfigParser object
+     */
+    public static ConfigParser parseConfig(CommandLine commandline) {
         String config_filename = commandline.getOptionValue('c', "gossip.conf");
-        ConfigParser config_parser = new ConfigParser(getDefaultConfig());
+        ConfigParser parser = new ConfigParser(getDefaultConfig());
         try {
-            config_parser.read(config_filename);
+            parser.read(config_filename);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Unable to read config file: {0}",
                     config_filename);
             System.exit(1);
         }
+        return parser;
+    }
+
+    static void configure(ConfigParser parser, CommandLine commandline) {
         String section = "gossip";
         String server_addr_str;
         try {
-            server_addr_str = config_parser.get(section, "api_address");
+            server_addr_str = parser.get(section, "api_address");
         } catch (ConfigParserException ex) {
             LOGGER.severe(ex.toString());
             System.exit(1);
@@ -142,6 +166,18 @@ public class Publish {
         } catch (URISyntaxException ex) {
             throw new RuntimeException("Invalid Gossip API address");
         }
+    }
+
+    private static void configure(Options options, String[] args) {
+
+        options.addOption(Option.builder("m")
+                .required(true)
+                .hasArg(true)
+                .longOpt("msg")
+                .desc("message to publish through Gossip")
+                .argName("MESSAGE")
+                .build());
+
         message = commandline.getOptionValue('m');
         LOGGER.log(Level.FINE, "Attempting to publish message: {0}", message);
     }
