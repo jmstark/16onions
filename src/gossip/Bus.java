@@ -59,7 +59,9 @@ public final class Bus {
             this.handlerMap.put(datatype, handlers);
         }
         handlers.add(handler);
-        LOGGER.log(Level.FINER, "Added a notification handler");
+        LOGGER.
+                log(Level.FINER, "Added a notification handler for {0}",
+                        datatype);
     }
 
     /**

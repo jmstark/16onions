@@ -61,6 +61,10 @@ public class NotificationMessage extends NotifyMessage {
         return hash;
     }
 
+    public byte[] getData() {
+        return data;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -88,10 +92,11 @@ public class NotificationMessage extends NotifyMessage {
      * @param buf
      * @return
      */
-    static ApiMessage parse(ByteBuffer buf) throws MessageParserException {
+    public static NotificationMessage parse(ByteBuffer buf) throws
+            MessageParserException {
         byte[] data;
         int datatype;
-        ApiMessage message;
+        NotificationMessage message;
 
         try {
         buf.position(buf.position() + 2); //skip over the reserved part
