@@ -181,8 +181,8 @@ public final class GossipMessageHandler extends MessageHandler<PeerContext> {
             LOGGER.fine("\t But we already know this message");
         } else {
             item = page;
+            Bus.getInstance().trigger(page);
         }
         item.knownTo(peer);
-        Bus.getInstance().trigger(page);
     }
 }
