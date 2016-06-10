@@ -48,6 +48,10 @@ public class GossipConfigurationImpl
     public Peer getBootstrapper() throws NoSuchElementException {
         InetSocketAddress address;
         address = this.getAddress(OPTION_BOOTSTRAPPER);
+        // return null if we are the bootstrap peer
+        if (address.equals(this.getListenAddress())) {
+            return null;
+        }
         return new Peer(address);
     }
 
