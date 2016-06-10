@@ -21,13 +21,8 @@ import gossip.p2p.Client;
 import gossip.p2p.GossipServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,15 +30,9 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.ini4j.ConfigParser;
-import org.ini4j.ConfigParser.ConfigParserException;
-import protocol.Connection;
-import tools.Misc;
+import tools.config.CliParser;
 
 /**
  *
@@ -52,6 +41,7 @@ import tools.Misc;
 public class Main {
 
     private static final Logger LOGGER = Logger.getLogger("Gossip");
+    //private static GossipConfiguration config;
     private static int cache_size;
     private static int max_connections;
     private static Cache cache;
@@ -72,94 +62,26 @@ public class Main {
                 true);
     }
 
-    private static Map<String, String> getDefaultConfig() {
-        HashMap<String, String> map = new HashMap(5);
-        map.put("cache_size", "60");
-        map.put("max_connections", "20");
-        map.put("bootstrapper", "131.159.20.52:4433");
-        map.put("listen_address", "127.0.0.1:4433");
-        map.put("api_address", "127.0.0.1:7001");
-        return map;
-    }
-
     private static void configure(String[] args) {
-        DefaultParser cli_parser;
         CommandLine commandline;
-        Options options;
-        HelpFormatter formatter;
-
-        options = new Options();
-        options.addOption(Option.builder("c")
-                .required(false)
-                .longOpt("config")
-                .desc("configuration file")
-                .optionalArg(false)
-                .argName("FILE")
-                .hasArg().build());
-        options.addOption(Option.builder("h")
-                .required(false)
-                .hasArg(false)
-                .longOpt("help")
-                .desc("show usage help")
-                .build());
-        formatter = new HelpFormatter();
-        cli_parser = new DefaultParser();
-
+        CliParser parser;
+        parser = new CliParser("gossip.Main",
+                "A sample (and insecure) implementation of Gossip");
+        commandline = parser.parse(args);
+        String filename = commandline.getOptionValue('c', "gossip.conf");
+        GossipConfiguration config;
         try {
-            commandline = cli_parser.parse(options, args);
-        } catch (ParseException exp) {
-            printHelp(formatter, options, "Unable to parse arguments");
-            System.exit(1);
-            return;
-        }
-        if (commandline.hasOption('h')) {
-            printHelp(formatter, options,
-                    "A sample (and insecure) implementation of Gossip");
-            System.exit(1);
-        }
-        String config_filename = commandline.getOptionValue('c', "gossip.conf");
-        ConfigParser config_parser = new ConfigParser(getDefaultConfig());
-        try {
-            config_parser.read(config_filename);
+            config = new GossipConfigurationImpl(filename);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Unable to read config file: {0}",
-                    config_filename);
-            System.exit(1);
+                    filename);
+            throw new RuntimeException();
         }
-        String section = "gossip";
-        String bootstrapper_addr_str;
-        String listen_addr_str;
-        String api_addr_str;
-        try {
-            cache_size = config_parser.getInt(section, "cache_size");
-            max_connections = config_parser.getInt(section, "max_connections");
-            bootstrapper_addr_str = config_parser.get(section, "bootstrapper");
-            listen_addr_str = config_parser.get(section, "listen_address");
-            api_addr_str = config_parser.get(section, "api_address");
-        } catch (ConfigParserException ex) {
-            LOGGER.severe(ex.toString());
-            System.exit(1);
-            return;
-        }
-        InetSocketAddress bootstrapper_address;
-        try {
-            bootstrapper_address = Misc.fromAddressString(bootstrapper_addr_str);
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException("Invalid address for bootstrapper");
-        }
-        try {
-            listen_address = Misc.fromAddressString(listen_addr_str);
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException("Invalid format for listen_address");
-        }
-        if (!bootstrapper_address.equals(listen_address)) {
-            bootstrapper = new Peer(bootstrapper_address);
-        }
-        try {
-            api_address = Misc.fromAddressString(api_addr_str);
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException("Invalid address for API socket");
-        }
+        cache_size = config.getCacheSize();
+        max_connections = config.getMaxConnections();
+        bootstrapper = config.getBootstrapper();
+        listen_address = config.getListenAddress();
+        api_address = config.getAPIAddress();
         LOGGER.log(Level.FINE, "Creating cache with {0} entries", cache_size);
         cache = Cache.initialize(cache_size);
     }

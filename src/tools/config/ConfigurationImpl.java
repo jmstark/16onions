@@ -27,8 +27,8 @@ import tools.Misc;
 
 abstract public class ConfigurationImpl implements Configuration {
 
-    protected static final String optionListenAddress = "listen_address";
-    protected static final String optionApiAddress = "api_address";
+    protected static final String OPTION_LISTEN_ADDRESS = "listen_address";
+    protected static final String OPTION_API_ADDRESS = "api_address";
     protected final ConfigParser parser;
     protected final String section;
     protected ConfigurationImpl(String filename,
@@ -61,13 +61,13 @@ abstract public class ConfigurationImpl implements Configuration {
     @Override
     public InetSocketAddress getListenAddress() throws
             NoSuchElementException {
-        return getAddress(optionListenAddress);
+        return getAddress(OPTION_LISTEN_ADDRESS);
     }
 
     @Override
     public InetSocketAddress getAPIAddress() throws
             NoSuchElementException {
-        return getAddress(optionApiAddress);
+        return getAddress(OPTION_API_ADDRESS);
     }
 
 }

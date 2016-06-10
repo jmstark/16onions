@@ -20,26 +20,23 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.ini4j.ConfigParser;
 import org.ini4j.ConfigParser.ConfigParserException;
 import tools.config.ConfigurationImpl;
 
 public class GossipConfigurationImpl
         extends ConfigurationImpl implements GossipConfiguration {
 
-    private static final String optionCacheSize = "cache_size";
-    private static final String optionMaxConnections = "max_connections";
-    private static final String optionBootstrapper = "bootstrapper";
+    private static final String OPTION_CACHE_SIZE = "cache_size";
+    private static final String OPTION_MAX_CONNECTIONS = "max_connections";
+    private static final String OPTION_BOOTSTRAPPER = "bootstrapper";
 
     private static HashMap<String, String> getDefaults() {
         HashMap<String, String> map = new HashMap(5);
-        map.put(optionCacheSize, "60");
-        map.put(optionMaxConnections, "20");
-        map.put(optionBootstrapper, "131.159.20.52:4433");
-        map.put(optionListenAddress, "127.0.0.1:4433");
-        map.put(optionApiAddress, "127.0.0.1:7001");
+        map.put(OPTION_CACHE_SIZE, "60");
+        map.put(OPTION_MAX_CONNECTIONS, "20");
+        map.put(OPTION_BOOTSTRAPPER, "131.159.20.52:4433");
+        map.put(OPTION_LISTEN_ADDRESS, "127.0.0.1:4433");
+        map.put(OPTION_API_ADDRESS, "127.0.0.1:7001");
         return map;
     }
 
@@ -50,14 +47,14 @@ public class GossipConfigurationImpl
     @Override
     public Peer getBootstrapper() throws NoSuchElementException {
         InetSocketAddress address;
-        address = this.getAddress("bootstrapper");
+        address = this.getAddress(OPTION_BOOTSTRAPPER);
         return new Peer(address);
     }
 
     @Override
     public int getCacheSize() throws NoSuchElementException {
         try {
-            return this.parser.getInt(section, "cache_size");
+            return this.parser.getInt(section, OPTION_CACHE_SIZE);
         } catch (ConfigParserException ex) {
             throw new NoSuchElementException(ex.getMessage());
         }
@@ -66,7 +63,7 @@ public class GossipConfigurationImpl
     @Override
     public int getMaxConnections() throws NoSuchElementException {
         try {
-            return this.parser.getInt(section, "max_connections");
+            return this.parser.getInt(section, OPTION_MAX_CONNECTIONS);
         } catch (ConfigParserException ex) {
             throw new NoSuchElementException(ex.getMessage());
         }

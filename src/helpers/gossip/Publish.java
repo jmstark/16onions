@@ -16,6 +16,8 @@
  */
 package helpers.gossip;
 
+import gossip.GossipConfiguration;
+import gossip.GossipConfigurationImpl;
 import gossip.api.AnnounceMessage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,6 +44,8 @@ import org.ini4j.ConfigParser.ConfigParserException;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageSizeExceededException;
+import tools.config.CliParser;
+import tools.config.Configuration;
 
 /**
  * Class to connect to a Gossip module and publish a message
@@ -77,107 +81,28 @@ public class Publish {
                 true);
     }
 
-    /**
-     * Generate options for config (-c, --config )and help (-h, --help)
-     *
-     * @return the options object
-     */
-    public static Options defaultOptions() {
-        Options options = new Options();
-        options.addOption(Option.builder("c")
-                .required(false)
-                .longOpt("config")
-                .desc("configuration file")
-                .optionalArg(false)
-                .argName("FILE")
-                .hasArg().build());
-        options.addOption(Option.builder("h")
-                .required(false)
-                .hasArg(false)
-                .longOpt("help")
-                .desc("show usage help")
-                .build());
-        return options;
-    }
-
-    /**
-     * Parses the given arguments for default options (-c, -h).
-     *
-     * @param options the options. They may contain options additional to
-     * default options
-     * @param args the command line arguments
-     * @return the commandLine object which can be used to read the parsed
-     * argument values
-     */
-    public static CommandLine defaultConfigure(Options options, String[] args) {
-        DefaultParser cli_parser;
+    private static void configure(String[] args) {
         CommandLine commandline;
-        HelpFormatter formatter;
-
-        formatter = new HelpFormatter();
-        cli_parser = new DefaultParser();
-
-        try {
-            commandline = cli_parser.parse(options, args);
-        } catch (ParseException exp) {
-            printHelp(formatter, options,
-                    "Insufficient or wrong arguments given");
-            System.exit(1);
-            return null;
-        }
-        if (commandline.hasOption('h')) {
-            printHelp(formatter, options, "Publishes a message through Gossip");
-            System.exit(1);
-        }
-        return commandline;
-    }
-
-    /**
-     * Read the config file
-     *
-     * @param commandline the object to parse the config filename
-     * @return ConfigParser object
-     */
-    public static ConfigParser parseConfig(CommandLine commandline) {
-        String config_filename = commandline.getOptionValue('c', "gossip.conf");
-        ConfigParser parser = new ConfigParser(getDefaultConfig());
-        try {
-            parser.read(config_filename);
-        } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Unable to read config file: {0}",
-                    config_filename);
-            System.exit(1);
-        }
-        return parser;
-    }
-
-    static void configure(ConfigParser parser, CommandLine commandline) {
-        String section = "gossip";
-        String server_addr_str;
-        try {
-            server_addr_str = parser.get(section, "api_address");
-        } catch (ConfigParserException ex) {
-            LOGGER.severe(ex.toString());
-            System.exit(1);
-            return;
-        }
-        try {
-            api_address = tools.Misc.fromAddressString(server_addr_str);
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException("Invalid Gossip API address");
-        }
-    }
-
-    private static void configure(Options options, String[] args) {
-
-        options.addOption(Option.builder("m")
+        CliParser parser = new CliParser("helpers.gossip.Publish",
+                "Publishes a message through Gossip");
+        parser.addOption(Option.builder("m")
                 .required(true)
                 .hasArg(true)
                 .longOpt("msg")
                 .desc("message to publish through Gossip")
                 .argName("MESSAGE")
                 .build());
-
+        commandline = parser.parse(args);
+        String filename = parser.getConfigFilename("gossip.conf");
+        GossipConfiguration config = null;
+        try {
+            config = new GossipConfigurationImpl(filename);
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Unable to read config file: {0}",
+                    filename);
+            System.exit(1);
+        }
+        api_address = config.getAPIAddress();
         message = commandline.getOptionValue('m');
         LOGGER.log(Level.FINE, "Attempting to publish message: {0}", message);
     }
