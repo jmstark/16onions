@@ -37,7 +37,11 @@ public abstract class MessageHandler<C> {
         MessageType type;
 
         size = Message.getUnsignedShort(buf);
-        type = MessageType.asMessageType(Message.getUnsignedShort(buf));
+        try {
+            type = MessageType.asMessageType(Message.getUnsignedShort(buf));
+        } catch (UnknownMessageTypeException ex) {
+            throw new ProtocolException(ex.toString());
+        }
         buf.limit(size);
         this.parseMessage(buf, type, this.closure);
     }

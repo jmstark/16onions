@@ -42,13 +42,14 @@ public class Protocol {
             return numVal;
         }
 
-        public static MessageType asMessageType(int numVal) {
+        public static MessageType asMessageType(int numVal) throws
+                UnknownMessageTypeException {
             for (MessageType mtype : MessageType.values()) {
                 if (mtype.getNumVal() == numVal) {
                     return mtype;
                 }
             }
-            return null;
+            throw new UnknownMessageTypeException(numVal);
         }
     }
 
