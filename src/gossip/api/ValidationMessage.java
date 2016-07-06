@@ -28,8 +28,8 @@ import protocol.Protocol;
  */
 public class ValidationMessage extends ApiMessage {
 
-    private int msgId;
-    private boolean valid;
+    private final int msgId;
+    private final boolean valid;
 
     public ValidationMessage(int msgId, boolean valid) {
         this.addHeader(Protocol.MessageType.API_GOSSIP_VALIDATION);
@@ -67,5 +67,28 @@ public class ValidationMessage extends ApiMessage {
             throw new MessageParserException();
         }
         return message;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 79 * hash + this.msgId;
+        hash = 79 * hash + (this.valid ? 1 : 0);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final ValidationMessage other = (ValidationMessage) obj;
+        return true;
     }
 }
