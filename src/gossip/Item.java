@@ -53,4 +53,11 @@ public interface Item {
      * @return the data associated with this item
      */
     public byte[] getData();
+
+    /**
+     * return a ID for this item
+     *
+     * @return the ID
+     */
+    public int getId();
 }

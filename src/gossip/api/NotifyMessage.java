@@ -28,12 +28,18 @@ import protocol.Protocol;
  */
 public class NotifyMessage extends ApiMessage {
     protected int datatype;
+    protected int reserved;
 
-    public NotifyMessage(int datatype) {
+    public NotifyMessage(int reserved, int datatype) {
         assert (65535 >= datatype);
         super.addHeader(Protocol.MessageType.API_GOSSIP_NOTIFY);
+        this.reserved = reserved;
         this.datatype = datatype;
         this.size += 2 + 2; //2 reserved; 2 datatype
+    }
+
+    public NotifyMessage(int datatype) {
+        this(0, datatype);
     }
 
     public int getDatatype() {
@@ -43,7 +49,7 @@ public class NotifyMessage extends ApiMessage {
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        super.sendEmptyBytes(out, 2); //2 bytes reserved
+        out.putShort((short) reserved);
         out.putShort((short) datatype);
     }
 

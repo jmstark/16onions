@@ -17,15 +17,14 @@
 package gossip.api;
 
 import gossip.Bus;
+import gossip.Item;
 import gossip.NotificationHandler;
-import gossip.p2p.Page;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
 import protocol.MessageSizeExceededException;
-import gossip.Item;
 
 /**
  *
@@ -80,7 +79,7 @@ public class ClientContext implements NotificationHandler {
 
         try {
             notification
-                    = new NotificationMessage(item.getType(), item.getData());
+                    = new NotificationMessage(item);
         } catch (MessageSizeExceededException ex) {
             LOGGER.log(Level.SEVERE, "This is a bug; please report."
                     + "  Size exceeded while creating a NotificationMessage");

@@ -42,6 +42,11 @@ public abstract class AbstractItem implements Item {
     }
 
     @Override
+    public int getId() {
+        return (short) this.hashCode();
+    }
+
+    @Override
     public int hashCode() {
         int hash = 3;
         hash = 37 * hash + this.getType();

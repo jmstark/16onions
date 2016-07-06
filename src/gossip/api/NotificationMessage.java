@@ -16,7 +16,7 @@
  */
 package gossip.api;
 
-import gossip.p2p.Page;
+import gossip.Item;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -33,9 +33,9 @@ public class NotificationMessage extends NotifyMessage {
 
     byte[] data;
 
-    public NotificationMessage(int datatype, byte[] data)
+    public NotificationMessage(int msgId, int datatype, byte[] data)
             throws MessageSizeExceededException {
-        super(datatype);
+        super(msgId, datatype);
         this.changeMessageType(Protocol.MessageType.API_GOSSIP_NOTIFICATION);
         this.data = data;
         if (Protocol.MAX_MESSAGE_SIZE < (this.size + data.length)) {
@@ -44,8 +44,8 @@ public class NotificationMessage extends NotifyMessage {
         this.size += data.length;
     }
 
-    public NotificationMessage(Page page) throws MessageSizeExceededException {
-        this(page.getType(), page.getData());
+    public NotificationMessage(Item item) throws MessageSizeExceededException {
+        this(item.getId(), item.getType(), item.getData());
     }
 
     @Override
@@ -56,13 +56,18 @@ public class NotificationMessage extends NotifyMessage {
 
     @Override
     public int hashCode() {
-        int hash = datatype;
+        int hash;
+        hash = 67 * datatype + reserved;
         hash = 67 * hash + Arrays.hashCode(this.data);
         return hash;
     }
 
     public byte[] getData() {
         return data;
+    }
+
+    public int getMsgId() {
+        return reserved;
     }
 
     @Override
@@ -96,14 +101,15 @@ public class NotificationMessage extends NotifyMessage {
             MessageParserException {
         byte[] data;
         int datatype;
+        int msgId;
         NotificationMessage message;
 
         try {
-        buf.position(buf.position() + 2); //skip over the reserved part
-        datatype = Message.unsignedIntFromShort(buf.getShort());
-        data = new byte[buf.remaining()];
+            msgId = Message.unsignedIntFromShort(buf.getShort());
+            datatype = Message.unsignedIntFromShort(buf.getShort());
+            data = new byte[buf.remaining()];
             buf.get(data);
-            message = new NotificationMessage(datatype, data);
+            message = new NotificationMessage(msgId, datatype, data);
         } catch (BufferUnderflowException | IllegalArgumentException |
                 MessageSizeExceededException exp) {
             throw new MessageParserException();
