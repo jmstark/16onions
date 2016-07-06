@@ -61,6 +61,8 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
                 return AnnounceMessage.parse(buf);
             case API_GOSSIP_NOTIFY:
                 return NotifyMessage.parse(buf);
+            case API_GOSSIP_VALIDATION:
+                return ValidationMessage.parse(buf);
             default:
                 LOGGER.log(Level.WARNING, "Unknown message received");
                 throw new MessageParserException("Unknown message");
@@ -88,6 +90,8 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
                 NotifyMessage notify = (NotifyMessage) message;
                 context.addInterest(notify.getDatatype());
                 break;
+            case API_GOSSIP_VALIDATION:
+
             default:
                 assert (false);
         }

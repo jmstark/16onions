@@ -50,6 +50,9 @@ public abstract class Cache {
     /**
      * Add the given item into the cache.
      *
+     * The validation is pending on the item. This means that the item is not
+     * retrived using the @a getItem() call until it is validated.
+     *
      * If the given item is already present in the cache, it is not added again.
      * Instead the older object representing the same item is returned.
      *
@@ -59,7 +62,21 @@ public abstract class Cache {
      */
     public abstract Item addItem(Item item);
 
+    /**
+     * Return the list of validated items.
+     *
+     * @return the list of validated items
+     */
     public abstract List<Item> getItems();
+
+    /**
+     * Mark the given item as valid.
+     *
+     * An item is propagated via Gossip to other peers if it is valid.
+     *
+     * @param item item to be validated
+     */
+    public abstract void markValid(Item item);
 
     public static Cache initialize(int capacity) {
         if (null != CACHE) {
