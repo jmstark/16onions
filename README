@@ -11,7 +11,7 @@ Building
 ========
 
 Before you use the testing framework, you should build the code:
-  ant build
+  ant compile
 
 To check if you didn't pull any terribly broken commit (other could be broken as
 well but may not be that bad), you should run the test suites which test the
