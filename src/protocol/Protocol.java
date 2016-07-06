@@ -27,6 +27,7 @@ public class Protocol {
         API_GOSSIP_ANNOUNCE(500),
         API_GOSSIP_NOTIFY(501),
         API_GOSSIP_NOTIFICATION(502),
+        API_GOSSIP_VALIDATION(503),
         //Gossip P2P Messages
         GOSSIP_HELLO(9500),
         GOSSIP_NEIGHBORS(9501),
