@@ -22,6 +22,7 @@ import gossip.api.NotificationMessage;
 import gossip.api.NotifyMessage;
 import gossip.api.ValidationMessage;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
@@ -50,7 +51,9 @@ public class Notify {
 
     private static final Logger LOGGER = Logger.getLogger(
             "helpers.gossip.Notify");
-    private static final AtomicBoolean inShutdown = new AtomicBoolean();
+    private static final InputStreamReader INPUT_READER
+            = new InputStreamReader(System.in);
+    private static final AtomicBoolean IN_SHUTDOWN = new AtomicBoolean();
     private static final int DATATYPE = Publish.DATATYPE;
     private static final SimpleDateFormat DATEFORMAT
             = new SimpleDateFormat("HH:mm:ss");
@@ -73,7 +76,7 @@ public class Notify {
     }
 
     private static void shutdown() {
-        inShutdown.set(true);
+        IN_SHUTDOWN.set(true);
         if (null != connection) {
             connection.disconnect();
         }
@@ -86,9 +89,32 @@ public class Notify {
         System.out.println(DATEFORMAT.format(date) + ": " + message);
     }
 
+    private static boolean promptUser() throws IOException {
+        int resp;
+
+        while (true) {
+            //flush the stream
+            while (INPUT_READER.ready()) {
+                INPUT_READER.skip(1);
+            }
+            System.out.println("Does the above message make sense? [Y/N]");
+            resp = INPUT_READER.read();
+            switch (resp) {
+                case 'Y':
+                case 'y':
+                    return true;
+                case 'N':
+                case 'n':
+                    return false;
+                default:
+                    System.out.println("Be serious.");
+            }
+        }
+
+    }
+
     public static void main(String[] args) throws IOException {
         AsynchronousSocketChannel channel;
-
         configure(args);
         group = AsynchronousChannelGroup.withFixedThreadPool(1,
                 Executors.defaultThreadFactory());
@@ -143,7 +169,16 @@ public class Notify {
             LOGGER.log(Level.INFO, "Received: {0}", content);
             display(content);
             ValidationMessage validation;
-            validation = new ValidationMessage(notification.getMsgId(), true);
+            try {
+                validation = new ValidationMessage(notification.getMsgId(),
+                        promptUser());
+            } catch (IOException ex) {
+                LOGGER.log(Level.SEVERE,
+                        "Unable to handle input stream: {0}",
+                        ex);
+                shutdown();
+                return;
+            }
             LOGGER.log(Level.FINE,
                     "Sending validation message for {0}",
                     notification.getMsgId());
