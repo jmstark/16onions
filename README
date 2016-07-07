@@ -16,7 +16,7 @@ Before you use the testing framework, you should build the code:
 To check if you didn't pull any terribly broken commit (other could be broken as
 well but may not be that bad), you should run the test suites which test the
 testing suite --- how ironical!
-  ant check
+  ant test
 
 Note that the testcases create TCP clients and servers on ports which are not
 chosen randomly, so if a testsuite fails please try to understand where it fails
