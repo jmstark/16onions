@@ -32,7 +32,10 @@ class CacheImpl extends Cache {
 
     private final static Logger LOGGER = Logger.getLogger("gossip.Cache");
     private final List<Peer> peers;
-    private final List<Item> dataitems;
+    //Items which are not yet validated
+    private final List<Item> newItems;
+    //Items which are validated
+    private final List<Item> validItems;
     private final ReentrantLock lock_peers;
     private final ReentrantLock lock_dataitems;
     private final int max_peers;
@@ -40,7 +43,8 @@ class CacheImpl extends Cache {
 
     protected CacheImpl(int capacity) {
         this.peers = new LinkedList();
-        this.dataitems = new LinkedList();
+        this.newItems = new LinkedList();
+        this.validItems = new LinkedList();
         this.lock_peers = new ReentrantLock();
         this.lock_dataitems = new ReentrantLock();
         this.max_peers = capacity;
@@ -105,34 +109,98 @@ class CacheImpl extends Cache {
         return list.iterator();
     }
 
+    /**
+     * Add the given item into the cache.
+     *
+     * The validation is pending on the item. This means that the item is not
+     * retrieved using the @a getItem() call until it is validated.
+     *
+     * If the given item is already present in the cache, it is not added again.
+     * Instead the older object representing the same item is returned.
+     *
+     * @param item the item to add
+     * @return null when the given item is new and is added into the cache; the
+     * existing item object when the given item is already present in the cache.
+     */
     @Override
     public Item addItem(Item item) {
         int index;
         lock_dataitems.lock();
         try {
-            index = this.dataitems.indexOf(item);
+            // check if the item is already among valid items
+            index = validItems.indexOf(item);
             if (-1 != index) {
                 LOGGER.finest("An existing item is found; not adding new one");
-                return dataitems.get(index);
+                return validItems.get(index);
             }
-            if (max_dataitems == dataitems.size()) {
+            // check if the item is already among new items
+            index = newItems.indexOf(item);
+            if (-1 != index) {
+                LOGGER.finest("An existing item is found pending validation;"
+                        + " discarding new one");
+                return newItems.get(index);
+            }
+            // if the new items list is too big; remove older item
+            if (newItems.size() == max_dataitems) {
                 LOGGER.finest("Removing an older item to accommodate new one");
-                dataitems.remove(0);
+                newItems.remove(0);
             }
-            LOGGER.finest("Adding an item to cache");
-            dataitems.add(item);
+            LOGGER.finest("Adding an item to new items");
+            newItems.add(item);
         } finally {
             lock_dataitems.unlock();
         }
         return null;
     }
 
+    /**
+     * Mark the given item as valid.
+     *
+     * An item is propagated via Gossip to other peers if it is valid.
+     *
+     * @param item item to be validated
+     */
+    @Override
+    public void markValid(Item item) {
+        int index;
+        lock_dataitems.lock();
+        try {
+            // check if the item is already among valid items
+            index = validItems.indexOf(item);
+            if (-1 != index) {
+                LOGGER.finest("Item already in valid items; not adding again");
+                return;
+            }
+            // check if the item is in new items and move it into valid items
+            index = newItems.indexOf(item);
+            if (-1 == index) {
+                LOGGER.fine("Item not found in new items; not adding");
+                return;
+            }
+            newItems.remove(index);
+            if (validItems.size() == max_dataitems) {
+                LOGGER.finest(
+                        "Removing an older valid item to accommodate new one");
+                newItems.remove(0);
+            }
+            LOGGER.finest("Adding an item to valid items");
+            validItems.add(item);
+        } finally {
+            lock_dataitems.unlock();
+        }
+    }
+
+    /**
+     * Return the list of validated items.
+     *
+     * @return the list of validated items
+     */
     @Override
     public List<Item> getItems() {
         ArrayList<Item> items;
         lock_dataitems.lock();
         try {
-            items = new ArrayList(dataitems);
+            items = new ArrayList(validItems);
         } finally {
             lock_dataitems.unlock();
         }
