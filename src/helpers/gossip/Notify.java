@@ -33,7 +33,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.commons.cli.CommandLine;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
