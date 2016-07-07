@@ -51,7 +51,7 @@ public abstract class Cache {
      * Add the given item into the cache.
      *
      * The validation is pending on the item. This means that the item is not
-     * retrived using the @a getItem() call until it is validated.
+     * retrieved using the @a getItem() call until it is validated.
      *
      * If the given item is already present in the cache, it is not added again.
      * Instead the older object representing the same item is returned.
