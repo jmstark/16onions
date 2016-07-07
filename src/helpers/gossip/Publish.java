@@ -21,7 +21,6 @@ import gossip.GossipConfigurationImpl;
 import gossip.api.AnnounceMessage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -34,18 +33,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.ini4j.ConfigParser;
-import org.ini4j.ConfigParser.ConfigParserException;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageSizeExceededException;
 import tools.config.CliParser;
-import tools.config.Configuration;
 
 /**
  * Class to connect to a Gossip module and publish a message
@@ -70,15 +62,6 @@ public class Publish {
         HashMap<String, String> map = new HashMap(5);
         map.put("api_address", "127.0.0.1:7001");
         return map;
-    }
-
-    private static void printHelp(HelpFormatter formatter, Options options,
-            String header) {
-        formatter.printHelp("helpers.gossip.Publish",
-                header,
-                options,
-                "Please report bugs to totakura@net.in.tum.de",
-                true);
     }
 
     private static void configure(String[] args) {
