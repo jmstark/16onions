@@ -20,6 +20,7 @@ import gossip.GossipConfiguration;
 import gossip.GossipConfigurationImpl;
 import gossip.api.NotificationMessage;
 import gossip.api.NotifyMessage;
+import gossip.api.ValidationMessage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -141,6 +142,12 @@ public class Notify {
                     Charset.forName("UTF-8"));
             LOGGER.log(Level.INFO, "Received: {0}", content);
             display(content);
+            ValidationMessage validation;
+            validation = new ValidationMessage(notification.getMsgId(), true);
+            LOGGER.log(Level.FINE,
+                    "Sending validation message for {0}",
+                    notification.getMsgId());
+            connection.sendMsg(validation);
         }
     }
 }

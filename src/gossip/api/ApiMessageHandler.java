@@ -83,6 +83,8 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
                     LOGGER.warning("Ignoring new announce as a similar message is already in the cache");
                 } else {
                     LOGGER.fine("Added a new announce message to cache; it will spread shortly");
+                    //mark the new message as valid so that it will be propagated
+                    cache.markValid(page);
                 }
                 break;
             case API_GOSSIP_NOTIFY:

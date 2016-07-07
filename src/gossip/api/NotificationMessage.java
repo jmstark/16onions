@@ -95,7 +95,8 @@ public class NotificationMessage extends NotifyMessage {
      * Parse a tokenized buffer to construct this message
      *
      * @param buf
-     * @return
+     * @return the constructed message
+     * @throws protocol.MessageParserException
      */
     public static NotificationMessage parse(ByteBuffer buf) throws
             MessageParserException {
