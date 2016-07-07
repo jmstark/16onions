@@ -181,7 +181,7 @@ class CacheImpl extends Cache {
             if (validItems.size() == max_dataitems) {
                 LOGGER.finest(
                         "Removing an older valid item to accommodate new one");
-                newItems.remove(0);
+                validItems.remove(0);
             }
             LOGGER.finest("Adding an item to valid items");
             validItems.add(item);
