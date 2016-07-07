@@ -91,7 +91,14 @@ class ApiMessageHandler extends MessageHandler<ClientContext> {
                 context.addInterest(notify.getDatatype());
                 break;
             case API_GOSSIP_VALIDATION:
-
+                LOGGER.log(Level.FINE, "Processing ValidationMessage");
+                ValidationMessage validation = (ValidationMessage) message;
+                int id = validation.getMsgId();
+                Item item = context.findItem(id);
+                if (null != item) {
+                    cache.markValid(item);
+                }
+                return;
             default:
                 assert (false);
         }

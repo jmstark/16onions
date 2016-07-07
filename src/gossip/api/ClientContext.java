@@ -19,8 +19,10 @@ package gossip.api;
 import gossip.Bus;
 import gossip.Item;
 import gossip.NotificationHandler;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.Connection;
@@ -34,12 +36,43 @@ public class ClientContext implements NotificationHandler {
 
     private final Connection connection;
     private final List<Integer> interests;
+    private final Map<Integer, Item> itemsMap;
+    private final List<Item> itemsList;
+    private static final int MAX_ITEMS = 300;
     private static final Logger LOGGER = Logger.getLogger("API");
     private static final Bus BUS = Bus.getInstance();
 
     ClientContext(Connection connection) {
         this.connection = connection;
         this.interests = new LinkedList();
+        this.itemsMap = new HashMap(MAX_ITEMS);
+        this.itemsList = new LinkedList();
+    }
+
+    private void addItem(Item item) {
+        if (itemsList.size() == MAX_ITEMS) {
+            // remove an older item if there are many items
+            removeItem(itemsList.get(0));
+        }
+        itemsList.add(item);
+        itemsMap.put(item.getId(), item);
+    }
+
+    private void removeItem(Item item) {
+        assert (true == itemsList.remove(item));
+        item = itemsMap.remove(item.getId());
+        assert (null != item);
+    }
+
+    Item findItem(int id) {
+        Item item;
+
+        item = itemsMap.get(id);
+        if (null == item) {
+            return null;
+        }
+        removeItem(item);
+        return item;
     }
 
     /**
@@ -71,7 +104,7 @@ public class ClientContext implements NotificationHandler {
     /**
      * We received a page; send it to the API connection
      *
-     * @param page
+     * @param item the item to send via API connection
      */
     @Override
     public void handleData(Item item) {
@@ -85,6 +118,7 @@ public class ClientContext implements NotificationHandler {
                     + "  Size exceeded while creating a NotificationMessage");
             return;
         }
+        addItem(item);
         connection.sendMsg(notification);
     }
 
