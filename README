@@ -43,6 +43,11 @@ increase the verbosity of Gossip module try:
 You can edit the logging.properties file to set the verbosity of different
 components.
 
+Depending on your setup you may have to set the classpath for java to find the
+dependency libraries.  In this case extend the `-cp dist/voip.jar' argument as
+following:
+  -cp dist/voip.jar:libs/commons-cli-1.3.1.jar:libs/ini4j-0.5.4.jar:junit-4.12.jar
+
 
 Debugging
 =========
