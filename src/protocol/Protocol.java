@@ -28,6 +28,9 @@ public class Protocol {
         API_GOSSIP_NOTIFY(501),
         API_GOSSIP_NOTIFICATION(502),
         API_GOSSIP_VALIDATION(503),
+        // NSE API message
+        API_NSE_QUERY(520),
+        API_NSE_ESTIMATE(521),
         //Gossip P2P Messages
         GOSSIP_HELLO(9500),
         GOSSIP_NEIGHBORS(9501),
