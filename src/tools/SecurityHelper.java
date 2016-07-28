@@ -17,6 +17,8 @@
 package tools;
 
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.InvalidParameterException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -41,21 +43,70 @@ import java.util.logging.Logger;
 public class SecurityHelper {
 
     private static final Logger LOGGER = Logger.getLogger("SecurityHelper");
+    private static KeyFactory factory = null;
 
-    public static byte[] encodeRSAPublicKey(PublicKey pkey) {
-        return null;
+    private static void initialize() {
+        if (null != factory) {
+            return;
+        }
+        try {
+            factory = KeyFactory.getInstance("RSA");
+        } catch (NoSuchAlgorithmException ex) {
+            LOGGER.log(Level.WARNING, ex.getLocalizedMessage());
+            throw new RuntimeException(
+                    "A provider for RSA not available; cannot continue.");
+        }
     }
 
-    public static RSAPublicKey getRSAPublicKeyFromEncoding(byte[] encoding) {
-        return null;
+    public static byte[] encodeRSAPublicKey(PublicKey pkey) {
+        initialize();
+        X509EncodedKeySpec spec;
+        try {
+            spec = factory.getKeySpec(pkey,
+                    X509EncodedKeySpec.class);
+        } catch (InvalidKeySpecException ex) {
+            throw new InvalidParameterException(
+                    "Given parameter is not a RSA public key");
+        }
+        return spec.getEncoded();
+    }
+
+    public static RSAPublicKey getRSAPublicKeyFromEncoding(byte[] encoding)
+            throws InvalidKeyException {
+        initialize();
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(encoding);
+        PublicKey pkey;
+        try {
+            pkey = factory.generatePublic(spec);
+        } catch (InvalidKeySpecException ex) {
+            throw new InvalidKeyException();
+        }
+        return (RSAPublicKey) pkey;
     }
 
     public static byte[] encodeRSAPrivateKey(PrivateKey skey) {
-        return null;
+        initialize();
+        PKCS8EncodedKeySpec spec;
+        try {
+            spec = factory.getKeySpec(skey, PKCS8EncodedKeySpec.class);
+        } catch (InvalidKeySpecException ex) {
+            throw new InvalidParameterException(
+                    "Given parameter is not a RSA private key");
+        }
+        return spec.getEncoded();
     }
 
-    public static RSAPrivateKey getRSAPrivateKeyFromEncoding(byte[] encoding) {
-        return null;
+    public static RSAPrivateKey getRSAPrivateKeyFromEncoding(byte[] encoding)
+            throws InvalidKeyException {
+        initialize();
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(encoding);
+        PrivateKey skey;
+        try {
+            skey = factory.generatePrivate(spec);
+        } catch (InvalidKeySpecException ex) {
+            throw new InvalidKeyException();
+        }
+        return (RSAPrivateKey) skey;
     }
 
     public static void main(String[] args) throws KeyStoreException, IOException,
@@ -74,16 +125,6 @@ public class SecurityHelper {
         PublicKey pkey = kp.getPublic();
         PrivateKey skey = kp.getPrivate();
 
-        //Convert the keys into encoded formats.  For this we need KeyFactory
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        X509EncodedKeySpec pkeyEnc = keyFactory.getKeySpec(pkey,
-                X509EncodedKeySpec.class);
-
-        PKCS8EncodedKeySpec skeyEnc = keyFactory.getKeySpec(skey,
-                PKCS8EncodedKeySpec.class);
-        LOGGER.log(Level.FINE, "KeySpec format for public key: {0}",
-                pkeyEnc.getFormat());
-        LOGGER.log(Level.FINE, "KeySpec format for private key: {0}",
-                skeyEnc.getFormat());
+        //Test the key encoding/decoding functions
     }
 }
