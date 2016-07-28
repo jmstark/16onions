@@ -21,15 +21,9 @@ import gossip.GossipConfigurationImpl;
 import gossip.api.AnnounceMessage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
@@ -37,6 +31,7 @@ import org.apache.commons.cli.Option;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageSizeExceededException;
+import tools.Program;
 import tools.config.CliParser;
 
 /**
@@ -44,90 +39,19 @@ import tools.config.CliParser;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class Publish {
+public final class Publish extends Program {
 
-    private static final Logger LOGGER = Logger.getLogger(
-            "helpers.gossip.Publish");
     public static final int DATATYPE = 7881;
-    private static final AtomicBoolean inShutdown = new AtomicBoolean();
-
     private static InetSocketAddress api_address;
-    private static Thread shutdownThread;
-    private static AsynchronousChannelGroup group;
     private static Connection connection;
     private static String message; //the message to publish
     private static boolean success;
 
-    private static Map<String, String> getDefaultConfig() {
-        HashMap<String, String> map = new HashMap(5);
-        map.put("api_address", "127.0.0.1:7001");
-        return map;
+    public Publish() {
+        super("helpers.gossip.Publish", "Publishes a message through Gossip");
     }
 
-    private static void configure(String[] args) {
-        CommandLine commandline;
-        CliParser parser = new CliParser("helpers.gossip.Publish",
-                "Publishes a message through Gossip");
-        parser.addOption(Option.builder("m")
-                .required(true)
-                .hasArg(true)
-                .longOpt("msg")
-                .desc("message to publish through Gossip")
-                .argName("MESSAGE")
-                .build());
-        commandline = parser.parse(args);
-        String filename = parser.getConfigFilename("gossip.conf");
-        GossipConfiguration config = null;
-        try {
-            config = new GossipConfigurationImpl(filename);
-        } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Unable to read config file: {0}",
-                    filename);
-            System.exit(1);
-        }
-        api_address = config.getAPIAddress();
-        message = commandline.getOptionValue('m');
-        LOGGER.log(Level.FINE, "Attempting to publish message: {0}", message);
-    }
-
-    private static void await() {
-        boolean terminated;
-
-        shutdownThread = new Thread() {
-            @Override
-            public void run() {
-                if (!inShutdown.compareAndSet(false, true)) {
-                    return;
-                }
-                LOGGER.log(Level.INFO,
-                        "Shutting down; this may take a while...");
-                shutdown();
-            }
-        };
-
-        Runtime.getRuntime().addShutdownHook(shutdownThread);
-        do {
-            try {
-                terminated = group.awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException ex) {
-                break;
-            }
-            if (terminated) {
-                break;
-            }
-        } while (true);
-    }
-
-    private static void shutdown() {
-        inShutdown.set(true);
-        if (null != connection) {
-            connection.disconnect();
-        }
-        LOGGER.fine("shutting down...");
-        group.shutdown();
-    }
-
-    private static void sendMessage() {
+    private void sendMessage() {
         byte[] data = message.getBytes(Charset.forName("UTF-8"));
         AnnounceMessage announce;
         try {
@@ -151,23 +75,54 @@ public class Publish {
     }
 
     public static void main(String[] args) throws IOException {
-        AsynchronousSocketChannel channel;
-
-        configure(args);
-        try {
-            group = AsynchronousChannelGroup
-                    .withFixedThreadPool(1, Executors.defaultThreadFactory());
-        } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Please report this bug:\n{0}", ex);
-            System.exit(1);
-            return;
-        }
-        channel = AsynchronousSocketChannel.open(group);
-        channel.connect(api_address, channel, new ConnectHandler());
-        await();
+        new Publish().start(args);
     }
 
-    private static class ConnectHandler implements
+    @Override
+    protected void addParserOptions(CliParser parser) {
+        parser.addOption(Option.builder("m")
+                .required(true)
+                .hasArg(true)
+                .longOpt("msg")
+                .desc("message to publish through Gossip")
+                .argName("MESSAGE")
+                .build());
+    }
+
+    @Override
+    protected void parseCommandLine(CommandLine cli, CliParser parser) {
+        String filename = parser.getConfigFilename("gossip.conf");
+        GossipConfiguration config;
+        try {
+            config = new GossipConfigurationImpl(filename);
+        } catch (IOException ex) {
+            throw new RuntimeException("Unable to read config file" + filename);
+        }
+        api_address = config.getAPIAddress();
+        message = cli.getOptionValue('m');
+        LOGGER.log(Level.FINE, "Attempting to publish message: {0}", message);
+    }
+
+    @Override
+    protected void cleanup() {
+        if (null != connection) {
+            connection.disconnect();
+            connection = null;
+        }
+    }
+
+    @Override
+    protected void run() {
+        AsynchronousSocketChannel channel;
+        try {
+            channel = AsynchronousSocketChannel.open(group);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+        channel.connect(api_address, channel, new ConnectHandler());
+    }
+
+    private class ConnectHandler implements
             CompletionHandler<Void, AsynchronousSocketChannel> {
 
         @Override

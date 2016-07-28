@@ -25,63 +25,39 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.commons.cli.CommandLine;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
 import protocol.Protocol;
 import protocol.ProtocolException;
+import tools.Program;
 import tools.config.CliParser;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class Notify {
+public final class Notify extends Program {
 
-    private static final Logger LOGGER = Logger.getLogger(
-            "helpers.gossip.Notify");
     private static final InputStreamReader INPUT_READER
             = new InputStreamReader(System.in);
-    private static final AtomicBoolean IN_SHUTDOWN = new AtomicBoolean();
     private static final int DATATYPE = Publish.DATATYPE;
     private static final SimpleDateFormat DATEFORMAT
             = new SimpleDateFormat("HH:mm:ss");
     private static InetSocketAddress api_address;
-    private static AsynchronousChannelGroup group;
     private static Connection connection;
 
-    public static void configure(String[] args) {
-        CliParser parser = new CliParser("helpers.gossip.Notify",
+    public Notify() {
+        super("helpers.gossip.Notify",
                 "Notifies whenever a message published through Gossip is seen.");
-        parser.parse(args);
-        String filename = parser.getConfigFilename("gossip.conf");
-        GossipConfiguration config;
-        try {
-            config = new GossipConfigurationImpl(filename);
-        } catch (IOException ex) {
-            throw new RuntimeException("Unable to read config file");
-        }
-        api_address = config.getAPIAddress();
-    }
-
-    private static void shutdown() {
-        IN_SHUTDOWN.set(true);
-        if (null != connection) {
-            connection.disconnect();
-        }
-        LOGGER.fine("shutting down...");
-        group.shutdown();
     }
 
     private static void display(String message) {
@@ -114,15 +90,45 @@ public class Notify {
     }
 
     public static void main(String[] args) throws IOException {
+        new Notify().start(args);
+    }
+
+    @Override
+    protected void addParserOptions(CliParser parser) {
+    }
+
+    @Override
+    protected void parseCommandLine(CommandLine cli, CliParser parser) {
+        String filename = parser.getConfigFilename("gossip.conf");
+        GossipConfiguration config;
+        try {
+            config = new GossipConfigurationImpl(filename);
+        } catch (IOException ex) {
+            throw new RuntimeException("Unable to read config file");
+        }
+        api_address = config.getAPIAddress();
+    }
+
+    @Override
+    protected void cleanup() {
+        if (null != connection) {
+            connection.disconnect();
+            connection = null;
+        }
+    }
+
+    @Override
+    protected void run() {
         AsynchronousSocketChannel channel;
-        configure(args);
-        group = AsynchronousChannelGroup.withFixedThreadPool(1,
-                Executors.defaultThreadFactory());
-        channel = AsynchronousSocketChannel.open(group);
+        try {
+            channel = AsynchronousSocketChannel.open(group);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
         channel.connect(api_address, channel, new ConnectHandler());
     }
 
-    private static class ConnectHandler implements
+    private class ConnectHandler implements
             CompletionHandler<Void, AsynchronousSocketChannel> {
 
         @Override
@@ -149,7 +155,7 @@ public class Notify {
         }
     }
 
-    private static class NotificationHandler
+    private class NotificationHandler
             extends MessageHandler<Connection> {
 
         public NotificationHandler(Connection connection) {
