@@ -126,5 +126,20 @@ public class SecurityHelper {
         PrivateKey skey = kp.getPrivate();
 
         //Test the key encoding/decoding functions
+        byte[] pkeyEnc = encodeRSAPublicKey(pkey);
+        byte[] skeyEnc = encodeRSAPrivateKey(skey);
+        RSAPublicKey dup_pkey;
+        RSAPrivateKey dup_skey;
+        try {
+            dup_pkey = getRSAPublicKeyFromEncoding(pkeyEnc);
+            dup_skey = getRSAPrivateKeyFromEncoding(skeyEnc);
+        } catch (InvalidKeyException ex) {
+            Logger.getLogger(SecurityHelper.class.getName()).
+                    log(Level.SEVERE, null, ex);
+            return;
+        }
+
+        assert (pkey.equals(dup_pkey));
+        assert (skey.equals(dup_skey));
     }
 }
