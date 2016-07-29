@@ -94,10 +94,6 @@ public final class Notify extends Program {
     }
 
     @Override
-    protected void addParserOptions(CliParser parser) {
-    }
-
-    @Override
     protected void parseCommandLine(CommandLine cli, CliParser parser) {
         String filename = parser.getConfigFilename("gossip.conf");
         GossipConfiguration config;

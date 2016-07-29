@@ -50,13 +50,18 @@ public abstract class Program {
         LOGGER = Logger.getLogger(name);
     }
 
-    abstract protected void addParserOptions(CliParser parser);
+    protected void addParserOptions(CliParser parser) {
+    }
 
     abstract protected void parseCommandLine(CommandLine cli, CliParser parser);
 
     abstract protected void cleanup();
 
     abstract protected void run();
+
+    protected boolean inShutdown() {
+        return inShutdown.get();
+    }
 
     private void await() {
         boolean terminated;
