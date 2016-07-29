@@ -42,6 +42,14 @@ public class EstimateMessage extends ApiMessage {
         this.size += 8; // 4: estimate + 4:deviation
     }
 
+    public int getEstimate() {
+        return (int) estimate;
+    }
+
+    public int getDeviation() {
+        return (int) deviation;
+    }
+
     @Override
     public void send(ByteBuffer out) {
         out.putInt((int) this.estimate);
