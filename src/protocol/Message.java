@@ -49,6 +49,11 @@ public abstract class Message {
         return otherMsg.getType() == type;
     }
 
+    /**
+     * Serialize the message into a byte buffer.
+     *
+     * @param out the bytebuffer to hold the serialized message
+     */
     protected void send(ByteBuffer out) {
         assert (this.headerAdded);
         out.putShort((short) this.size);

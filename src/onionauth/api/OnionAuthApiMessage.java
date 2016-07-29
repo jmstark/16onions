@@ -15,7 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package onionauth.api;
-import protocol.Protocol.MessageType;
 import protocol.Message;
 
 /**
@@ -24,9 +23,4 @@ import protocol.Message;
  */
 public abstract class OnionAuthApiMessage extends Message {
 
-    private MessageType type;
-
-    public OnionAuthApiMessage(MessageType type) {
-
-    }
 }
