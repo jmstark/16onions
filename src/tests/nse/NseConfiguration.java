@@ -36,6 +36,6 @@ class NseConfiguration extends ConfigurationImpl {
     }
 
     public NseConfiguration(String filename) throws IOException {
-        super(filename, "NSE", getDefaults());
+        super(filename, "nse", getDefaults());
     }
 }
