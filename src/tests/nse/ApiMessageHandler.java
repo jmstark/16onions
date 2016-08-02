@@ -31,10 +31,11 @@ import protocol.ProtocolException;
  */
 class ApiMessageHandler extends MessageHandler<Context> {
 
-    private static final Logger LOGGER = Main.getLogger();
+    private final Logger logger;
 
-    ApiMessageHandler(Context context) {
+    ApiMessageHandler(Context context, Logger logger) {
         super(context);
+        this.logger = logger;
     }
 
     @Override
@@ -51,10 +52,10 @@ class ApiMessageHandler extends MessageHandler<Context> {
         context.receivedEstimate();
         tally = context.tally();
         if (tally > 0) {
-            LOGGER.log(Level.WARNING,
+            logger.log(Level.WARNING,
                     "More estimates are being received than requested");
         }
-        LOGGER.log(Level.INFO,
+        logger.log(Level.INFO,
                 "Received estimate #peers: {0}; standard deviation of estimate:{1}",
                 new Object[]{message.getEstimate(), message.getDeviation()});
 

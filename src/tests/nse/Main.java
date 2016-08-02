@@ -17,22 +17,18 @@
 package tests.nse;
 
 import java.io.IOException;
-import static java.lang.Math.max;
 import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import nse.api.QueryMessage;
+import org.apache.commons.cli.CommandLine;
 import protocol.Connection;
 import protocol.DisconnectHandler;
+import tools.Program;
 import tools.config.CliParser;
 
 /**
@@ -40,61 +36,30 @@ import tools.config.CliParser;
  *
  * @author totakura
  */
-public class Main {
+public class Main extends Program {
 
-    private static Context context;
-    private static AsynchronousChannelGroup channelGroup;
-    private static ScheduledExecutorService scheduledExecutor;
-    private static Connection connection;
-    private static Thread shutdownThread;
-    private static final Logger LOGGER = Logger.getLogger("tests.nse");
-    private static final AtomicBoolean IN_SHUTDOWN = new AtomicBoolean();
+    private Context context;
+    private Connection connection;
+    private InetSocketAddress api_address;
 
-    static Logger getLogger() {
-        return LOGGER;
+    Main() {
+        super("tests.nse", "API conformance test case for NSE");
     }
 
-    private static void shutdown() {
-        IN_SHUTDOWN.set(true);
+    Logger getLogger() {
+        return this.LOGGER;
+    }
+
+    @Override
+    protected void cleanup() {
         if (null != connection) {
             connection.disconnect();
+            connection = null;
         }
-        LOGGER.fine("shutting down...");
-        channelGroup.shutdown();
     }
 
-    private static void await() {
-        boolean terminated;
-
-        shutdownThread = new Thread() {
-            @Override
-            public void run() {
-                if (!IN_SHUTDOWN.compareAndSet(false, true)) {
-                    return;
-                }
-                LOGGER.log(Level.INFO,
-                        "Shutting down; this may take a while...");
-                shutdown();
-            }
-        };
-
-        Runtime.getRuntime().addShutdownHook(shutdownThread);
-        do {
-            try {
-                terminated = channelGroup.awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException ex) {
-                break;
-            }
-            if (terminated) {
-                break;
-            }
-        } while (true);
-    }
-
-    public static void main(String args[]) throws IOException {
-        CliParser parser = new CliParser("helpers.gossip.Notify",
-                "Notifies whenever a message published through Gossip is seen.");
-        parser.parse(args);
+    @Override
+    protected void parseCommandLine(CommandLine cli, CliParser parser) {
         String filename = parser.getConfigFilename("gossip.conf");
         NseConfiguration config;
         try {
@@ -102,24 +67,26 @@ public class Main {
         } catch (IOException ex) {
             throw new RuntimeException("Unable to read config file");
         }
-        InetSocketAddress api_address = config.getAPIAddress();
-
-        //start the test by connecting to the API socket
-        // start the test by opening as many connections as possible
-        final int cores = Runtime.getRuntime().availableProcessors();
-        final ThreadFactory threadFactory = Executors.defaultThreadFactory();
-        channelGroup = AsynchronousChannelGroup.withFixedThreadPool(
-                max(1, cores - 1), threadFactory);
-        scheduledExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
-
-        context = new ContextImpl();
-        AsynchronousSocketChannel channel;
-        channel = AsynchronousSocketChannel.open(channelGroup);
-        channel.connect(api_address, channel, new ConnectCompletion());
-        await();
+        api_address = config.getAPIAddress();
     }
 
-    static private class ConnectCompletion
+    @Override
+    protected void run() {
+        context = new ContextImpl();
+        AsynchronousSocketChannel channel;
+        try {
+            channel = AsynchronousSocketChannel.open(this.group);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+        channel.connect(api_address, channel, new ConnectCompletion());
+    }
+
+    public static void main(String args[]) throws IOException {
+        new Main().start(args);
+    }
+
+    private class ConnectCompletion
             implements CompletionHandler<Void, AsynchronousSocketChannel> {
         private final Random random;
 
@@ -133,14 +100,14 @@ public class Main {
             connection = new Connection(channel, new DisconnectHandler(null) {
                 @Override
                 protected void handleDisconnect(Object closure) {
-                    if (!IN_SHUTDOWN.get()) {
+                    if (!Main.this.inShutdown()) {
                         LOGGER.log(Level.WARNING, "Connection disconnected");
                         connection = null;
                         shutdown();
                     }
                 }
             });
-            connection.receive(new ApiMessageHandler(context));
+            connection.receive(new ApiMessageHandler(context, LOGGER));
             scheduleNextQuery(0);
         }
 

@@ -40,7 +40,7 @@ public abstract class Program {
     protected final String description;
     protected ScheduledExecutorService scheduledExecutor;
     protected AsynchronousChannelGroup group;
-    protected static Logger LOGGER;
+    protected Logger LOGGER;
     private final AtomicBoolean inShutdown = new AtomicBoolean();
     private Thread shutdownThread;
 
