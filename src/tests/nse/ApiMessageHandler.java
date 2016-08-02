@@ -41,15 +41,23 @@ class ApiMessageHandler extends MessageHandler<Context> {
     public void parseMessage(ByteBuffer buf,
             Protocol.MessageType type,
             Context context) throws MessageParserException, ProtocolException {
+        int tally;
+
         if (type != Protocol.MessageType.API_NSE_ESTIMATE) {
             throw new ProtocolException("Received an invalid message");
         }
         //Parse and handle the estimate message
         EstimateMessage message = EstimateMessage.parse(buf);
         context.receivedEstimate();
+        tally = context.tally();
+        if (tally > 0) {
+            LOGGER.log(Level.WARNING,
+                    "More estimates are being received than requested");
+        }
         LOGGER.log(Level.INFO,
                 "Received estimate #peers: {0}; standard deviation of estimate:{1}",
                 new Object[]{message.getEstimate(), message.getDeviation()});
+
     }
 
 }

@@ -42,6 +42,7 @@ import tools.config.CliParser;
  */
 public class Main {
 
+    private static Context context;
     private static AsynchronousChannelGroup channelGroup;
     private static ScheduledExecutorService scheduledExecutor;
     private static Connection connection;
@@ -111,6 +112,7 @@ public class Main {
                 max(1, cores - 1), threadFactory);
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
 
+        context = new ContextImpl();
         AsynchronousSocketChannel channel;
         channel = AsynchronousSocketChannel.open(channelGroup);
         channel.connect(api_address, channel, new ConnectCompletion());
@@ -138,7 +140,7 @@ public class Main {
                     }
                 }
             });
-            connection.receive(new ApiMessageHandler(new ContextImpl()));
+            connection.receive(new ApiMessageHandler(context));
             scheduleNextQuery(0);
         }
 
@@ -163,6 +165,7 @@ public class Main {
 
                     query = new QueryMessage();
                     connection.sendMsg(query);
+                    context.sentQuery();
                     delay = random.nextInt(30 * 1000); // 30 seconds
                     scheduleNextQuery(delay);
                 }
