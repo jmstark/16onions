@@ -18,6 +18,7 @@ package tools.config;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.After;
@@ -25,18 +26,34 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
+@RunWith(Parameterized.class)
 public class ConfigurationImplTest extends ConfigurationImpl {
+
+    // The various parameters used to run this test
+    @Parameters(name = "{index}: {0}")
+    public static Iterable<String> data() {
+        return Arrays.asList("section1", "skyfall");
+    }
 
     private static Map<String, String> defaults;
 
-    public ConfigurationImplTest() throws IOException {
+    /**
+     * Constructor
+     *
+     * @param section the test parameter
+     * @throws IOException
+     */
+    public ConfigurationImplTest(String section) throws IOException {
         super("test/tools/config/test.config",
-                "section1",
+                section,
                 defaults);
     }
 
