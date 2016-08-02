@@ -25,6 +25,11 @@ import org.ini4j.ConfigParser;
 import org.ini4j.ConfigParser.ConfigParserException;
 import tools.Misc;
 
+/**
+ * Default implementation of the Configuration interface
+ *
+ * @author totakura
+ */
 abstract public class ConfigurationImpl implements Configuration {
 
     protected static final String OPTION_LISTEN_ADDRESS = "listen_address";
