@@ -16,13 +16,15 @@
  */
 package tools.config;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.text.MessageFormat;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import org.ini4j.ConfigParser;
 import org.ini4j.ConfigParser.ConfigParserException;
+import org.ini4j.Ini;
 import tools.Misc;
 
 /**
@@ -34,15 +36,14 @@ abstract public class ConfigurationImpl implements Configuration {
 
     protected static final String OPTION_LISTEN_ADDRESS = "listen_address";
     protected static final String OPTION_API_ADDRESS = "api_address";
-    protected final ConfigParser parser;
+    protected final Ini parser;
     protected final String section;
     protected ConfigurationImpl(String filename,
             String section,
             Map<String, String> defaults)
             throws IOException {
         this.section = section;
-        this.parser = new ConfigParser(defaults);
-        this.parser.read(filename);
+        this.parser = new Ini(new File(filename));
     }
 
     protected InetSocketAddress getAddress(String option) throws
@@ -50,10 +51,11 @@ abstract public class ConfigurationImpl implements Configuration {
         InetSocketAddress address;
         String value;
 
-        try {
-            value = parser.get(this.section, option);
-        } catch (ConfigParserException ex) {
-            throw new NoSuchElementException(ex.getMessage());
+        value = parser.get(this.section, option);
+        if (null == value) {
+            throw new NoSuchElementException(
+                    MessageFormat.format("{0} not found in section {1}",
+                            new Object[]{option, section}));
         }
         try {
             address = Misc.fromAddressString(value);
