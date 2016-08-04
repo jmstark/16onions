@@ -11,4 +11,13 @@ package protocol;
  */
 public class MessageSizeExceededException extends Exception {
 
+    public MessageSizeExceededException(
+            String msg) {
+        super(msg);
+    }
+
+    public MessageSizeExceededException() {
+        super();
+    }
+
 }
