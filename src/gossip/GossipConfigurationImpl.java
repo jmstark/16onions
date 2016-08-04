@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
-import org.ini4j.ConfigParser.ConfigParserException;
 import tools.config.ConfigurationImpl;
 
 public class GossipConfigurationImpl
