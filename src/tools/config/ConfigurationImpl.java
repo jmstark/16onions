@@ -23,7 +23,6 @@ import java.net.URISyntaxException;
 import java.text.MessageFormat;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import org.ini4j.ConfigParser.ConfigParserException;
 import org.ini4j.Ini;
 import tools.Misc;
 

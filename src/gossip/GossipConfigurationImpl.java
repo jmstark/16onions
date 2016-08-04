@@ -57,19 +57,11 @@ public class GossipConfigurationImpl
 
     @Override
     public int getCacheSize() throws NoSuchElementException {
-        try {
-            return this.parser.getInt(section, OPTION_CACHE_SIZE);
-        } catch (ConfigParserException ex) {
-            throw new NoSuchElementException(ex.getMessage());
-        }
+        return this.parser.get(section, OPTION_CACHE_SIZE, Integer.class);
     }
 
     @Override
     public int getMaxConnections() throws NoSuchElementException {
-        try {
-            return this.parser.getInt(section, OPTION_MAX_CONNECTIONS);
-        } catch (ConfigParserException ex) {
-            throw new NoSuchElementException(ex.getMessage());
-        }
+        return this.parser.get(section, OPTION_MAX_CONNECTIONS, Integer.class);
     }
 }
