@@ -72,5 +72,6 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException("invalid message encoding");
         }
+        return message;
     }
 }
