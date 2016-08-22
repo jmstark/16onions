@@ -49,4 +49,12 @@ public interface Context {
     public Future<Session> deriveSession(RSAPublicKey key,
             byte[] diffePayload,
             CompletionHandler<Session, ? extends Object> handler);
+
+    /**
+     * Close this context and all its underlying sessions
+     *
+     * @param disconnected are we shutting down because the connection has been
+     * disconnected?
+     */
+    public void shutdown(boolean disconnected);
 }
