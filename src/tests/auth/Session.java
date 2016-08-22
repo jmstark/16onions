@@ -17,9 +17,21 @@
 package tests.auth;
 
 /**
+ * An instantiated Auth session.
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface Session extends IncompleteSession {
+public interface Session {
 
+    /**
+     * Return the ID of this session
+     *
+     * @return the ID
+     */
+    public long getID();
+
+    /**
+     * Close this session
+     */
+    public void close();
 }

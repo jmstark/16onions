@@ -16,13 +16,26 @@
  */
 package tests.auth;
 
+import java.nio.channels.CompletionHandler;
+import java.util.concurrent.Future;
+
 /**
+ * An onion auth session which is not yet initialised. It requires further steps
+ * to be fully initialised.
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface IncompleteSession {
+public interface IncompleteSession extends Session {
 
-    public long getID();
+    /**
+     * Fully instantiate new session from the DH payload received from the other
+     * peer
+     *
+     * @param diffiePayload the DH payload received from other peer
+     * @param handler the handler to receive the instantiated session object
+     * @return future object
+     */
+    public Future<Session> completeSession(byte[] diffiePayload,
+            CompletionHandler<Session, ? extends Object> handler);
 
-    public void close();
 }

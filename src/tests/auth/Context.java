@@ -21,21 +21,32 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.Future;
 
 /**
+ * Context object for managing sessions
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 public interface Context {
+
+    /**
+     * Create a new session with a peer
+     *
+     * @param key public key of the other peer
+     * @param handler handler to receive the newly created session object
+     * @return future object
+     */
     public Future<IncompleteSession> startSession(RSAPublicKey key,
             CompletionHandler<IncompleteSession, ? extends Object> handler);
 
-    public Future<Session> completeSession(RSAPublicKey key,
+    /**
+     * Fully instantiate new session from the Diffie-Hellman (DH) payload
+     * received from the other peer
+     *
+     * @param key the public key of the other peer
+     * @param diffePayload the DH payload
+     * @param handler the handler to receive the instantiated session object
+     * @return future object
+     */
+    public Future<Session> deriveSession(RSAPublicKey key,
             byte[] diffePayload,
             CompletionHandler<Session, ? extends Object> handler);
-
-    public Future<Session> completeSession(byte[] diffiePayload,
-            IncompleteSession session,
-            CompletionHandler<Session, ? extends Object> handler);
-
-    public Future<Boolean> closeSession(IncompleteSession session,
-            CompletionHandler<Boolean, ? extends Object> handler);
 }
