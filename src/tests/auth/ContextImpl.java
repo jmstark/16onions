@@ -21,7 +21,11 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import onionauth.api.OnionAuthClose;
+import onionauth.api.OnionAuthSessionHS1;
+import onionauth.api.OnionAuthSessionHS2;
 import onionauth.api.OnionAuthSessionStartMessage;
 import protocol.Connection;
 import protocol.DisconnectHandler;
@@ -40,6 +44,70 @@ class ContextImpl implements Context {
     private final Connection connection;
     private final HashMap<Integer, Future> map;
     private FutureImpl future;
+
+    /**
+     * Class for fully instantiated sessions.
+     */
+    public class SessionImpl implements Session {
+
+        private final long id;
+
+        public SessionImpl(long id) {
+            super();
+            this.id = id;
+        }
+
+        @Override
+        public long getID() {
+            return this.id;
+        }
+
+        @Override
+        public void close() {
+            closeSession(this.id);
+        }
+    }
+
+    /**
+     * Class for partially initiated sessions. The session requires another DH
+     * counterpart to be complete.
+     */
+    private class IncompleteSessionImpl implements IncompleteSession {
+
+        private final long id;
+        private final byte[] payload;
+
+        public IncompleteSessionImpl(long id, byte[] payload) {
+            super();
+            this.id = id;
+            this.payload = payload;
+        }
+
+        @Override
+        public Session completeSession(byte[] diffiePayload) throws
+                MessageSizeExceededException {
+            OnionAuthSessionHS2 message;
+            message = new OnionAuthSessionHS2(id, diffiePayload);
+            connection.sendMsg(message);
+            return new SessionImpl(this.id);
+        }
+
+        @Override
+        public long getID() {
+            return this.id;
+        }
+
+        @Override
+        public void close() {
+            closeSession(this.id);
+        }
+    }
+
+    private void closeSession(long id) {
+        OnionAuthClose message;
+        message = new OnionAuthClose(id);
+        connection.sendMsg(message);
+    }
 
     private enum State {
         START_SESSION,
@@ -90,7 +158,34 @@ class ContextImpl implements Context {
         @Override
         public void parseMessage(ByteBuffer buf, Protocol.MessageType type,
                 Object closure) throws MessageParserException, ProtocolException {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            switch (state) {
+                case START_SESSION:
+                    switch (type) {
+                        case API_AUTH_SESSION_HS1:
+                            break;
+                        default:
+                            throw new ProtocolException("Excepting HS1 message");
+                    }
+                    OnionAuthSessionHS1 message = null;
+                    IncompleteSessionImpl session;
+                    try {
+                        message = OnionAuthSessionHS1.parse(buf);
+                    } catch (MessageParserException messageParserException) {
+                        future.triggerException(
+                                new ExecutionException(messageParserException),
+                                null);
+                    }
+                    if (null != message) {
+                        session = new IncompleteSessionImpl(message.getId(),
+                                message.getPayload());
+                        future.trigger(session, null);
+                    }
+                    future = null;
+                    state = State.OTHER;
+                    return;
+                default:
+                    break;
+            }
         }
     }
 

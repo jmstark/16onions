@@ -18,6 +18,7 @@ package tests.auth;
 
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.Future;
+import protocol.MessageSizeExceededException;
 
 /**
  * An onion auth session which is not yet initialised. It requires further steps
@@ -32,10 +33,11 @@ public interface IncompleteSession extends Session {
      * peer
      *
      * @param diffiePayload the DH payload received from other peer
-     * @param handler the handler to receive the instantiated session object
-     * @return future object
+     * @return the instantiated session object
+     * @throws MessageSizeExceededException if the given payload is too big to
+     * fit into a single API message
      */
-    public Future<Session> completeSession(byte[] diffiePayload,
-            CompletionHandler<Session, ? extends Object> handler);
+    public Session completeSession(byte[] diffiePayload) throws
+            MessageSizeExceededException;
 
 }
