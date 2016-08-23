@@ -23,6 +23,8 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import onionauth.api.OnionAuthClose;
 import onionauth.api.OnionAuthSessionHS1;
 import onionauth.api.OnionAuthSessionHS2;
@@ -44,6 +46,7 @@ class ContextImpl implements Context {
     private final Connection connection;
     private final HashMap<Integer, Future> map;
     private FutureImpl future;
+    private final Logger logger;
 
     /**
      * Class for fully instantiated sessions.
@@ -117,6 +120,7 @@ class ContextImpl implements Context {
 
     public ContextImpl(AsynchronousSocketChannel channel,
             DisconnectHandler disconnectHandler) {
+        logger = Main.LOGGER;
         map = new HashMap(1000);
         connection = new Connection(channel, disconnectHandler);
         connection.receive(new AuthMessageHandler());
@@ -166,6 +170,7 @@ class ContextImpl implements Context {
                         default:
                             throw new ProtocolException("Excepting HS1 message");
                     }
+                    logger.log(Level.FINE, "Received AUTH SESSION HS1");
                     OnionAuthSessionHS1 message = null;
                     IncompleteSessionImpl session;
                     try {
@@ -175,9 +180,11 @@ class ContextImpl implements Context {
                                 new ExecutionException(messageParserException),
                                 null);
                     }
+                    logger.log(Level.FINER, "Received AUTH SESSION HS1");
                     if (null != message) {
                         session = new IncompleteSessionImpl(message.getId(),
                                 message.getPayload());
+                        logger.log(Level.FINEST, "Created IncompleteSession");
                         future.trigger(session, null);
                     }
                     future = null;

@@ -35,6 +35,7 @@ public class Main extends Program {
 
     private InetSocketAddress apiAddress;
     private Context context;
+    static Logger LOGGER;
 
     public Main() {
         super("tests.auth", "API conformance test case for Onion Auth");
@@ -94,5 +95,11 @@ public class Main extends Program {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
 
+    }
+
+    public static void main(String[] args) throws IOException {
+        Main auth = new Main();
+        LOGGER = auth.logger;
+        auth.start(args);
     }
 }

@@ -24,6 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -38,6 +40,8 @@ class FutureImpl<V, A> implements Future {
     private boolean cancelled;
     private final ReentrantLock lock;
     private final Condition condition;
+    private static final Logger LOGGER = Logger.getLogger(
+            "tests.auth.FutureImpl");
 
     public FutureImpl(CompletionHandler<V, A> handler) {
         this.handler = handler;
@@ -103,6 +107,7 @@ class FutureImpl<V, A> implements Future {
         }
         lock.lockInterruptibly();
         try {
+            LOGGER.log(Level.FINEST, "Waiting for future's result");
             condition.await(arg0, arg1);
         } finally {
             lock.unlock();
@@ -114,6 +119,7 @@ class FutureImpl<V, A> implements Future {
         if (this.cancelled) {
             return;
         }
+        LOGGER.log(Level.FINEST, "Triggering future");
         this.result = result;
         this.done = true;
         this.handler.completed(result, attachment);
@@ -129,6 +135,7 @@ class FutureImpl<V, A> implements Future {
         if (this.cancelled) {
             return;
         }
+        LOGGER.log(Level.FINEST, "Triggering exception for future");
         this.exp = exp;
         this.done = true;
         this.handler.failed(exp, attachment);
