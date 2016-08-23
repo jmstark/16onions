@@ -35,7 +35,7 @@ public interface Context {
      * @return future object
      */
     public Future<IncompleteSession> startSession(RSAPublicKey key,
-            CompletionHandler<IncompleteSession, ? extends Object> handler);
+            CompletionHandler<IncompleteSession, Void> handler);
 
     /**
      * Fully instantiate new session from the Diffie-Hellman (DH) payload
@@ -48,7 +48,7 @@ public interface Context {
      */
     public Future<Session> deriveSession(RSAPublicKey key,
             byte[] diffePayload,
-            CompletionHandler<Session, ? extends Object> handler);
+            CompletionHandler<Session, Void> handler);
 
     /**
      * Close this context and all its underlying sessions

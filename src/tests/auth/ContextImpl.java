@@ -21,12 +21,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import onionauth.api.OnionAuthSessionStartMessage;
 import protocol.Connection;
 import protocol.DisconnectHandler;
@@ -46,39 +41,6 @@ class ContextImpl implements Context {
     private final HashMap<Integer, Future> map;
     private FutureImpl future;
 
-    private static class FutureImpl implements Future {
-
-        public FutureImpl(int id,
-                CompletionHandler<IncompleteSession, ? extends Object> handler) {
-        }
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public boolean isCancelled() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public boolean isDone() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public Object get() throws InterruptedException, ExecutionException {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public Object get(long arg0, TimeUnit arg1) throws InterruptedException,
-                ExecutionException, TimeoutException {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-    }
-
     private enum State {
         START_SESSION,
         OTHER
@@ -95,7 +57,7 @@ class ContextImpl implements Context {
 
     @Override
     public Future<IncompleteSession> startSession(RSAPublicKey key,
-            CompletionHandler<IncompleteSession, ? extends Object> handler) {
+            CompletionHandler<IncompleteSession, Void> handler) {
         OnionAuthSessionStartMessage message;
         try {
             message = new OnionAuthSessionStartMessage(key);
@@ -104,12 +66,13 @@ class ContextImpl implements Context {
         }
         connection.sendMsg(message);
         state = State.START_SESSION;
-        future = new FutureImpl(0, handler);
+        future = new FutureImpl(handler);
+        return future;
     }
 
     @Override
     public Future<Session> deriveSession(RSAPublicKey key, byte[] diffePayload,
-            CompletionHandler<Session, ? extends Object> handler) {
+            CompletionHandler<Session, Void> handler) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
