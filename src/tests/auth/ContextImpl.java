@@ -27,7 +27,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import onionauth.api.OnionAuthClose;
 import onionauth.api.OnionAuthSessionHS1;
-import onionauth.api.OnionAuthSessionHS2;
+import onionauth.api.OnionAuthSessionIncomingHS1;
+import onionauth.api.OnionAuthSessionIncomingHS2;
 import onionauth.api.OnionAuthSessionStartMessage;
 import protocol.Connection;
 import protocol.DisconnectHandler;
@@ -89,8 +90,8 @@ class ContextImpl implements Context {
         @Override
         public Session completeSession(byte[] diffiePayload) throws
                 MessageSizeExceededException {
-            OnionAuthSessionHS2 message;
-            message = new OnionAuthSessionHS2(id, diffiePayload);
+            OnionAuthSessionIncomingHS2 message;
+            message = new OnionAuthSessionIncomingHS2(id, diffiePayload);
             connection.sendMsg(message);
             return new SessionImpl(this.id);
         }
@@ -143,9 +144,13 @@ class ContextImpl implements Context {
     }
 
     @Override
-    public Future<Session> deriveSession(RSAPublicKey key, byte[] diffePayload,
-            CompletionHandler<Session, Void> handler) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public Future<ReceiverSession> deriveSession(RSAPublicKey key,
+            byte[] diffiePayload,
+            CompletionHandler<Session, Void> handler) throws
+            MessageSizeExceededException {
+        OnionAuthSessionIncomingHS1 message;
+        message = new OnionAuthSessionIncomingHS1(key, diffiePayload);
+        connection.sendMsg(message);
     }
 
     @Override

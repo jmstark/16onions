@@ -19,6 +19,7 @@ package tests.auth;
 import java.nio.channels.CompletionHandler;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.Future;
+import protocol.MessageSizeExceededException;
 
 /**
  * Context object for managing sessions
@@ -45,10 +46,13 @@ public interface Context {
      * @param diffePayload the DH payload
      * @param handler the handler to receive the instantiated session object
      * @return future object
+     * @throws exception when the payload size or the given key are too big to
+     * be fit into a single API message
      */
-    public Future<Session> deriveSession(RSAPublicKey key,
+    public Future<ReceiverSession> deriveSession(RSAPublicKey key,
             byte[] diffePayload,
-            CompletionHandler<Session, Void> handler);
+            CompletionHandler<Session, Void> handler) throws
+            MessageSizeExceededException;
 
     /**
      * Close this context and all its underlying sessions

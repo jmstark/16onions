@@ -16,26 +16,17 @@
  */
 package tests.auth;
 
-import protocol.MessageSizeExceededException;
-
 /**
- * An onion auth session which is not yet initialised. It requires further steps
- * to be fully initialised.
+ * Interface to identify a session on the receiver of DH
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface IncompleteSession extends Session {
+public interface ReceiverSession extends Session {
 
     /**
-     * Fully instantiate new session from the DH payload received from the other
-     * peer
+     * Return the Diffie-Hellman payload of this session
      *
-     * @param diffiePayload the DH payload received from other peer
-     * @return the instantiated session object
-     * @throws MessageSizeExceededException if the given payload is too big to
-     * fit into a single API message
+     * @return the DH payload
      */
-    public Session completeSession(byte[] diffiePayload) throws
-            MessageSizeExceededException;
-
+    public byte[] getDiffiePayload();
 }
