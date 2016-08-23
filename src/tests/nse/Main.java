@@ -47,7 +47,7 @@ public class Main extends Program {
     }
 
     Logger getLogger() {
-        return this.LOGGER;
+        return this.logger;
     }
 
     @Override
@@ -101,19 +101,19 @@ public class Main extends Program {
                 @Override
                 protected void handleDisconnect(Object closure) {
                     if (!Main.this.inShutdown()) {
-                        LOGGER.log(Level.WARNING, "Connection disconnected");
+                        logger.log(Level.WARNING, "Connection disconnected");
                         connection = null;
                         shutdown();
                     }
                 }
             });
-            connection.receive(new ApiMessageHandler(context, LOGGER));
+            connection.receive(new ApiMessageHandler(context, logger));
             scheduleNextQuery(0);
         }
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel arg1) {
-            LOGGER.log(Level.SEVERE, "Cannot connect to NSE API");
+            logger.log(Level.SEVERE, "Cannot connect to NSE API");
             shutdown();
         }
 

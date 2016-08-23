@@ -132,7 +132,7 @@ public final class Notify extends Program {
             connection = new Connection(channel, new DisconnectHandler(null) {
                 @Override
                 protected void handleDisconnect(Object closure) {
-                    LOGGER.log(Level.SEVERE, "API connection disconnected");
+                    logger.log(Level.SEVERE, "API connection disconnected");
                     connection = null;
                     shutdown();
                 }
@@ -146,7 +146,7 @@ public final class Notify extends Program {
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel arg1) {
-            LOGGER.log(Level.SEVERE, "Cannot connect to Gossip API");
+            logger.log(Level.SEVERE, "Cannot connect to Gossip API");
             shutdown();
         }
     }
@@ -168,20 +168,20 @@ public final class Notify extends Program {
             NotificationMessage notification = NotificationMessage.parse(buf);
             String content = new String(notification.getData(),
                     Charset.forName("UTF-8"));
-            LOGGER.log(Level.INFO, "Received: {0}", content);
+            logger.log(Level.INFO, "Received: {0}", content);
             display(content);
             ValidationMessage validation;
             try {
                 validation = new ValidationMessage(notification.getMsgId(),
                         promptUser());
             } catch (IOException ex) {
-                LOGGER.log(Level.SEVERE,
+                logger.log(Level.SEVERE,
                         "Unable to handle input stream: {0}",
                         ex);
                 shutdown();
                 return;
             }
-            LOGGER.log(Level.FINE,
+            logger.log(Level.FINE,
                     "Sending validation message for {0}",
                     notification.getMsgId());
             connection.sendMsg(validation);

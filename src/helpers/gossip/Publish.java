@@ -57,7 +57,7 @@ public final class Publish extends Program {
         try {
             announce = new AnnounceMessage((short) 255, DATATYPE, data);
         } catch (MessageSizeExceededException ex) {
-            LOGGER.log(Level.WARNING,
+            logger.log(Level.WARNING,
                     "Message is too long to announce, try shortening");
             shutdown();
             return;
@@ -70,7 +70,7 @@ public final class Publish extends Program {
             Logger.getLogger(Publish.class.getName()).
                     log(Level.SEVERE, null, ex);
         }
-        LOGGER.info("Message announced to Gossip");
+        logger.info("Message announced to Gossip");
         shutdown();
     }
 
@@ -100,7 +100,7 @@ public final class Publish extends Program {
         }
         api_address = config.getAPIAddress();
         message = cli.getOptionValue('m');
-        LOGGER.log(Level.FINE, "Attempting to publish message: {0}", message);
+        logger.log(Level.FINE, "Attempting to publish message: {0}", message);
     }
 
     @Override
@@ -131,7 +131,7 @@ public final class Publish extends Program {
                 @Override
                 protected void handleDisconnect(Object closure) {
                     if (!success) {
-                        LOGGER.log(Level.SEVERE, "Publishing failed");
+                        logger.log(Level.SEVERE, "Publishing failed");
                     }
                 }
             });
@@ -140,7 +140,7 @@ public final class Publish extends Program {
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel arg1) {
-            LOGGER.log(Level.SEVERE, "Cannot connect to Gossip API");
+            logger.log(Level.SEVERE, "Cannot connect to Gossip API");
             shutdown();
         }
     }

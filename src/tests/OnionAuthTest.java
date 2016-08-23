@@ -83,21 +83,21 @@ public class OnionAuthTest extends Program {
 
         @Override
         public void completed(Void arg0, AsynchronousSocketChannel channel) {
-            LOGGER.log(Level.INFO, "Connected to API socket");
+            logger.log(Level.INFO, "Connected to API socket");
             connection = new Connection(channel, new DisconnectHandler(null) {
                 @Override
                 protected void handleDisconnect(Object closure) {
                     if (OnionAuthTest.this.inShutdown()) {
                         return;
                     }
-                    LOGGER.log(Level.SEVERE, "Connection disconnected");
+                    logger.log(Level.SEVERE, "Connection disconnected");
                 }
             });
         }
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel channel) {
-            LOGGER.log(Level.SEVERE, "Cannot connect to API socket");
+            logger.log(Level.SEVERE, "Cannot connect to API socket");
             shutdown();
         }
 

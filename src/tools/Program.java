@@ -29,6 +29,8 @@ import org.apache.commons.cli.CommandLine;
 import tools.config.CliParser;
 import java.util.logging.Logger;
 import static java.lang.Math.max;
+import static java.lang.Math.max;
+import static java.lang.Math.max;
 
 /**
  *
@@ -40,14 +42,14 @@ public abstract class Program {
     protected final String description;
     protected ScheduledExecutorService scheduledExecutor;
     protected AsynchronousChannelGroup group;
-    protected Logger LOGGER;
+    protected Logger logger;
     private final AtomicBoolean inShutdown = new AtomicBoolean();
     private Thread shutdownThread;
 
     protected Program(String name, String description) {
         this.name = name;
         this.description = description;
-        LOGGER = Logger.getLogger(name);
+        logger = Logger.getLogger(name);
     }
 
     protected void addParserOptions(CliParser parser) {
@@ -72,7 +74,7 @@ public abstract class Program {
                 if (inShutdown.get()) {
                     return;
                 }
-                LOGGER.log(Level.INFO,
+                logger.log(Level.INFO,
                         "Shutting down; this may take a while...");
                 shutdown();
             }
@@ -97,7 +99,7 @@ public abstract class Program {
             return;
         }
         cleanup();
-        LOGGER.fine("shutting down...");
+        logger.fine("shutting down...");
         group.shutdown();
     }
 
