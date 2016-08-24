@@ -51,7 +51,7 @@ public interface Context {
      */
     public Future<ReceiverSession> deriveSession(RSAPublicKey key,
             byte[] diffePayload,
-            CompletionHandler<Session, Void> handler) throws
+            CompletionHandler<ReceiverSession, Void> handler) throws
             MessageSizeExceededException;
 
     /**

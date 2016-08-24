@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class FutureImpl<V, A> implements Future {
+class FutureImpl<V, A, B> implements Future {
 
     private CompletionHandler<V, A> handler;
     private V result;
@@ -40,15 +40,21 @@ class FutureImpl<V, A> implements Future {
     private boolean cancelled;
     private final ReentrantLock lock;
     private final Condition condition;
+    private final B context;
     private static final Logger LOGGER = Logger.getLogger(
             "tests.auth.FutureImpl");
 
-    public FutureImpl(CompletionHandler<V, A> handler) {
+    FutureImpl(CompletionHandler<V, A> handler, B context) {
         this.handler = handler;
         this.done = false;
         this.lock = new ReentrantLock();
         this.condition = lock.newCondition();
         this.cancelled = false;
+        this.context = context;
+    }
+
+    B getContext() {
+        return this.context;
     }
 
     @Override
@@ -115,7 +121,7 @@ class FutureImpl<V, A> implements Future {
         return getResult();
     }
 
-    public void trigger(V result, A attachment) {
+    void trigger(V result, A attachment) {
         if (this.cancelled) {
             return;
         }
@@ -131,7 +137,7 @@ class FutureImpl<V, A> implements Future {
         }
     }
 
-    public void triggerException(ExecutionException exp, A attachment) {
+    void triggerException(ExecutionException exp, A attachment) {
         if (this.cancelled) {
             return;
         }

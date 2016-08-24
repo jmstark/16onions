@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import onionauth.api.OnionAuthClose;
 import onionauth.api.OnionAuthSessionHS1;
+import onionauth.api.OnionAuthSessionHS2;
 import onionauth.api.OnionAuthSessionIncomingHS1;
 import onionauth.api.OnionAuthSessionIncomingHS2;
 import onionauth.api.OnionAuthSessionStartMessage;
@@ -49,12 +50,28 @@ class ContextImpl implements Context {
     private FutureImpl future;
     private final Logger logger;
 
+    private static class ReceiverSessionImpl extends SessionImpl implements
+            ReceiverSession {
+
+        private final byte[] payload;
+
+        public ReceiverSessionImpl(long id, byte[] payload) {
+            super(id);
+            this.payload = payload;
+        }
+
+        @Override
+        public byte[] getDiffiePayload() {
+            return this.payload;
+        }
+    }
+
     /**
      * Class for fully instantiated sessions.
      */
     public class SessionImpl implements Session {
 
-        private final long id;
+        protected final long id;
 
         public SessionImpl(long id) {
             super();
@@ -76,14 +93,13 @@ class ContextImpl implements Context {
      * Class for partially initiated sessions. The session requires another DH
      * counterpart to be complete.
      */
-    private class IncompleteSessionImpl implements IncompleteSession {
+    private class IncompleteSessionImpl extends SessionImpl implements
+            IncompleteSession {
 
-        private final long id;
         private final byte[] payload;
 
         public IncompleteSessionImpl(long id, byte[] payload) {
-            super();
-            this.id = id;
+            super(id);
             this.payload = payload;
         }
 
@@ -95,16 +111,6 @@ class ContextImpl implements Context {
             connection.sendMsg(message);
             return new SessionImpl(this.id);
         }
-
-        @Override
-        public long getID() {
-            return this.id;
-        }
-
-        @Override
-        public void close() {
-            closeSession(this.id);
-        }
     }
 
     private void closeSession(long id) {
@@ -115,6 +121,7 @@ class ContextImpl implements Context {
 
     private enum State {
         START_SESSION,
+        START_SESSION_HS1,
         OTHER
     };
     private State state;
@@ -139,18 +146,31 @@ class ContextImpl implements Context {
         }
         connection.sendMsg(message);
         state = State.START_SESSION;
-        future = new FutureImpl(handler);
+        future = new FutureImpl(handler, key);
         return future;
     }
 
     @Override
     public Future<ReceiverSession> deriveSession(RSAPublicKey key,
             byte[] diffiePayload,
-            CompletionHandler<Session, Void> handler) throws
+            CompletionHandler<ReceiverSession, Void> handler) throws
             MessageSizeExceededException {
         OnionAuthSessionIncomingHS1 message;
         message = new OnionAuthSessionIncomingHS1(key, diffiePayload);
         connection.sendMsg(message);
+        /**
+         * we assume that SESSION_START and START_SESSION_HS1 are progressed
+         * synchronously. This is because of the limitation of the
+         * specification: AUTH_SESSION_HS1 and AUTH_SESSION_HS2 messages have no
+         * fields to link them to a response. These messages should also contain
+         * the key and payload from their corresponding requests so that the
+         * responses can be linked to the requests.
+         */
+        assert (State.OTHER == state);
+        assert (null == future);
+        state = State.START_SESSION_HS1;
+        future = new FutureImpl(handler, key);
+        return future;
     }
 
     @Override
@@ -176,21 +196,44 @@ class ContextImpl implements Context {
                             throw new ProtocolException("Excepting HS1 message");
                     }
                     logger.log(Level.FINE, "Received AUTH SESSION HS1");
-                    OnionAuthSessionHS1 message = null;
-                    IncompleteSessionImpl session;
-                    try {
+                     {
+                         OnionAuthSessionHS1 message = null;
+                         IncompleteSessionImpl session;
+                         try {
                         message = OnionAuthSessionHS1.parse(buf);
                     } catch (MessageParserException messageParserException) {
                         future.triggerException(
                                 new ExecutionException(messageParserException),
                                 null);
                     }
-                    logger.log(Level.FINER, "Received AUTH SESSION HS1");
+                         logger.log(Level.FINER, "Parsed AUTH SESSION HS1");
                     if (null != message) {
                         session = new IncompleteSessionImpl(message.getId(),
                                 message.getPayload());
                         logger.log(Level.FINEST, "Created IncompleteSession");
                         future.trigger(session, null);
+                        }
+                    }
+                    future = null;
+                    state = State.OTHER;
+                    return;
+                case START_SESSION_HS1:
+                    switch (type) {
+                        case API_AUTH_SESSION_HS2:
+                            break;
+                        default:
+                            throw new ProtocolException("Expecting HS2 message");
+                    }
+                    logger.log(Level.FINE, "Received AUTH SESSION HS2 message");
+                     {
+                         OnionAuthSessionHS2 message = null;
+                         ReceiverSession session;
+                         message = OnionAuthSessionHS2.parse(buf);
+                         logger.log(Level.FINER, "Parsed AUTH SESSION HS2");
+                         session = new ReceiverSessionImpl(message.getId(),
+                                 message.getPayload());
+                         logger.log(Level.FINEST, "Created ReceiverSession");
+                         future.trigger(session, null);
                     }
                     future = null;
                     state = State.OTHER;
@@ -200,5 +243,4 @@ class ContextImpl implements Context {
             }
         }
     }
-
 }
