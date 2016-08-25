@@ -114,38 +114,4 @@ public class SecurityHelper {
         gen.initialize(keysize);
         return gen.generateKeyPair();
     }
-
-    public static void main(String[] args) throws KeyStoreException, IOException,
-            NoSuchAlgorithmException, CertificateException,
-            InvalidKeySpecException {
-
-        // This is how KeyStore works
-        KeyStore ks = KeyStore.getInstance("jks");
-        ks.load(null, null);
-        LOGGER.log(Level.INFO, "Entries in KeyStore: {0}", ks.size());
-
-        //Let's try to generate a key pair
-        KeyPairGenerator kpGen = KeyPairGenerator.getInstance("RSA");
-        kpGen.initialize(2048);
-        KeyPair kp = kpGen.generateKeyPair();
-        PublicKey pkey = kp.getPublic();
-        PrivateKey skey = kp.getPrivate();
-
-        //Test the key encoding/decoding functions
-        byte[] pkeyEnc = encodeRSAPublicKey(pkey);
-        byte[] skeyEnc = encodeRSAPrivateKey(skey);
-        RSAPublicKey dup_pkey;
-        RSAPrivateKey dup_skey;
-        try {
-            dup_pkey = getRSAPublicKeyFromEncoding(pkeyEnc);
-            dup_skey = getRSAPrivateKeyFromEncoding(skeyEnc);
-        } catch (InvalidKeyException ex) {
-            Logger.getLogger(SecurityHelper.class.getName()).
-                    log(Level.SEVERE, null, ex);
-            return;
-        }
-
-        assert (pkey.equals(dup_pkey));
-        assert (skey.equals(dup_skey));
-    }
 }
