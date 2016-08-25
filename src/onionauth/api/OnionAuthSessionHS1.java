@@ -17,6 +17,7 @@
 package onionauth.api;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -31,7 +32,7 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
     private byte[] payload;
 
     public OnionAuthSessionHS1(long id, byte[] payload) throws MessageSizeExceededException {
-        assert (id <= ((2 ^ 32) - 1));
+        assert (id <= ((1L << 32) - 1));
         this.addHeader(Protocol.MessageType.API_AUTH_SESSION_HS1);
         this.id = id;
         this.size += 4;
@@ -73,5 +74,34 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
             throw new MessageParserException("invalid message encoding");
         }
         return message;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 89 * hash + (int) (this.id ^ (this.id >>> 32));
+        hash = 89 * hash + Arrays.hashCode(this.payload);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionAuthSessionHS1 other = (OnionAuthSessionHS1) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        if (!Arrays.equals(this.payload, other.payload)) {
+            return false;
+        }
+        return true;
     }
 }
