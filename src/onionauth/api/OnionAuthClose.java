@@ -26,12 +26,13 @@ import protocol.Protocol;
  */
 public class OnionAuthClose extends OnionAuthApiMessage {
 
-    long sessionID;
+    int sessionID;
 
-    public OnionAuthClose(long sessionID) {
+    public OnionAuthClose(int sessionID) {
         super.addHeader(Protocol.MessageType.API_AUTH_SESSION_CLOSE);
+        assert (sessionID <= ((1 << 16) - 1));
         this.sessionID = sessionID;
-        this.size += 4;
+        this.size += 4; //2 bytes reserved; 2 for sessionID
     }
 
     public long getSessionID() {
@@ -40,12 +41,13 @@ public class OnionAuthClose extends OnionAuthApiMessage {
 
     public void send(ByteBuffer out) {
         super.send(out);
-        out.putInt(size);
+        super.sendEmptyBytes(out, 2); //reserved
+        out.putShort((short) sessionID);
     }
 
     public static OnionAuthClose parse(ByteBuffer buf) throws
             MessageParserException {
-        long id;
+        int id;
         int remaining;
 
         remaining = buf.remaining();
@@ -53,8 +55,34 @@ public class OnionAuthClose extends OnionAuthApiMessage {
         if ((remaining < 4) || (remaining > 4)) {
             throw new MessageParserException("unable to parse message");
         }
-        id = protocol.Message.unsignedLongFromInt(buf.getInt());
+        buf.getShort();//reserved
+        id = protocol.Message.unsignedIntFromShort(buf.getShort());
         OnionAuthClose message = new OnionAuthClose(id);
         return message;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 53 * hash + (int) (this.sessionID ^ (this.sessionID >>> 32));
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionAuthClose other = (OnionAuthClose) obj;
+        if (this.sessionID != other.sessionID) {
+            return false;
+        }
+        return true;
     }
 }
