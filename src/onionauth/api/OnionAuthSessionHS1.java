@@ -53,6 +53,7 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
 
     @Override
     public void send(ByteBuffer out) {
+        super.send(out);
         out.putInt((int) this.id);
         out.put(this.payload);
     }

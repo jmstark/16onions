@@ -19,8 +19,8 @@ package onionauth.api;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Arrays;
+import java.util.Objects;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -68,6 +68,39 @@ public class OnionAuthSessionIncomingHS1 extends OnionAuthApiMessage {
         out.putShort((short) keyEnc.length);
         out.put(keyEnc);
         out.put(payload);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 67 * hash + Objects.hashCode(this.sourceKey);
+        hash = 67 * hash + Arrays.hashCode(this.payload);
+        hash = 67 * hash + Arrays.hashCode(this.keyEnc);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionAuthSessionIncomingHS1 other = (OnionAuthSessionIncomingHS1) obj;
+        if (!Objects.equals(this.sourceKey, other.sourceKey)) {
+            return false;
+        }
+        if (!Arrays.equals(this.payload, other.payload)) {
+            return false;
+        }
+        if (!Arrays.equals(this.keyEnc, other.keyEnc)) {
+            return false;
+        }
+        return true;
     }
 
     public static OnionAuthSessionIncomingHS1 parse(ByteBuffer buf)
