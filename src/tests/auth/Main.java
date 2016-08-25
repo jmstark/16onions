@@ -92,9 +92,9 @@ public class Main extends Program {
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel arg1) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            logger.log(Level.SEVERE, "Could not connect to Auth API");
+            shutdown();
         }
-
     }
 
     public static void main(String[] args) throws IOException {

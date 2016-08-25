@@ -50,7 +50,7 @@ class ContextImpl implements Context {
     private FutureImpl future;
     private final Logger logger;
 
-    private static class ReceiverSessionImpl extends SessionImpl implements
+    private class ReceiverSessionImpl extends SessionImpl implements
             ReceiverSession {
 
         private final byte[] payload;
@@ -115,7 +115,7 @@ class ContextImpl implements Context {
 
     private void closeSession(long id) {
         OnionAuthClose message;
-        message = new OnionAuthClose(id);
+        message = new OnionAuthClose((int) id);
         connection.sendMsg(message);
     }
 
