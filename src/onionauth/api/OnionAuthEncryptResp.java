@@ -17,6 +17,7 @@
 package onionauth.api;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -99,5 +100,34 @@ public class OnionAuthEncryptResp extends OnionAuthApiMessage {
             throw new MessageParserException();
         }
         return message;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 31 * hash + this.id;
+        hash = 31 * hash + Arrays.hashCode(this.payload);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionAuthEncryptResp other = (OnionAuthEncryptResp) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        if (!Arrays.equals(this.payload, other.payload)) {
+            return false;
+        }
+        return true;
     }
 }
