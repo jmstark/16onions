@@ -45,10 +45,7 @@ public class SecurityHelper {
     private static final Logger LOGGER = Logger.getLogger("SecurityHelper");
     private static KeyFactory factory = null;
 
-    private static void initialize() {
-        if (null != factory) {
-            return;
-        }
+    static {
         try {
             factory = KeyFactory.getInstance("RSA");
         } catch (NoSuchAlgorithmException ex) {
@@ -59,7 +56,6 @@ public class SecurityHelper {
     }
 
     public static byte[] encodeRSAPublicKey(PublicKey pkey) {
-        initialize();
         X509EncodedKeySpec spec;
         try {
             spec = factory.getKeySpec(pkey,
@@ -73,7 +69,6 @@ public class SecurityHelper {
 
     public static RSAPublicKey getRSAPublicKeyFromEncoding(byte[] encoding)
             throws InvalidKeyException {
-        initialize();
         X509EncodedKeySpec spec = new X509EncodedKeySpec(encoding);
         PublicKey pkey;
         try {
@@ -85,7 +80,6 @@ public class SecurityHelper {
     }
 
     public static byte[] encodeRSAPrivateKey(PrivateKey skey) {
-        initialize();
         PKCS8EncodedKeySpec spec;
         try {
             spec = factory.getKeySpec(skey, PKCS8EncodedKeySpec.class);
@@ -98,7 +92,6 @@ public class SecurityHelper {
 
     public static RSAPrivateKey getRSAPrivateKeyFromEncoding(byte[] encoding)
             throws InvalidKeyException {
-        initialize();
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(encoding);
         PrivateKey skey;
         try {
@@ -107,6 +100,19 @@ public class SecurityHelper {
             throw new InvalidKeyException();
         }
         return (RSAPrivateKey) skey;
+    }
+
+    public static KeyPair generateRSAKeyPair(int keysize) throws
+            InvalidParameterException {
+        KeyPairGenerator gen;
+        try {
+            gen = KeyPairGenerator.getInstance("RSA");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(
+                    "A provider for RSA not available; cannot continue.");
+        }
+        gen.initialize(keysize);
+        return gen.generateKeyPair();
     }
 
     public static void main(String[] args) throws KeyStoreException, IOException,
