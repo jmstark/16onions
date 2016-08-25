@@ -151,7 +151,9 @@ public class ConnectionTest {
             this.readHandler = new ClientReadHandler();
             this.readBuffer = ByteBuffer.allocate(randBytes.length);
             this.connection = AsynchronousSocketChannel.open(pool);
-            this.remoteSocket = new InetSocketAddress(InetAddress.getByName("localhost"), port);
+            this.remoteSocket
+                    = new InetSocketAddress(InetAddress.
+                            getByName(serverHostname), port);
             this.clientId = clientId;
             this.future = scheduledExecutor.schedule(new Runnable() {
                 @Override
@@ -202,7 +204,9 @@ public class ConnectionTest {
             public void failed(Throwable thrwbl, Void a) {
                 if (this.retries < 3) {
                     this.retries++;
-                    LOGGER.log(Level.WARNING, "{0}-connect failed; retrying", clientId);
+                    LOGGER.log(Level.WARNING, "{0}: connect failed:", clientId);
+                    LOGGER.log(Level.WARNING, thrwbl.getLocalizedMessage());
+                    LOGGER.log(Level.WARNING, "{0}: retrying", clientId);
                     connection.connect(remoteSocket, null,
                             new ConnectHandler(this.retries));
                     return;
