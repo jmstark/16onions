@@ -17,6 +17,7 @@
 package onionauth.api;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -48,6 +49,7 @@ public class OnionAuthEncrypt extends OnionAuthApiMessage {
             throw new MessageSizeExceededException(
                     "Number of sessions cannot be more that 255");
         }
+        assert (id <= ((1 << 16) - 1));
         this.size += 2; //1 layer count byte + 1 reserved byte
         this.id = id;
         this.size += 2;
@@ -99,6 +101,39 @@ public class OnionAuthEncrypt extends OnionAuthApiMessage {
             out.putInt((int) session);
         }
         out.put(payload);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 17 * hash + this.id;
+        hash = 17 * hash + Arrays.hashCode(this.sessions);
+        hash = 17 * hash + Arrays.hashCode(this.payload);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionAuthEncrypt other = (OnionAuthEncrypt) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        if (!Arrays.equals(this.sessions, other.sessions)) {
+            return false;
+        }
+        if (!Arrays.equals(this.payload, other.payload)) {
+            return false;
+        }
+        return true;
     }
 
     public static OnionAuthEncrypt parse(ByteBuffer buf)
