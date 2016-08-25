@@ -56,22 +56,6 @@ public class OnionAuthSessionIncomingHS1Test {
                 getPublic(), payload);
     }
 
-    @BeforeClass
-    public static void setUpClass() {
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
-    }
-
     /**
      * Test of getSourceKey method, of class OnionAuthSessionIncomingHS1.
      */

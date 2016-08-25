@@ -19,6 +19,7 @@ package onionauth.api;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Arrays;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -64,14 +65,39 @@ public class OnionAuthSessionStartMessage extends OnionAuthApiMessage {
         out.put(keyEnc);
     }
 
-    public OnionAuthSessionStartMessage parse(ByteBuffer buf)
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 19 * hash + Arrays.hashCode(this.keyEnc);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionAuthSessionStartMessage other = (OnionAuthSessionStartMessage) obj;
+        if (!Arrays.equals(this.keyEnc, other.keyEnc)) {
+            return false;
+        }
+        return true;
+    }
+
+    public static OnionAuthSessionStartMessage parse(ByteBuffer buf)
             throws MessageParserException {
         byte[] enc;
         OnionAuthSessionStartMessage message;
         RSAPublicKey pkey;
 
         enc = new byte[buf.remaining()];
-        buf.put(enc);
+        buf.get(enc);
         try {
             pkey = SecurityHelper.getRSAPublicKeyFromEncoding(enc);
         } catch (InvalidKeyException ex) {

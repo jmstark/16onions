@@ -43,7 +43,7 @@ import java.util.logging.Logger;
 public class SecurityHelper {
 
     private static final Logger LOGGER = Logger.getLogger("SecurityHelper");
-    private static KeyFactory factory = null;
+    private static final KeyFactory factory;
 
     static {
         try {
