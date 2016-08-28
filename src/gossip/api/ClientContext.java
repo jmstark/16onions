@@ -32,7 +32,7 @@ import protocol.MessageSizeExceededException;
  *
  * @author totakura
  */
-public class ClientContext implements NotificationHandler {
+class ClientContext implements NotificationHandler {
 
     private final Connection connection;
     private final List<Integer> interests;
