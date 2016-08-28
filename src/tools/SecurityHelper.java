@@ -16,25 +16,31 @@
  */
 package tools;
 
-import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.ShortBufferException;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  *
@@ -113,5 +119,40 @@ public class SecurityHelper {
         }
         gen.initialize(keysize);
         return gen.generateKeyPair();
+    }
+
+    public static void main(String args[]) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, ShortBufferException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
+        Random rand = new Random();
+        byte[] key = new byte[128 / 8];
+        rand.nextBytes(key);
+        SecretKeySpec spec = new SecretKeySpec(key, "AES");
+        rand.nextBytes(key);
+        IvParameterSpec ivSpec = new IvParameterSpec(key);
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+
+            cipher.init(Cipher.ENCRYPT_MODE, spec, ivSpec);
+
+
+        ByteBuffer clearBuf = ByteBuffer.allocate(2048);
+        ByteBuffer encBuf = ByteBuffer.allocate(2048);
+
+        clearBuf.put("Hello World ;-)".getBytes());
+        clearBuf.flip();
+
+            cipher.doFinal(clearBuf, encBuf);
+
+
+            cipher.init(Cipher.DECRYPT_MODE, spec, ivSpec);
+
+        clearBuf.clear();
+        encBuf.flip();
+
+            cipher.doFinal(encBuf, clearBuf);
+
+        clearBuf.flip();
+
+        byte[] original = new byte[clearBuf.remaining()];
+        clearBuf.get(original);
+        System.out.println("Decrypted content: " + new String(original));
     }
 }
