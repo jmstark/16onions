@@ -22,6 +22,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import onionauth.OnionAuthConfiguration;
 import org.apache.commons.cli.CommandLine;
 import protocol.DisconnectHandler;
 import tools.Program;
@@ -44,9 +45,9 @@ public class Main extends Program {
     @Override
     protected void parseCommandLine(CommandLine cli, CliParser parser) {
         String filename = parser.getConfigFilename("auth.conf");
-        AuthConfiguration config;
+        OnionAuthConfiguration config;
         try {
-            config = new AuthConfiguration(filename);
+            config = new OnionAuthConfiguration(filename);
         } catch (IOException ex) {
             throw new RuntimeException("Unable to read config file");
         }

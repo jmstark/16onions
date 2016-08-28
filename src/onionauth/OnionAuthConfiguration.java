@@ -26,6 +26,8 @@ import tools.config.ConfigurationImpl;
  */
 public class OnionAuthConfiguration extends ConfigurationImpl {
 
+    protected static final String OPTION_HOSTKEY = "hostkey";
+
     private static HashMap<String, String> getDefaults() {
         HashMap<String, String> map = new HashMap(2);
         map.put(OPTION_LISTEN_ADDRESS, "127.0.0.1:4433");
@@ -34,6 +36,6 @@ public class OnionAuthConfiguration extends ConfigurationImpl {
     }
 
     public OnionAuthConfiguration(String filename) throws IOException {
-        super(filename, "ONIONAUTH", getDefaults());
+        super(filename, "AUTH", getDefaults());
     }
 }
