@@ -21,6 +21,7 @@ import java.util.HashMap;
 import onionauth.api.OnionAuthSessionHS1;
 import onionauth.api.OnionAuthSessionHS2;
 import onionauth.api.OnionAuthSessionIncomingHS1;
+import onionauth.api.OnionAuthSessionIncomingHS2;
 import protocol.Connection;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
@@ -71,8 +72,12 @@ class AuthClientContextImpl implements AuthClientContext {
     private Session createSession(Key key) {
         Session session;
         session = new PartialSessionImpl().completeSession(key);
-        sessionMap.put(session.getID(), session);
+        registerSession(session);
         return session;
+    }
+
+    private void registerSession(Session session) {
+        sessionMap.put(session.getID(), session);
     }
 
     private void removeSession(int id) {
@@ -120,7 +125,24 @@ class AuthClientContextImpl implements AuthClientContext {
                     connection.sendMsg(reply);
                 }
                 break;
+                case API_AUTH_SESSION_INCOMING_HS2: {
+                    OnionAuthSessionIncomingHS2 request;
+                    PartialSession partial;
+                    Session session;
+                    int id;
 
+                    request = OnionAuthSessionIncomingHS2.parse(buf);
+                    id = (int) request.getId();
+                    partial = findPartialSession(id);
+                    if (null == partial) {
+                        throw new ProtocolException("No session with ID: " + id + " found.");
+                    }
+                    removePartialSession(id);
+                    session = partial.completeSession(new KeyImpl(request.getPayload()));
+                    registerSession(session);
+                    // we do not have to send anything
+                }
+                break;
                 // The following are message types we send a replies, so we do not expect to handle them here
                 case API_AUTH_SESSION_HS1:
                 case API_AUTH_SESSION_HS2:
