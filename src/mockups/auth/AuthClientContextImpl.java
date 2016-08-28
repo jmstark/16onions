@@ -19,6 +19,8 @@ package mockups.auth;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import onionauth.api.OnionAuthSessionHS1;
+import onionauth.api.OnionAuthSessionHS2;
+import onionauth.api.OnionAuthSessionIncomingHS1;
 import protocol.Connection;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
@@ -34,11 +36,13 @@ class AuthClientContextImpl implements AuthClientContext {
 
     private final Connection connection;
     private final HashMap<Integer, PartialSession> partialSessionMap;
+    private final HashMap<Integer, Session> sessionMap;
 
     public AuthClientContextImpl(Connection connection) {
         MessageHandler handler;
         this.connection = connection;
         this.partialSessionMap = new HashMap(30);
+        this.sessionMap = new HashMap(50);
         handler = new AuthApiMessageHandler();
         connection.receive(handler);
     }
@@ -50,7 +54,7 @@ class AuthClientContextImpl implements AuthClientContext {
 
     @Override
     public Session findSession(int id) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return sessionMap.get(id);
     }
 
     private PartialSession newPartialSession() {
@@ -60,9 +64,19 @@ class AuthClientContextImpl implements AuthClientContext {
         return session;
     }
 
-    @Override
-    public Session createSession(Key key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private void removePartialSession(int id) {
+        this.partialSessionMap.remove(id);
+    }
+
+    private Session createSession(Key key) {
+        Session session;
+        session = new PartialSessionImpl().completeSession(key);
+        sessionMap.put(session.getID(), session);
+        return session;
+    }
+
+    private void removeSession(int id) {
+        this.sessionMap.remove(id);
     }
 
     private class AuthApiMessageHandler extends MessageHandler<Void> {
@@ -88,6 +102,26 @@ class AuthClientContextImpl implements AuthClientContext {
                     connection.sendMsg(message);
                 }
                 break;
+                case API_AUTH_SESSION_INCOMING_HS1: {
+                    OnionAuthSessionIncomingHS1 request;
+                    Session session;
+                    Key otherKey;
+                    OnionAuthSessionHS2 reply;
+
+                    request = OnionAuthSessionIncomingHS1.parse(buf);
+                    otherKey = new KeyImpl(request.getPayload());
+                    session = createSession(otherKey);
+                    try {
+                    reply = new OnionAuthSessionHS2(session.getID(),
+                            session.getOurKeyHalf().getBytes());
+                    } catch (MessageSizeExceededException ex) {
+                        throw new RuntimeException("This is a bug; please report");
+                    }
+                    connection.sendMsg(reply);
+                }
+                break;
+
+                // The following are message types we send a replies, so we do not expect to handle them here
                 case API_AUTH_SESSION_HS1:
                 case API_AUTH_SESSION_HS2:
                 case API_AUTH_LAYER_ENCRYPT_RESP:

@@ -25,8 +25,4 @@ interface AuthClientContext {
     PartialSession findPartialSession(int id);
 
     Session findSession(int id);
-
-    PartialSession newPartialSession();
-
-    Session createSession(Key key);
 }

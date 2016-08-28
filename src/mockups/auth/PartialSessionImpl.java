@@ -32,6 +32,16 @@ public class PartialSessionImpl implements PartialSession {
         rand.nextBytes(ourKeyBytes);
     }
 
+    /**
+     * Copy constructor for internal use.
+     *
+     * @param partial the partial session to copy from
+     */
+    protected PartialSessionImpl(PartialSessionImpl partial) {
+        this.id = partial.id;
+        this.ourKeyBytes = partial.ourKeyBytes;
+    }
+
     @Override
     public int getID() {
         return this.id;
@@ -40,5 +50,48 @@ public class PartialSessionImpl implements PartialSession {
     @Override
     public Key getOurKeyHalf() {
         return new KeyImpl(ourKeyBytes);
+    }
+
+    @Override
+    public Session completeSession(Key otherKey) {
+        return new SessionImpl(this, otherKey);
+    }
+
+    private static class SessionImpl extends PartialSessionImpl implements Session {
+
+        private final byte[] key;
+
+        private SessionImpl(PartialSessionImpl partial, Key otherKey) {
+            super(partial);
+
+            byte[] a;
+            byte[] b;
+            int keySize;
+
+            a = partial.ourKeyBytes;
+            b = otherKey.getBytes();
+            if (b.length < a.length) {
+                byte[] temp = a;
+                a = b;
+                b = temp;
+            }
+            keySize = b.length;
+            this.key = new byte[keySize];
+            for (int index = 0; index < keySize; index++) {
+                this.key[index] = (byte) ((index < keySize)
+                        ? a[index] ^ b[index] : b[index]);
+            }
+        }
+
+        @Override
+        public byte[] encrypt(byte[] data) {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public byte[] decrypt(byte[] data) {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
     }
 }

@@ -25,4 +25,6 @@ interface PartialSession {
     int getID();
 
     Key getOurKeyHalf();
+
+    Session completeSession(Key otherKey);
 }
