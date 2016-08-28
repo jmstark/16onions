@@ -20,7 +20,7 @@ import java.util.Random;
 
 public class PartialSessionImpl implements PartialSession {
 
-    private static final int KEY_SIZE = 512; //size in bits
+    private static final int KEY_SIZE = 128; //size in bits
     private static int ID = 0;
     protected final int id;
     protected final byte[] ourKeyBytes;
