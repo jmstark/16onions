@@ -21,8 +21,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -127,14 +125,11 @@ public class PartialSessionImpl implements PartialSession {
             output = Arrays.copyOf(iv, outputSize);
             try {
                 cipher.doFinal(data, 0, data.length, output, iv.length);
-            } catch (ShortBufferException ex) {
-                //shouldn't happen; we made sure that the buffer is long enough
-                throw new RuntimeException();
-            } catch (IllegalBlockSizeException ex) {
-                //shouldn't happen; cipher spec takes care of padding
-                throw new RuntimeException();
-            } catch (BadPaddingException ex) {
-                //shouldn't happen; cipher spec takes care of padding
+            } catch (ShortBufferException | IllegalBlockSizeException |
+                    BadPaddingException ex) {
+                //ShortBufferException: we made sure that the buffer is long enough
+                //IllegalBlockSizeException: cipher spec takes care of padding
+                //BadPaddingException: cipher spec takes care of padding
                 throw new RuntimeException();
             }
             return output;
