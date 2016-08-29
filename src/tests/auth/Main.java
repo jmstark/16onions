@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import onionauth.OnionAuthConfiguration;
@@ -36,10 +38,15 @@ public class Main extends Program {
 
     private InetSocketAddress apiAddress;
     private Context context;
+    private TestController controller;
     static Logger LOGGER;
+    private final ReentrantLock lock;
+    private final Condition condition;
 
     public Main() {
         super("tests.auth", "API conformance test case for Onion Auth");
+        lock = new ReentrantLock();
+        condition = lock.newCondition();
     }
 
     @Override
@@ -71,6 +78,23 @@ public class Main extends Program {
             throw new RuntimeException(ex);
         }
         channel.connect(apiAddress, channel, new ConnectCompletion());
+        if (null == controller) {
+            lock.lock();
+            try {
+                condition.await();
+            } catch (InterruptedException ex) {
+                return;
+            } finally {
+                lock.unlock();
+            }
+        }
+        try {
+            controller.start();
+        } catch (Exception ex) {
+            LOGGER.log(Level.SEVERE, "Exception in test run");
+            ex.printStackTrace();
+            shutdown();
+        }
     }
 
     private class ConnectCompletion
@@ -89,6 +113,13 @@ public class Main extends Program {
                     }
                 }
             });
+            controller = new TestController(context, scheduledExecutor);
+            lock.lock();
+            try {
+                condition.signal();
+            } finally {
+                lock.unlock();
+            }
         }
 
         @Override
