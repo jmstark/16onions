@@ -22,7 +22,7 @@ import javax.crypto.ShortBufferException;
  *
  * @author totakura
  */
-interface Session extends PartialSession {
+public interface Session extends PartialSession {
 
     byte[] encrypt(byte[] data);
 

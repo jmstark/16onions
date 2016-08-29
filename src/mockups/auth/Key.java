@@ -20,6 +20,6 @@ package mockups.auth;
  *
  * @author totakura
  */
-interface Key {
+public interface Key {
     byte[] getBytes();
 }
