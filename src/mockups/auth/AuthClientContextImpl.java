@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.ShortBufferException;
+import onionauth.api.OnionAuthClose;
 import onionauth.api.OnionAuthDecrypt;
 import onionauth.api.OnionAuthDecryptResp;
 import onionauth.api.OnionAuthEncrypt;
@@ -48,8 +49,10 @@ class AuthClientContextImpl implements AuthClientContext {
     private final Connection connection;
     private final HashMap<Integer, PartialSession> partialSessionMap;
     private final HashMap<Integer, Session> sessionMap;
+    private final Logger logger;
 
     public AuthClientContextImpl(Connection connection) {
+        this.logger = Main.LOGGER;
         MessageHandler handler;
         this.connection = connection;
         this.partialSessionMap = new HashMap(30);
@@ -172,9 +175,8 @@ class AuthClientContextImpl implements AuthClientContext {
                         reply = new OnionAuthEncryptResp((int) request.getId(),
                                 data);
                     } catch (MessageSizeExceededException ex) {
-                        Logger.getLogger(AuthClientContextImpl.class.getName()).
-                                log(Level.SEVERE,
-                                        "Encryption resulted in bigger message");
+                        logger.log(Level.SEVERE,
+                                "Encryption resulted in bigger message");
                         //FIXME: We need to have another message code here
                         throw new RuntimeException();
                     }
@@ -195,9 +197,7 @@ class AuthClientContextImpl implements AuthClientContext {
                         try {
                             data = session.decrypt(data);
                         } catch (ShortBufferException ex) {
-                            Logger.getLogger(AuthClientContextImpl.class.
-                                    getName()).
-                                    log(Level.SEVERE, "Decryption failed", ex);
+                            logger.log(Level.SEVERE, "Decryption failed", ex);
                         }
                     }
                     try {
@@ -210,6 +210,21 @@ class AuthClientContextImpl implements AuthClientContext {
                     connection.sendMsg(reply);
                 }
                 break;
+                case API_AUTH_SESSION_CLOSE: {
+                    OnionAuthClose request;
+
+                    request = OnionAuthClose.parse(buf);
+                    Session session = findSession(request.getSessionID());
+                    if (null == session) {
+                        logger.log(Level.WARNING,
+                                "Asked to close an non-existing session");
+                        return;
+                    }
+                    removeSession(session.getID());
+                    logger.log(Level.INFO, "Session {0} removed", session.
+                            getID());
+                    return;
+                }
                 // The following are message types we send as replies,
                 // so we do not expect to handle them here
                 case API_AUTH_SESSION_HS1:

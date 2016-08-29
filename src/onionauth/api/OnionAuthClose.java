@@ -35,7 +35,7 @@ public class OnionAuthClose extends OnionAuthApiMessage {
         this.size += 4; //2 bytes reserved; 2 for sessionID
     }
 
-    public long getSessionID() {
+    public int getSessionID() {
         return sessionID;
     }
 
