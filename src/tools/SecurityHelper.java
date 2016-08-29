@@ -120,39 +120,4 @@ public class SecurityHelper {
         gen.initialize(keysize);
         return gen.generateKeyPair();
     }
-
-    public static void main(String args[]) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, ShortBufferException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
-        Random rand = new Random();
-        byte[] key = new byte[128 / 8];
-        rand.nextBytes(key);
-        SecretKeySpec spec = new SecretKeySpec(key, "AES");
-        rand.nextBytes(key);
-        IvParameterSpec ivSpec = new IvParameterSpec(key);
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-
-            cipher.init(Cipher.ENCRYPT_MODE, spec, ivSpec);
-
-
-        ByteBuffer clearBuf = ByteBuffer.allocate(2048);
-        ByteBuffer encBuf = ByteBuffer.allocate(2048);
-
-        clearBuf.put("Hello World ;-)".getBytes());
-        clearBuf.flip();
-
-            cipher.doFinal(clearBuf, encBuf);
-
-
-            cipher.init(Cipher.DECRYPT_MODE, spec, ivSpec);
-
-        clearBuf.clear();
-        encBuf.flip();
-
-            cipher.doFinal(encBuf, clearBuf);
-
-        clearBuf.flip();
-
-        byte[] original = new byte[clearBuf.remaining()];
-        clearBuf.get(original);
-        System.out.println("Decrypted content: " + new String(original));
-    }
 }
