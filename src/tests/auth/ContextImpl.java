@@ -50,78 +50,9 @@ class ContextImpl implements Context {
     private FutureImpl future;
     private final Logger logger;
 
-    private class ReceiverSessionImpl extends SessionImpl implements
-            ReceiverSession {
-
-        private final byte[] payload;
-
-        public ReceiverSessionImpl(long id, byte[] payload) {
-            super(id);
-            this.payload = payload;
-        }
-
-        @Override
-        public byte[] getDiffiePayload() {
-            return this.payload;
-        }
-    }
-
-    /**
-     * Class for fully instantiated sessions.
-     */
-    public class SessionImpl implements Session {
-
-        protected final long id;
-
-        public SessionImpl(long id) {
-            super();
-            this.id = id;
-        }
-
-        @Override
-        public long getID() {
-            return this.id;
-        }
-
-        @Override
-        public void close() {
-            closeSession(this.id);
-        }
-    }
-
-    /**
-     * Class for partially initiated sessions. The session requires another DH
-     * counterpart to be complete.
-     */
-    private class IncompleteSessionImpl extends SessionImpl implements
-            IncompleteSession {
-
-        private final byte[] payload;
-
-        public IncompleteSessionImpl(long id, byte[] payload) {
-            super(id);
-            this.payload = payload;
-        }
-
-        @Override
-        public Session completeSession(byte[] diffiePayload) throws
-                MessageSizeExceededException {
-            OnionAuthSessionIncomingHS2 message;
-            message = new OnionAuthSessionIncomingHS2(id, diffiePayload);
-            connection.sendMsg(message);
-            return new SessionImpl(this.id);
-        }
-    }
-
-    private void closeSession(long id) {
-        OnionAuthClose message;
-        message = new OnionAuthClose((int) id);
-        connection.sendMsg(message);
-    }
-
     private enum State {
-        START_SESSION,
-        START_SESSION_HS1,
+        START_SESSION, //we start a session by sending SESSION_START
+        START_SESSION_HS1, //we start a session by sending SESSION_INCOMNIG_HS1
         OTHER
     };
     private State state;
@@ -136,8 +67,8 @@ class ContextImpl implements Context {
     }
 
     @Override
-    public Future<IncompleteSession> startSession(RSAPublicKey key,
-            CompletionHandler<IncompleteSession, Void> handler) {
+    public Future<PartialSession> startSession(RSAPublicKey key,
+            CompletionHandler<PartialSession, Void> handler) {
         OnionAuthSessionStartMessage message;
         try {
             message = new OnionAuthSessionStartMessage(key);
@@ -151,9 +82,9 @@ class ContextImpl implements Context {
     }
 
     @Override
-    public Future<ReceiverSession> deriveSession(RSAPublicKey key,
+    public Future<PartialSession> deriveSession(RSAPublicKey key,
             byte[] diffiePayload,
-            CompletionHandler<ReceiverSession, Void> handler) throws
+            CompletionHandler<PartialSession, Void> handler) throws
             MessageSizeExceededException {
         OnionAuthSessionIncomingHS1 message;
         message = new OnionAuthSessionIncomingHS1(key, diffiePayload);
@@ -198,7 +129,7 @@ class ContextImpl implements Context {
                     logger.log(Level.FINE, "Received AUTH SESSION HS1");
                      {
                          OnionAuthSessionHS1 message = null;
-                         IncompleteSessionImpl session;
+                         PartialSessionHS1Impl session;
                          try {
                         message = OnionAuthSessionHS1.parse(buf);
                     } catch (MessageParserException messageParserException) {
@@ -208,8 +139,8 @@ class ContextImpl implements Context {
                     }
                          logger.log(Level.FINER, "Parsed AUTH SESSION HS1");
                     if (null != message) {
-                        session = new IncompleteSessionImpl(message.getId(),
-                                message.getPayload());
+                        session = new PartialSessionHS1Impl(message.getId(),
+                                message.getPayload(), connection);
                         logger.log(Level.FINEST, "Created IncompleteSession");
                         future.trigger(session, null);
                         }
@@ -227,11 +158,11 @@ class ContextImpl implements Context {
                     logger.log(Level.FINE, "Received AUTH SESSION HS2 message");
                      {
                          OnionAuthSessionHS2 message = null;
-                         ReceiverSession session;
+                         PartialSession session;
                          message = OnionAuthSessionHS2.parse(buf);
                          logger.log(Level.FINER, "Parsed AUTH SESSION HS2");
-                         session = new ReceiverSessionImpl(message.getId(),
-                                 message.getPayload());
+                         session = new PartialSessionHS2Impl(message.getId(),
+                                 message.getPayload(), connection);
                          logger.log(Level.FINEST, "Created ReceiverSession");
                          future.trigger(session, null);
                     }

@@ -16,26 +16,33 @@
  */
 package tests.auth;
 
+import onionauth.api.OnionAuthSessionIncomingHS2;
+import protocol.Connection;
 import protocol.MessageSizeExceededException;
 
 /**
- * An onion auth session which is not yet initialised. It requires further steps
- * to be fully initialised.
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface IncompleteSession extends Session {
+public class PartialSessionHS1Impl extends AbstractPartialSessionImpl {
+
+    public PartialSessionHS1Impl(long id, byte[] payload, Connection connection) {
+        super(id, payload, connection);
+    }
 
     /**
-     * Fully instantiate new session from the DH payload received from the other
-     * peer
+     * Create a session object and send the DH payload to OnionAuth
      *
-     * @param diffiePayload the DH payload received from other peer
-     * @return the instantiated session object
-     * @throws MessageSizeExceededException if the given payload is too big to
-     * fit into a single API message
+     * @param diffiePayload
+     * @return session object
+     * @throws MessageSizeExceededException
      */
+    @Override
     public Session completeSession(byte[] diffiePayload) throws
-            MessageSizeExceededException;
-
+            MessageSizeExceededException {
+        OnionAuthSessionIncomingHS2 message;
+        message = new OnionAuthSessionIncomingHS2(id, diffiePayload);
+        connection.sendMsg(message);
+        return this;
+    }
 }

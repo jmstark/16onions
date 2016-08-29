@@ -16,17 +16,29 @@
  */
 package tests.auth;
 
+import protocol.Connection;
+import protocol.MessageSizeExceededException;
+
 /**
- * Interface to identify a session on the receiver of DH
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface ReceiverSession extends Session {
+public class PartialSessionHS2Impl extends AbstractPartialSessionImpl {
+
+    public PartialSessionHS2Impl(long id, byte[] payload, Connection connection) {
+        super(id, payload, connection);
+    }
 
     /**
-     * Return the Diffie-Hellman payload of this session
+     * Create Session without further interaction
      *
-     * @return the DH payload
+     * @param diffiePayload
+     * @return session
+     * @throws MessageSizeExceededException; but it is not thrown here
      */
-    public byte[] getDiffiePayload();
+    @Override
+    public Session completeSession(byte[] diffiePayload) throws
+            MessageSizeExceededException {
+        return this;
+    }
 }

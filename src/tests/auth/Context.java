@@ -35,8 +35,8 @@ public interface Context {
      * @param handler handler to receive the newly created session object
      * @return future object
      */
-    public Future<IncompleteSession> startSession(RSAPublicKey key,
-            CompletionHandler<IncompleteSession, Void> handler);
+    public Future<PartialSession> startSession(RSAPublicKey key,
+            CompletionHandler<PartialSession, Void> handler);
 
     /**
      * Fully instantiate new session from the Diffie-Hellman (DH) payload
@@ -49,9 +49,9 @@ public interface Context {
      * @throws exception when the payload size or the given key are too big to
      * be fit into a single API message
      */
-    public Future<ReceiverSession> deriveSession(RSAPublicKey key,
+    public Future<PartialSession> deriveSession(RSAPublicKey key,
             byte[] diffePayload,
-            CompletionHandler<ReceiverSession, Void> handler) throws
+            CompletionHandler<PartialSession, Void> handler) throws
             MessageSizeExceededException;
 
     /**
