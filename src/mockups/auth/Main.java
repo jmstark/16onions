@@ -70,6 +70,7 @@ public class Main extends Program {
         } catch (IOException ex) {
             throw new RuntimeException("Cannot start API server; cannot continue");
         }
+        server.start();
         LOGGER.info("Started API server");
     }
 
