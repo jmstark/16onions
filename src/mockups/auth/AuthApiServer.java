@@ -35,7 +35,9 @@ class AuthApiServer extends ProtocolServer<AuthClientContext> {
 
     @Override
     protected AuthClientContext handleNewClient(Connection connection) {
-        return new AuthClientContextImpl(connection);
+        AuthClientContextImpl context = new AuthClientContextImpl(connection);
+        connection.receive(context);
+        return context;
     }
 
     @Override
