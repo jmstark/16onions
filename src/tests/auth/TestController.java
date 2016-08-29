@@ -38,8 +38,8 @@ public class TestController {
     }
 
     public void start() throws Exception {
-        KeyPair pair1 = SecurityHelper.generateRSAKeyPair(2048);
-        KeyPair pair2 = SecurityHelper.generateRSAKeyPair(2048);
+        KeyPair pair1 = SecurityHelper.generateRSAKeyPair(1024);
+        KeyPair pair2 = SecurityHelper.generateRSAKeyPair(1024);
         PartialSession partial1;
         PartialSession partial2;
         {
