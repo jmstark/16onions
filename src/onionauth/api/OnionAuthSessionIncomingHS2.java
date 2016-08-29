@@ -17,6 +17,8 @@
 package onionauth.api;
 
 import java.nio.ByteBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol.MessageType;
@@ -38,8 +40,13 @@ public class OnionAuthSessionIncomingHS2 extends OnionAuthSessionHS1 {
     public static OnionAuthSessionIncomingHS2 parse(ByteBuffer buf)
             throws MessageParserException {
         OnionAuthSessionIncomingHS2 message;
-        message = (OnionAuthSessionIncomingHS2) OnionAuthSessionHS1.parse(buf);
-        message.changeMessageType(TYPE);
+        OnionAuthSessionHS1 parent;
+        parent = OnionAuthSessionHS1.parse(buf);
+        try {
+            message = new OnionAuthSessionIncomingHS2(parent.id, parent.payload);
+        } catch (MessageSizeExceededException ex) {
+            throw new MessageParserException("invalid message encoding");
+        }
         return message;
     }
 

@@ -28,8 +28,8 @@ import protocol.Protocol;
  */
 public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
 
-    private long id;
-    private byte[] payload;
+    protected long id;
+    protected byte[] payload;
 
     public OnionAuthSessionHS1(long id, byte[] payload) throws MessageSizeExceededException {
         assert (id <= ((1L << 32) - 1));

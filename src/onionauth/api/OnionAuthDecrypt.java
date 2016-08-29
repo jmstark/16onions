@@ -34,6 +34,15 @@ public class OnionAuthDecrypt extends OnionAuthEncrypt {
 
     public static OnionAuthDecrypt parse(ByteBuffer buf) throws
             MessageParserException {
-        return (OnionAuthDecrypt) OnionAuthEncrypt.parse(buf);
+        OnionAuthEncrypt parent;
+        parent = OnionAuthEncrypt.parse(buf);
+        OnionAuthDecrypt message;
+        try {
+            message = new OnionAuthDecrypt(parent.getId(), parent.getSessions(),
+                    parent.getPayload());
+        } catch (MessageSizeExceededException ex) {
+            throw new MessageParserException();
+        }
+        return message;
     }
 }

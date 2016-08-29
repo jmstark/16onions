@@ -17,6 +17,8 @@
 package onionauth.api;
 
 import java.nio.ByteBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 
@@ -33,6 +35,15 @@ public class OnionAuthDecryptResp extends OnionAuthEncryptResp {
 
     public static OnionAuthDecryptResp parse(ByteBuffer buf) throws
             MessageParserException {
-        return (OnionAuthDecryptResp) OnionAuthEncryptResp.parse(buf);
+        OnionAuthEncryptResp parent;
+        parent = OnionAuthEncryptResp.parse(buf);
+        OnionAuthDecryptResp message;
+        try {
+            message = new OnionAuthDecryptResp(parent.getId(), parent.
+                    getPayload());
+        } catch (MessageSizeExceededException ex) {
+            throw new MessageParserException();
+        }
+        return message;
     }
 }
