@@ -80,3 +80,13 @@ afterwards.
 An another way, on Linux, is to enable TCP_TW_REUSE.  This is done by writing
 `1' to /proc/sys/net/ipv4/tcp_tw_reuse.  This causes new TCP connections to
 reuse the ports occupied by TCP connections in TCP_WAIT state.
+
+
+Protocol Issues
+===============
+
+The specified protocol has issues, mainly breaking the REST semantics.  These
+are observed in OnionAuth: during session creation the client has to
+synchronously wait for HS1, HS2 messages.  Futhermore, there is no reply to
+incoming HS2 message.  This could be solved by issues a request ID to each of
+those requests and having the reply contain the ID of its corresponding request.
