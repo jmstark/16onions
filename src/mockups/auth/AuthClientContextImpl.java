@@ -17,7 +17,17 @@
 package mockups.auth;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.ShortBufferException;
+import onionauth.api.OnionAuthDecrypt;
+import onionauth.api.OnionAuthDecryptResp;
+import onionauth.api.OnionAuthEncrypt;
+import onionauth.api.OnionAuthEncryptResp;
 import onionauth.api.OnionAuthSessionHS1;
 import onionauth.api.OnionAuthSessionHS2;
 import onionauth.api.OnionAuthSessionIncomingHS1;
@@ -145,7 +155,63 @@ class AuthClientContextImpl implements AuthClientContext {
                     // we do not have to send anything
                 }
                 break;
-                // The following are message types we send a replies, so we do not expect to handle them here
+                case API_AUTH_LAYER_ENCRYPT: {
+                    OnionAuthEncrypt request;
+                    OnionAuthEncryptResp reply;
+                    Session[] sessions;
+
+                    request = OnionAuthEncrypt.parse(buf);
+                    sessions = extractSessions(request);
+                    // do layer encryption
+                    // Note: data size increases with every layer as we add IV
+                    byte[] data = request.getPayload();
+                    for (Session session : sessions) {
+                        data = session.encrypt(data);
+                    }
+                    try {
+                        reply = new OnionAuthEncryptResp((int) request.getId(),
+                                data);
+                    } catch (MessageSizeExceededException ex) {
+                        Logger.getLogger(AuthClientContextImpl.class.getName()).
+                                log(Level.SEVERE,
+                                        "Encryption resulted in bigger message");
+                        //FIXME: We need to have another message code here
+                        throw new RuntimeException();
+                    }
+                    connection.sendMsg(reply);
+                }
+                break;
+                case API_AUTH_LAYER_DECRYPT: {
+                    OnionAuthDecrypt request;
+                    List<Session> sessions;
+                    OnionAuthDecryptResp reply;
+
+                    request = OnionAuthDecrypt.parse(buf);
+                    sessions = Arrays.asList(extractSessions(request));
+                    byte[] data = request.getPayload();
+                    //reverse the sessions as we decrypt with the last session first
+                    Collections.reverse(sessions);
+                    for (Session session : sessions) {
+                        try {
+                            data = session.decrypt(data);
+                        } catch (ShortBufferException ex) {
+                            Logger.getLogger(AuthClientContextImpl.class.
+                                    getName()).
+                                    log(Level.SEVERE, "Decryption failed", ex);
+                        }
+                    }
+                    try {
+                        reply = new OnionAuthDecryptResp(request.getId(), data);
+                    } catch (MessageSizeExceededException ex) {
+                        // shouldn't happen as decryption should reduce the payload size
+                        throw new RuntimeException(
+                                "This is a bug; please report");
+                    }
+                    connection.sendMsg(reply);
+                }
+                break;
+                // The following are message types we send as replies,
+                // so we do not expect to handle them here
                 case API_AUTH_SESSION_HS1:
                 case API_AUTH_SESSION_HS2:
                 case API_AUTH_LAYER_ENCRYPT_RESP:
@@ -154,6 +220,21 @@ class AuthClientContextImpl implements AuthClientContext {
                 default:
                     throw new RuntimeException("This is a bug, please report");
             }
+        }
+
+        private Session[] extractSessions(OnionAuthEncrypt request) throws
+                ProtocolException {
+            long[] ids = request.getSessions();
+            Session[] sessions = new Session[ids.length];
+            for (int index = 0; index < sessions.length; index++) {
+                Session session = findSession((int) ids[index]);
+                if (null == session) {
+                    throw new ProtocolException(
+                            "Unknown session ID given");
+                }
+                sessions[index] = session;
+            }
+            return sessions;
         }
     }
 
