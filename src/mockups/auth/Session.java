@@ -16,6 +16,8 @@
  */
 package mockups.auth;
 
+import javax.crypto.ShortBufferException;
+
 /**
  *
  * @author totakura
@@ -24,5 +26,5 @@ interface Session extends PartialSession {
 
     byte[] encrypt(byte[] data);
 
-    byte[] decrypt(byte[] data);
+    byte[] decrypt(byte[] data) throws ShortBufferException;
 }

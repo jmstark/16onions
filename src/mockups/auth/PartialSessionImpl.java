@@ -16,20 +16,34 @@
  */
 package mockups.auth;
 
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.ShortBufferException;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class PartialSessionImpl implements PartialSession {
 
-    private static final int KEY_SIZE = 128; //size in bits
     private static int ID = 0;
     protected final int id;
+    protected static final int KEY_SIZE = 128 / 8; //size in bytes
     protected final byte[] ourKeyBytes;
+    protected final Random random;
 
     public PartialSessionImpl() {
-        Random rand = new Random();
-        ourKeyBytes = new byte[KEY_SIZE / 8];
+        random = new Random();
+        ourKeyBytes = new byte[KEY_SIZE];
         this.id = ID++;
-        rand.nextBytes(ourKeyBytes);
+        random.nextBytes(ourKeyBytes);
     }
 
     /**
@@ -40,6 +54,7 @@ public class PartialSessionImpl implements PartialSession {
     protected PartialSessionImpl(PartialSessionImpl partial) {
         this.id = partial.id;
         this.ourKeyBytes = partial.ourKeyBytes;
+        this.random = partial.random;
     }
 
     @Override
@@ -59,11 +74,13 @@ public class PartialSessionImpl implements PartialSession {
 
     private static class SessionImpl extends PartialSessionImpl implements Session {
 
-        private final byte[] key;
+        private static final String CIPHER_TRANSFORMATION = "AES/CBC/PKCS5Padding";
+        private final SecretKeySpec spec;
 
         private SessionImpl(PartialSessionImpl partial, Key otherKey) {
             super(partial);
 
+            byte[] key;
             byte[] a;
             byte[] b;
             int keySize;
@@ -76,21 +93,85 @@ public class PartialSessionImpl implements PartialSession {
                 b = temp;
             }
             keySize = b.length;
-            this.key = new byte[keySize];
+            key = new byte[keySize];
             for (int index = 0; index < keySize; index++) {
-                this.key[index] = (byte) ((index < keySize)
+                key[index] = (byte) ((index < keySize)
                         ? a[index] ^ b[index] : b[index]);
             }
+            this.spec = new SecretKeySpec(key, "AES");
+
         }
 
         @Override
         public byte[] encrypt(byte[] data) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            Cipher cipher;
+            IvParameterSpec ivSpec;
+            byte[] iv;
+            iv = new byte[KEY_SIZE];
+            random.nextBytes(data);
+            ivSpec = new IvParameterSpec(iv);
+
+            try {
+                cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
+                throw new RuntimeException(); //AES CBC has to be available
+            }
+            try {
+                cipher.init(Cipher.ENCRYPT_MODE, spec, ivSpec);
+            } catch (InvalidKeyException | InvalidAlgorithmParameterException ex) {
+                throw new RuntimeException(); // this should not happen
+            }
+            int outputSize = cipher.getOutputSize(data.length);
+            outputSize += iv.length;
+            byte[] output;
+            output = Arrays.copyOf(iv, outputSize);
+            try {
+                cipher.doFinal(data, 0, data.length, output, iv.length);
+            } catch (ShortBufferException ex) {
+                //shouldn't happen; we made sure that the buffer is long enough
+                throw new RuntimeException();
+            } catch (IllegalBlockSizeException ex) {
+                //shouldn't happen; cipher spec takes care of padding
+                throw new RuntimeException();
+            } catch (BadPaddingException ex) {
+                //shouldn't happen; cipher spec takes care of padding
+                throw new RuntimeException();
+            }
+            return output;
         }
 
         @Override
-        public byte[] decrypt(byte[] data) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        public byte[] decrypt(byte[] data) throws ShortBufferException {
+            Cipher cipher;
+            byte[] iv;
+            byte[] output;
+            IvParameterSpec ivSpec;
+
+            if (data.length <= KEY_SIZE) {
+                throw new ShortBufferException();
+            }
+            //extract IV and initialize it
+            iv = Arrays.copyOf(data, KEY_SIZE);
+            ivSpec = new IvParameterSpec(iv);
+
+            try {
+                cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
+                throw new RuntimeException(); //AES CBC has to be available
+            }
+            try {
+                cipher.init(Cipher.DECRYPT_MODE, spec, ivSpec);
+            } catch (InvalidKeyException | InvalidAlgorithmParameterException ex) {
+                throw new RuntimeException(); // this should not happen
+            }
+            cipher.update(data);
+            try {
+                output = cipher.doFinal();
+            } catch (IllegalBlockSizeException | BadPaddingException ex) {
+                //cipher spec takes care of padding
+                throw new RuntimeException();
+            }
+            return output;
         }
 
     }
