@@ -58,7 +58,8 @@ class AuthClientContextImpl implements AuthClientContext {
         return sessionMap.get(id);
     }
 
-    private PartialSession newPartialSession() {
+    @Override
+    public PartialSession newPartialSession() {
         PartialSession session;
         session = new PartialSessionImpl();
         partialSessionMap.put(session.getID(), session);
@@ -69,7 +70,8 @@ class AuthClientContextImpl implements AuthClientContext {
         this.partialSessionMap.remove(id);
     }
 
-    private Session createSession(Key key) {
+    @Override
+    public Session createSession(Key key) {
         Session session;
         session = new PartialSessionImpl().completeSession(key);
         registerSession(session);

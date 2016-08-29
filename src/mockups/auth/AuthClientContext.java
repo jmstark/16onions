@@ -17,12 +17,18 @@
 package mockups.auth;
 
 /**
+ * Interface capturing the important functionality of client context. This is
+ * used in testing.
  *
  * @author totakura
  */
-interface AuthClientContext {
+public interface AuthClientContext {
 
-    PartialSession findPartialSession(int id);
+    public PartialSession findPartialSession(int id);
 
-    Session findSession(int id);
+    public Session findSession(int id);
+
+    public PartialSession newPartialSession();
+
+    public Session createSession(Key key);
 }
