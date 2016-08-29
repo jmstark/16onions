@@ -93,7 +93,7 @@ class FutureImpl<V, A, B> implements Future {
         if (done) {
             return getResult();
         }
-        lock.lockInterruptibly();
+        lock.lock();
         try {
             condition.await();
         } finally {
@@ -111,7 +111,7 @@ class FutureImpl<V, A, B> implements Future {
         if (done) {
             return getResult();
         }
-        lock.lockInterruptibly();
+        lock.lock();
         try {
             LOGGER.log(Level.FINEST, "Waiting for future's result");
             condition.await(arg0, arg1);
@@ -128,7 +128,9 @@ class FutureImpl<V, A, B> implements Future {
         LOGGER.log(Level.FINEST, "Triggering future");
         this.result = result;
         this.done = true;
-        this.handler.completed(result, attachment);
+        if (null != this.handler) {
+            this.handler.completed(result, attachment);
+        }
         lock.lock();
         try {
             condition.signal();
@@ -144,7 +146,9 @@ class FutureImpl<V, A, B> implements Future {
         LOGGER.log(Level.FINEST, "Triggering exception for future");
         this.exp = exp;
         this.done = true;
-        this.handler.failed(exp, attachment);
+        if (null != this.handler) {
+            this.handler.failed(exp, attachment);
+        }
         lock.lock();
         try {
             condition.signal();
