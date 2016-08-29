@@ -104,6 +104,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
             throws MessageParserException, ProtocolException {
         switch (type) {
             case API_AUTH_SESSION_START: {
+                logger.info("Received SESSION_START");
                 PartialSession session = newPartialSession();
                 OnionAuthSessionHS1 message;
                 try {
@@ -113,6 +114,8 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                     throw new RuntimeException("This is a bug; please report");
                 }
                 connection.sendMsg(message);
+                logger.log(Level.INFO,
+                        "Created partial session with ID {0}", session.getID());
             }
             break;
             case API_AUTH_SESSION_INCOMING_HS1: {
@@ -121,6 +124,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                 Key otherKey;
                 OnionAuthSessionHS2 reply;
 
+                logger.info("Received SESSION_INCOMING_HS1");
                 request = OnionAuthSessionIncomingHS1.parse(buf);
                 otherKey = new KeyImpl(request.getPayload());
                 session = createSession(otherKey);
@@ -131,6 +135,8 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                     throw new RuntimeException("This is a bug; please report");
                 }
                 connection.sendMsg(reply);
+                logger.log(Level.INFO,
+                        "Created session with ID {0}", session.getID());
             }
             break;
             case API_AUTH_SESSION_INCOMING_HS2: {
@@ -139,6 +145,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                 Session session;
                 int id;
 
+                logger.info("Received SESSION_INCOMING_HS2");
                 request = OnionAuthSessionIncomingHS2.parse(buf);
                 id = (int) request.getId();
                 partial = findPartialSession(id);
@@ -150,6 +157,8 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                 session = partial.completeSession(new KeyImpl(request.
                         getPayload()));
                 registerSession(session);
+                logger.log(Level.INFO,
+                        "Created session with ID {0}", session.getID());
                 // we do not have to send anything
             }
             break;
@@ -160,6 +169,8 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
 
                 request = OnionAuthEncrypt.parse(buf);
                 sessions = extractSessions(request);
+                logger.log(Level.INFO, "Received LAYER_ENCRYPT with {0} layers",
+                        sessions.length);
                 // do layer encryption
                 // Note: data size increases with every layer as we add IV
                 byte[] data = request.getPayload();
@@ -185,6 +196,8 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
 
                 request = OnionAuthDecrypt.parse(buf);
                 sessions = Arrays.asList(extractSessions(request));
+                logger.log(Level.INFO, "Received LAYER_DECRYPY with {0} layers",
+                        sessions.size());
                 byte[] data = request.getPayload();
                 //reverse the sessions as we decrypt with the last session first
                 Collections.reverse(sessions);
@@ -209,6 +222,9 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                 OnionAuthClose request;
 
                 request = OnionAuthClose.parse(buf);
+                logger.log(Level.INFO,
+                        "Received session close for {0}",
+                        request.getSessionID());
                 Session session = findSession(request.getSessionID());
                 if (null == session) {
                     logger.log(Level.WARNING,
