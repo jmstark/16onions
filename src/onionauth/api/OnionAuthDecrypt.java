@@ -3,6 +3,7 @@ package onionauth.api;
 import java.nio.ByteBuffer;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
+import protocol.Protocol;
 
 /*
  * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
@@ -30,6 +31,7 @@ public class OnionAuthDecrypt extends OnionAuthEncrypt {
     public OnionAuthDecrypt(int id, long[] sessions, byte[] payload) throws
             MessageSizeExceededException {
         super(id, sessions, payload);
+        this.changeMessageType(Protocol.MessageType.API_AUTH_LAYER_DECRYPT);
     }
 
     public static OnionAuthDecrypt parse(ByteBuffer buf) throws

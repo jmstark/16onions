@@ -196,7 +196,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
 
                 request = OnionAuthDecrypt.parse(buf);
                 sessions = Arrays.asList(extractSessions(request));
-                logger.log(Level.INFO, "Received LAYER_DECRYPY with {0} layers",
+                logger.log(Level.INFO, "Received LAYER_DECRYPT with {0} layers",
                         sessions.size());
                 byte[] data = request.getPayload();
                 //reverse the sessions as we decrypt with the last session first

@@ -106,7 +106,7 @@ public class PartialSessionImpl implements PartialSession {
             IvParameterSpec ivSpec;
             byte[] iv;
             iv = new byte[KEY_SIZE];
-            random.nextBytes(data);
+            random.nextBytes(iv);
             ivSpec = new IvParameterSpec(iv);
 
             try {
