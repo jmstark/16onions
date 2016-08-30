@@ -256,7 +256,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
             Session session = findSession((int) ids[index]);
             if (null == session) {
                 throw new ProtocolException(
-                        "Unknown session ID given");
+                        "Unknown session ID " + (int) ids[index] + " given");
             }
             sessions[index] = session;
         }
