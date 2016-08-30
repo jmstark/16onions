@@ -109,7 +109,9 @@ class ContextImpl implements Context {
 
     @Override
     public void shutdown(boolean disconnected) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if (!disconnected) {
+            connection.disconnect();
+        }
     }
 
     @Override

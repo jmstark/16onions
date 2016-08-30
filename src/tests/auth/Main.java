@@ -95,6 +95,7 @@ public class Main extends Program {
             ex.printStackTrace();
             shutdown();
         }
+        shutdown();
     }
 
     private class ConnectCompletion
