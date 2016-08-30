@@ -160,9 +160,8 @@ public class PartialSessionImpl implements PartialSession {
             } catch (InvalidKeyException | InvalidAlgorithmParameterException ex) {
                 throw new RuntimeException(); // this should not happen
             }
-            cipher.update(data);
             try {
-                output = cipher.doFinal();
+                output = cipher.doFinal(data, KEY_SIZE, data.length - KEY_SIZE);
             } catch (IllegalBlockSizeException | BadPaddingException ex) {
                 //cipher spec takes care of padding
                 throw new RuntimeException();
