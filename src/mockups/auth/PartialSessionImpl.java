@@ -70,10 +70,11 @@ public class PartialSessionImpl implements PartialSession {
         return new SessionImpl(this, otherKey);
     }
 
-    private static class SessionImpl extends PartialSessionImpl implements Session {
+    protected static class SessionImpl extends PartialSessionImpl implements
+            Session {
 
         private static final String CIPHER_TRANSFORMATION = "AES/CBC/PKCS5Padding";
-        private final SecretKeySpec spec;
+        protected final SecretKeySpec spec;
 
         private SessionImpl(PartialSessionImpl partial, Key otherKey) {
             super(partial);
