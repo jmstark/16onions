@@ -31,19 +31,18 @@ public class TunnelImpl implements Tunnel {
 
     private final LinkedList<Session> sessions;
     private final Session main;
-    private final Map<Integer, FutureImpl> requestMap;
-    private static int counter = 0;
     private final Connection connection;
+    private static final Map<Integer, FutureImpl> requestMap = new HashMap(3000);
+    private static int counter = 0;
 
     public TunnelImpl(Session session, Connection connection) {
         this.main = session;
         this.sessions = new LinkedList();
-        this.requestMap = new HashMap(300);
         this.connection = connection;
     }
 
-    public FutureImpl getFuture(int id) throws NoSuchElementException {
-        FutureImpl future = requestMap.get(id);
+    public static FutureImpl getFuture(int id) throws NoSuchElementException {
+        FutureImpl future = requestMap.remove(id);
         if (null == future) {
             throw new NoSuchElementException(Integer.toString(id));
         }

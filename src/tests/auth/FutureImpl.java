@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class FutureImpl<V, A, B> implements Future {
+public class FutureImpl<V, A, B> implements Future {
 
     private CompletionHandler<V, A> handler;
     private V result;

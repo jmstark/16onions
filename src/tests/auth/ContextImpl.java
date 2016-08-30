@@ -21,11 +21,14 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import onionauth.api.OnionAuthClose;
+import onionauth.api.OnionAuthDecryptResp;
+import onionauth.api.OnionAuthEncryptResp;
 import onionauth.api.OnionAuthSessionHS1;
 import onionauth.api.OnionAuthSessionHS2;
 import onionauth.api.OnionAuthSessionIncomingHS1;
@@ -175,8 +178,41 @@ class ContextImpl implements Context {
                     state = State.OTHER;
                     return;
                 default:
+                    //encryption and decryption happens here
+                    switch (type) {
+                        case API_AUTH_LAYER_ENCRYPT_RESP: {
+                            OnionAuthEncryptResp message
+                                    = OnionAuthEncryptResp.parse(buf);
+                            FutureImpl future;
+                            try {
+                                future = TunnelImpl.getFuture(message.getId());
+                            } catch (NoSuchElementException ex) {
+                                logger.warning(
+                                        "Received encrypt response for an unknown ID");
+                                return;
+                            }
+                            future.trigger(message.getPayload(), null);
+                        }
+                            return;
+                        case API_AUTH_LAYER_DECRYPT_RESP: {
+                            OnionAuthDecryptResp message
+                                    = OnionAuthDecryptResp.parse(buf);
+                            FutureImpl future;
+                            try {
+                                future = TunnelImpl.getFuture(message.getId());
+                            } catch (NoSuchElementException ex) {
+                                logger.warning(
+                                        "Received encrypt response for an unknown ID");
+                                return;
+                            }
+                            future.trigger(message.getPayload(), null);
+                        }
+                            return;
+                        default:
+                    }
                     break;
             }
+            throw new ProtocolException("Protocol reached incorrect state");
         }
     }
 }
