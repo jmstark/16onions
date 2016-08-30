@@ -54,6 +54,23 @@ public class TestController {
         }
         Session session1 = partial1.completeSession(partial2.getDiffiePayload());
         Session session2 = partial2.completeSession(partial1.getDiffiePayload());
+
+        Tunnel tunnel1 = context.createTunnel(session1);
+        Tunnel tunnel2 = context.createTunnel(session2);
+
+        String cleartext = "Hello World";
+        byte[] encrypted;
+        {
+            Future<byte[]> future = tunnel1.encrypt(cleartext.getBytes(), null);
+            encrypted = future.get();
+        }
+        byte[] decrypted;
+        {
+            Future<byte[]> future = tunnel2.decrypt(encrypted, null);
+            decrypted = future.get();
+        }
+        String decryptedText = new String(decrypted);
+        System.out.println("Decrypted: " + decryptedText);
     }
 
 }
