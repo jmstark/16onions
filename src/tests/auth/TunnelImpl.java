@@ -64,7 +64,7 @@ public class TunnelImpl implements Tunnel {
         long[] ids = new long[sessions.size()];
         int index = 0;
         for (Session session : sessions) {
-            ids[index] = session.getID();
+            ids[index++] = session.getID();
         }
         sessions.removeFirst();
         return ids;
