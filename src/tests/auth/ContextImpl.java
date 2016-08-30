@@ -109,6 +109,11 @@ class ContextImpl implements Context {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
+    @Override
+    public Tunnel createTunnel(Session session) {
+        return new TunnelImpl(session, connection);
+    }
+
     private class AuthMessageHandler extends MessageHandler {
 
         public AuthMessageHandler() {

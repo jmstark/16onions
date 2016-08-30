@@ -61,4 +61,13 @@ public interface Context {
      * disconnected?
      */
     public void shutdown(boolean disconnected);
+
+    /**
+     * Create a tunnel
+     *
+     * @param session the initial session of the tunnel; this session cannot be
+     *           removed from the tunnel
+     * @return the tunnel
+     */
+    public Tunnel createTunnel(Session session);
 }

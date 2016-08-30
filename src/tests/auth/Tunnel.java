@@ -18,6 +18,7 @@ package tests.auth;
 
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.Future;
+import protocol.MessageSizeExceededException;
 
 /**
  * A tunnel formed by chaining multiple sessions.
@@ -42,7 +43,7 @@ public interface Tunnel {
      *
      * @param session
      */
-    public void removeHop(Session session);
+    public boolean removeHop(Session session);
 
     /**
      * Layer encrypt the given payload.
@@ -50,9 +51,11 @@ public interface Tunnel {
      * @param payload the data to be encrypted with the chained sessions
      * @param handler completion handler which receives the encrypted payload
      * @return future object
+     * @throws protocol.MessageSizeExceededException
      */
     public Future<byte[]> encrypt(byte[] payload,
-            CompletionHandler<byte[], ? extends Object> handler);
+            CompletionHandler<byte[], ? extends Object> handler) throws
+            MessageSizeExceededException;
 
     /**
      * Layer decrypt the given payload.
@@ -60,7 +63,9 @@ public interface Tunnel {
      * @param payload the data to be decrypted with chained sessions.
      * @param handler completion handler which receives the decrypted payload
      * @return future object
+     * @throws protocol.MessageSizeExceededException
      */
     public Future<byte[]> decrypt(byte[] payload,
-            CompletionHandler<byte[], ? extends Object> handler);
+            CompletionHandler<byte[], ? extends Object> handler) throws
+            MessageSizeExceededException;
 }
