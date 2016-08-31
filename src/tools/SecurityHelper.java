@@ -16,31 +16,32 @@
  */
 package tools;
 
-import java.nio.ByteBuffer;
-import java.security.InvalidAlgorithmParameterException;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.KeyStore.PasswordProtection;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Random;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.ShortBufferException;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
+import javax.security.auth.DestroyFailedException;
 
 /**
  *
@@ -50,6 +51,7 @@ public class SecurityHelper {
 
     private static final Logger LOGGER = Logger.getLogger("SecurityHelper");
     private static final KeyFactory factory;
+    public static final KeyStore keyStore;
 
     static {
         try {
@@ -58,6 +60,54 @@ public class SecurityHelper {
             LOGGER.log(Level.WARNING, ex.getLocalizedMessage());
             throw new RuntimeException(
                     "A provider for RSA not available; cannot continue.");
+        }
+        String propertiesPath = System.getProperty("keystore.config.file",
+                "security.properties");
+
+        Properties properties;
+        properties = new Properties();
+        try (FileInputStream fis = new FileInputStream(propertiesPath)) {
+            properties.load(fis);
+        } catch (FileNotFoundException ex) {
+            throw new RuntimeException(
+                    "Could not load security properties. See `Security' in README");
+        } catch (IOException ex) {
+            throw new RuntimeException(ex.toString());
+        }
+        String ksType = properties.getProperty("keystore.type", KeyStore.
+                getDefaultType());
+        String ksFile = properties.getProperty("keystore.path", ".keystore");
+        String ksPassFile = properties.getProperty("keystore.passwd.path",
+                ".keystore_passwd");
+        PasswordProtection ksPass;
+        try {
+            keyStore = KeyStore.getInstance(ksType);
+        } catch (KeyStoreException ex) {
+            throw new RuntimeException(
+                    "Could not load the default keystore; cannot continue");
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                new FileInputStream(ksPassFile)))) {
+            ksPass = new PasswordProtection(reader.readLine().toCharArray());
+
+        } catch (IOException ex) {
+            ksPass = new PasswordProtection(new char[0]);
+        }
+        try (FileInputStream input = new FileInputStream(ksFile)) {
+            keyStore.load(input, ksPass.getPassword());
+        } catch (IOException ex) {
+            throw new RuntimeException(ex.toString());
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex.toString());
+        } catch (CertificateException ex) {
+            throw new RuntimeException(ex.toString());
+        } finally {
+            try {
+                ksPass.destroy();
+            } catch (DestroyFailedException ex) {
+                Logger.getLogger(SecurityHelper.class.getName()).
+                        log(Level.SEVERE, null, ex);
+            }
         }
     }
 

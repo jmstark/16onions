@@ -90,3 +90,21 @@ are observed in OnionAuth: during session creation the client has to
 synchronously wait for HS1, HS2 messages.  Futhermore, there is no reply to
 incoming HS2 message.  This could be solved by issues a request ID to each of
 those requests and having the reply contain the ID of its corresponding request.
+
+Security
+========
+
+The testing module uses Java Cryptography APIs for handling keys and using
+cryptographic functions.  As part of this, you have to create a java keystore as
+following:
+
+1. Populate a file with a password:
+   $ pwgen 16 1 > ~/.keystore_passwd
+2. Create the keystore (default at ~/.keystore; can be changed with -keystore)
+   and a keypair with (alias) name `pair1' and the common name (CN) for the
+   corresponding certificate as `key1':
+   $keytool -alias "pair1" -dname CN=key1 -genkeypair -keyalg RSA -keysize 4096 -storepass:file .keystore_passwd
+3. We also need a second key:
+   keytool -alias "pair2" -dname CN=key2 -genkeypair -keyalg RSA -keysize 4096 -storepass:file .keystore_passwd
+4. List the certificates:
+   keytool -list -storepass:file ~/.keystore_passwd

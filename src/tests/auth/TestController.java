@@ -16,7 +16,8 @@
  */
 package tests.auth;
 
-import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -40,18 +41,23 @@ public class TestController {
     }
 
     public void start() throws Exception {
-        KeyPair pair1 = SecurityHelper.generateRSAKeyPair(1024);
-        KeyPair pair2 = SecurityHelper.generateRSAKeyPair(1024);
+        KeyStore keyStore = SecurityHelper.keyStore;
+        if (keyStore.size() < 2) {
+            throw new RuntimeException("keystore needs to have atleast two keys");
+        }
+        Certificate cert1 = keyStore.getCertificate("pair1");
+        Certificate cert2 = keyStore.getCertificate("pair2");
+
         PartialSession partial1;
         PartialSession partial2;
         {
             Future<PartialSession> future = context.startSession(
-                    (RSAPublicKey) pair1.getPublic(), null);
+                    (RSAPublicKey) cert1.getPublicKey(), null);
             partial1 = future.get();
         }
         {
             Future<PartialSession> future = context.startSession(
-                    (RSAPublicKey) pair2.getPublic(), null);
+                    (RSAPublicKey) cert2.getPublicKey(), null);
             partial2 = future.get();
         }
         Session session1 = partial1.completeSession(partial2.getDiffiePayload());
@@ -84,11 +90,11 @@ public class TestController {
             B = new Session[fB.length];
             int index;
             for (index = 0; index < fA.length; index++) {
-                fA[index] = context.startSession((RSAPublicKey) pair1.
-                        getPublic(), null);
+                fA[index] = context.startSession((RSAPublicKey) cert1.
+                        getPublicKey(), null);
                 PartialSession pa = fA[index].get();
-                fB[index] = context.startSession((RSAPublicKey) pair2.
-                        getPublic(), null);
+                fB[index] = context.startSession((RSAPublicKey) cert2.
+                        getPublicKey(), null);
                 PartialSession pb = fB[index].get();
                 A[index] = pa.completeSession(pb.getDiffiePayload());
                 B[index] = pb.completeSession(pa.getDiffiePayload());
