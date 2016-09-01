@@ -52,16 +52,19 @@ public class TestController {
         PartialSession partial2;
         {
             Future<PartialSession> future = context.startSession(
-                    (RSAPublicKey) cert1.getPublicKey(), null);
+                    (RSAPublicKey) cert2.getPublicKey(), null);
             partial1 = future.get();
         }
         {
-            Future<PartialSession> future = context.startSession(
-                    (RSAPublicKey) cert2.getPublicKey(), null);
+            Future<PartialSession> future = context.deriveSession(
+                    (RSAPublicKey) cert1.getPublicKey(), partial1.
+                    getDiffiePayload(), null);
             partial2 = future.get();
         }
-        Session session1 = partial1.completeSession(partial2.getDiffiePayload());
-        Session session2 = partial2.completeSession(partial1.getDiffiePayload());
+        Session session1;
+        Session session2;
+        session1 = partial1.completeSession(partial2.getDiffiePayload());
+        session2 = partial2.completeSession(partial1.getDiffiePayload());
 
         Tunnel tunnel1 = context.createTunnel(session1);
         Tunnel tunnel2 = context.createTunnel(session2);
