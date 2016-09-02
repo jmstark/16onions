@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -36,17 +38,16 @@ import tools.config.CliParser;
  */
 public class Main extends Program {
 
-    private InetSocketAddress apiAddress;
-    private Context context;
+    private InetSocketAddress apiAddress1;
+    private InetSocketAddress apiAddress2;
+    private Context[] contexts;
     private TestController controller;
     static Logger LOGGER;
-    private final ReentrantLock lock;
-    private final Condition condition;
+    private final Semaphore semaphore = new Semaphore(2);
 
     public Main() {
         super("tests.auth", "API conformance test case for Onion Auth");
-        lock = new ReentrantLock();
-        condition = lock.newCondition();
+        contexts = new Context[2];
     }
 
     @Override
@@ -58,36 +59,47 @@ public class Main extends Program {
         } catch (IOException ex) {
             throw new RuntimeException("Unable to read config file");
         }
-        apiAddress = config.getAPIAddress();
+        apiAddress1 = config.getAPIAddress();
+        apiAddress2 = config.getAddress("api_address2");
     }
 
     @Override
     protected void cleanup() {
-        if (null != context) {
-            context.shutdown(false);
-            context = null;
+        for (Context context : contexts) {
+            if (null != context) {
+                context.shutdown(false);
+                context = null;
+            }
         }
     }
 
     @Override
     protected void run() {
-        AsynchronousSocketChannel channel;
+        AsynchronousSocketChannel channel1;
+        AsynchronousSocketChannel channel2;
         try {
-            channel = AsynchronousSocketChannel.open(this.group);
+            channel1 = AsynchronousSocketChannel.open(this.group);
+            channel2 = AsynchronousSocketChannel.open(this.group);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
-        channel.connect(apiAddress, channel, new ConnectCompletion());
-        if (null == controller) {
-            lock.lock();
-            try {
-                condition.await();
-            } catch (InterruptedException ex) {
-                return;
-            } finally {
-                lock.unlock();
-            }
+        try {
+            semaphore.acquire(2);
+        } catch (InterruptedException ex) {
+            LOGGER.warning("Interrupted");
+            return;
         }
+        channel1.connect(apiAddress1, channel1, new ConnectCompletion(0));
+        channel2.connect(apiAddress2, channel2, new ConnectCompletion(1));
+        try {
+            semaphore.acquire(1);
+        } catch (InterruptedException ex) {
+            LOGGER.warning("Could not connect to OnionAuth API modules");
+            return;
+        }
+        assert (null == controller);
+        controller = new TestController(contexts[0], contexts[1],
+                scheduledExecutor);
         try {
             controller.start();
         } catch (Exception ex) {
@@ -101,30 +113,33 @@ public class Main extends Program {
     private class ConnectCompletion
             implements CompletionHandler<Void, AsynchronousSocketChannel> {
 
+        private final int index;//the index referring to the correct context object to set
+
+        private ConnectCompletion(int index) {
+            this.index = index;
+        }
+
         @Override
-        public void completed(Void arg0, AsynchronousSocketChannel channel) {
-            context = new ContextImpl(channel, new DisconnectHandler(null) {
+        public void completed(Void none, AsynchronousSocketChannel channel) {
+            contexts[index] = new ContextImpl(channel, new DisconnectHandler(
+                    null) {
                 @Override
                 protected void handleDisconnect(Object closure) {
                     if (!Main.this.inShutdown()) {
+                        Context context = contexts[index];
                         LOGGER.log(Level.WARNING, "Connection disconnected");
                         context.shutdown(true);
-                        context = null;
+                        contexts[index] = null;
                         shutdown();
                     }
                 }
             });
-            controller = new TestController(context, scheduledExecutor);
-            lock.lock();
-            try {
-                condition.signal();
-            } finally {
-                lock.unlock();
-            }
+            semaphore.release();
         }
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel arg1) {
+            semaphore.release();
             logger.log(Level.SEVERE, "Could not connect to Auth API");
             shutdown();
         }

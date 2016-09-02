@@ -31,12 +31,15 @@ import tools.SecurityHelper;
  */
 public class TestController {
 
-    private final Context context;
+    private final Context context1;
     private final ScheduledExecutorService scheduledExecutor;
+    private final Context context2;
 
-    public TestController(Context context,
+    public TestController(Context context1,
+            Context context2,
             ScheduledExecutorService scheduledExecutor) {
-        this.context = context;
+        this.context1 = context1;
+        this.context2 = context2;
         this.scheduledExecutor = scheduledExecutor;
     }
 
@@ -45,18 +48,18 @@ public class TestController {
         if (keyStore.size() < 2) {
             throw new RuntimeException("keystore needs to have atleast two keys");
         }
-        Certificate cert1 = keyStore.getCertificate("pair1");
-        Certificate cert2 = keyStore.getCertificate("pair2");
+        Certificate cert1 = keyStore.getCertificate("sel.A");
+        Certificate cert2 = keyStore.getCertificate("hostkey.A");
 
         PartialSession partial1;
         PartialSession partial2;
         {
-            Future<PartialSession> future = context.startSession(
+            Future<PartialSession> future = context1.startSession(
                     (RSAPublicKey) cert2.getPublicKey(), null);
             partial1 = future.get();
         }
         {
-            Future<PartialSession> future = context.deriveSession(
+            Future<PartialSession> future = context2.deriveSession(
                     (RSAPublicKey) cert1.getPublicKey(), partial1.
                     getDiffiePayload(), null);
             partial2 = future.get();
@@ -66,8 +69,8 @@ public class TestController {
         session1 = partial1.completeSession(partial2.getDiffiePayload());
         session2 = partial2.completeSession(partial1.getDiffiePayload());
 
-        Tunnel tunnel1 = context.createTunnel(session1);
-        Tunnel tunnel2 = context.createTunnel(session2);
+        Tunnel tunnel1 = context1.createTunnel(session1);
+        Tunnel tunnel2 = context2.createTunnel(session2);
 
         String cleartext = "Hello World";
         byte[] encrypted;
@@ -87,23 +90,23 @@ public class TestController {
         {
             Future<PartialSession>[] fA, fB;
             Session[] A, B;
-            fA = new Future[5];
+            fA = new Future[15];
             fB = new Future[fA.length];
             A = new Session[fA.length];
             B = new Session[fB.length];
             int index;
             for (index = 0; index < fA.length; index++) {
-                fA[index] = context.startSession((RSAPublicKey) cert1.
+                fA[index] = context2.startSession((RSAPublicKey) cert1.
                         getPublicKey(), null);
                 PartialSession pa = fA[index].get();
-                fB[index] = context.deriveSession((RSAPublicKey) cert2.
+                fB[index] = context1.deriveSession((RSAPublicKey) cert2.
                         getPublicKey(), pa.getDiffiePayload(), null);
                 PartialSession pb = fB[index].get();
                 A[index] = pa.completeSession(pb.getDiffiePayload());
                 B[index] = pb.completeSession(pa.getDiffiePayload());
             }
-            t1 = context.createTunnel(A[0]);
-            t2 = context.createTunnel(B[0]);
+            t1 = context2.createTunnel(A[0]);
+            t2 = context1.createTunnel(B[0]);
             for (index = 1; index < A.length; index++) {
                 t1.addHop(A[index]);
                 t2.addHop(B[index]);
