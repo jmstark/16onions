@@ -45,7 +45,8 @@ abstract public class ConfigurationImpl implements Configuration {
         this.parser = new Ini(new File(filename));
     }
 
-    protected InetSocketAddress getAddress(String option) throws
+    @Override
+    public InetSocketAddress getAddress(String option) throws
             NoSuchElementException {
         InetSocketAddress address;
         String value;

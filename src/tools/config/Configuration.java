@@ -25,7 +25,10 @@ import java.util.NoSuchElementException;
  */
 public interface Configuration {
 
-    /**
+    public InetSocketAddress getAddress(String option) throws
+            NoSuchElementException;
+
+        /**
      * Get the address of the socket used for listening to P2P connections from
      * other peers.
      *
