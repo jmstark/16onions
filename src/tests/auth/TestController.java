@@ -96,8 +96,8 @@ public class TestController {
                 fA[index] = context.startSession((RSAPublicKey) cert1.
                         getPublicKey(), null);
                 PartialSession pa = fA[index].get();
-                fB[index] = context.startSession((RSAPublicKey) cert2.
-                        getPublicKey(), null);
+                fB[index] = context.deriveSession((RSAPublicKey) cert2.
+                        getPublicKey(), pa.getDiffiePayload(), null);
                 PartialSession pb = fB[index].get();
                 A[index] = pa.completeSession(pb.getDiffiePayload());
                 B[index] = pb.completeSession(pa.getDiffiePayload());
