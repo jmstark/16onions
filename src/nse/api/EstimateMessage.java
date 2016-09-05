@@ -30,12 +30,12 @@ import protocol.Protocol;
  */
 public class EstimateMessage extends ApiMessage {
 
-    private long estimate;
-    private long deviation;
+    private final long estimate;
+    private final long deviation;
 
     public EstimateMessage(long estimate, long deviation) {
-        assert (estimate <= Integer.MAX_VALUE);
-        assert (deviation <= Integer.MAX_VALUE);
+        assert (estimate <= UINT32_MAX);
+        assert (deviation <= UINT32_MAX);
         this.addHeader(Protocol.MessageType.API_NSE_ESTIMATE);
         this.estimate = estimate;
         this.deviation = deviation;
