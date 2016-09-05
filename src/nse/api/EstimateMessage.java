@@ -52,6 +52,7 @@ public class EstimateMessage extends ApiMessage {
 
     @Override
     public void send(ByteBuffer out) {
+        super.send(out);
         out.putInt((int) this.estimate);
         out.putInt((int) this.deviation);
     }
@@ -67,5 +68,32 @@ public class EstimateMessage extends ApiMessage {
         estimate = Message.unsignedLongFromInt(buf.getInt());
         deviation = Message.unsignedLongFromInt(buf.getInt());
         return new EstimateMessage(estimate, deviation);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final EstimateMessage other = (EstimateMessage) obj;
+        if (this.estimate != other.estimate) {
+            return false;
+        }
+        if (this.deviation != other.deviation) {
+            return false;
+        }
+        return true;
     }
 }

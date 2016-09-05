@@ -32,6 +32,10 @@ public class QueryMessage extends ApiMessage {
         this.addHeader(Protocol.MessageType.API_NSE_QUERY);
     }
 
+    public void send(ByteBuffer out) {
+        super.send(out);
+    }
+
     public static QueryMessage parse(ByteBuffer buf) {
         return new QueryMessage();
     }

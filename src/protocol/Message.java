@@ -15,9 +15,9 @@ import protocol.Protocol.MessageType;
 public abstract class Message {
 
     protected int size;
-    protected static final long UINT32_MAX = (1L << 32) - 1;
-    protected static final int UINT16_MAX = (1 << 16) - 1;
-    protected static final short UINT8_MAX = 0x00ff;
+    public static final long UINT32_MAX = (1L << 32) - 1;
+    public static final int UINT16_MAX = (1 << 16) - 1;
+    public static final short UINT8_MAX = 0x00ff;
 
     private boolean headerAdded;
     private MessageType type;
