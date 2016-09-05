@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 totakura
+ * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,28 +14,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package tests.nse;
+package nse;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 import tools.config.ConfigurationImpl;
 
 /**
- * NSE configuration class for NSE tests.
  *
- * Simple wrapper over ConfigurationImpl.
- *
- * @author totakura
+ * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class NseConfiguration extends ConfigurationImpl {
+public class NseConfiguration extends ConfigurationImpl {
 
-    private static HashMap<String, String> getDefaults() {
-        HashMap<String, String> map = new HashMap(5);
-        map.put(OPTION_API_ADDRESS, "127.0.0.1:7002");
-        return map;
+    private static final Map<String, String> defaults;
+
+    static {
+        defaults = new HashMap(5);
+        defaults.put(OPTION_API_ADDRESS, "127.0.0.1:7002");
     }
 
     public NseConfiguration(String filename) throws IOException {
-        super(filename, "nse", getDefaults());
+        super(filename, "nse", defaults);
+    }
+
+    protected NseConfiguration(String filename, Map overriddenDefaults) throws
+            IOException {
+        super(filename, "nse", overriddenDefaults);
     }
 }

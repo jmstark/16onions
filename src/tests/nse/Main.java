@@ -24,6 +24,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import nse.NseConfiguration;
 import nse.api.QueryMessage;
 import org.apache.commons.cli.CommandLine;
 import protocol.Connection;
@@ -60,7 +61,7 @@ public class Main extends Program {
 
     @Override
     protected void parseCommandLine(CommandLine cli, CliParser parser) {
-        String filename = parser.getConfigFilename("gossip.conf");
+        String filename = parser.getConfigFilename("nse.conf");
         NseConfiguration config;
         try {
             config = new NseConfiguration(filename);
