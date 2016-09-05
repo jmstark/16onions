@@ -16,6 +16,7 @@
  */
 package onionauth.api;
 
+import auth.api.OnionAuthSessionHS1;
 import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.util.Random;

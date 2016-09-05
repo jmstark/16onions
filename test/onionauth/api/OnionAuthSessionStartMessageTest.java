@@ -16,6 +16,7 @@
  */
 package onionauth.api;
 
+import auth.api.OnionAuthSessionStartMessage;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;

@@ -1,3 +1,10 @@
+package auth.api;
+
+import java.nio.ByteBuffer;
+import protocol.MessageParserException;
+import protocol.MessageSizeExceededException;
+import protocol.Protocol;
+
 /*
  * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
@@ -14,36 +21,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package onionauth.api;
-
-import java.nio.ByteBuffer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import protocol.MessageParserException;
-import protocol.MessageSizeExceededException;
-import protocol.Protocol.MessageType;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class OnionAuthSessionHS2 extends OnionAuthSessionHS1 {
+public class OnionAuthDecrypt extends OnionAuthEncrypt {
 
-    private static final MessageType TYPE = MessageType.API_AUTH_SESSION_HS2;
-
-    public OnionAuthSessionHS2(long id, byte[] payload) throws
+    public OnionAuthDecrypt(int id, long[] sessions, byte[] payload) throws
             MessageSizeExceededException {
-        super(id, payload);
-        this.changeMessageType(TYPE);
+        super(id, sessions, payload);
+        this.changeMessageType(Protocol.MessageType.API_AUTH_LAYER_DECRYPT);
     }
 
-    public static OnionAuthSessionHS2 parse(ByteBuffer buf)
-            throws MessageParserException {
-        OnionAuthSessionHS2 message;
-        OnionAuthSessionHS1 parent;
-        parent = OnionAuthSessionHS1.parse(buf);
+    public static OnionAuthDecrypt parse(ByteBuffer buf) throws
+            MessageParserException {
+        OnionAuthEncrypt parent;
+        parent = OnionAuthEncrypt.parse(buf);
+        OnionAuthDecrypt message;
         try {
-            message = new OnionAuthSessionHS2(parent.id, parent.payload);
+            message = new OnionAuthDecrypt(parent.getId(), parent.getSessions(),
+                    parent.getPayload());
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException();
         }

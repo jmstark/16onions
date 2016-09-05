@@ -22,8 +22,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
-import onionauth.api.OnionAuthDecrypt;
-import onionauth.api.OnionAuthEncrypt;
+import auth.api.OnionAuthDecrypt;
+import auth.api.OnionAuthEncrypt;
 import protocol.Connection;
 import protocol.MessageSizeExceededException;
 

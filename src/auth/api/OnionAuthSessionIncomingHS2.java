@@ -14,36 +14,40 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package onionauth.api;
+package auth.api;
 
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
+import protocol.Protocol.MessageType;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class OnionAuthDecryptResp extends OnionAuthEncryptResp {
+public class OnionAuthSessionIncomingHS2 extends OnionAuthSessionHS1 {
 
-    public OnionAuthDecryptResp(int id, byte[] payload) throws
+    private static final MessageType TYPE = MessageType.API_AUTH_SESSION_INCOMING_HS2;
+
+    public OnionAuthSessionIncomingHS2(long id, byte[] payload) throws
             MessageSizeExceededException {
         super(id, payload);
+        this.changeMessageType(TYPE);
     }
 
-    public static OnionAuthDecryptResp parse(ByteBuffer buf) throws
-            MessageParserException {
-        OnionAuthEncryptResp parent;
-        parent = OnionAuthEncryptResp.parse(buf);
-        OnionAuthDecryptResp message;
+    public static OnionAuthSessionIncomingHS2 parse(ByteBuffer buf)
+            throws MessageParserException {
+        OnionAuthSessionIncomingHS2 message;
+        OnionAuthSessionHS1 parent;
+        parent = OnionAuthSessionHS1.parse(buf);
         try {
-            message = new OnionAuthDecryptResp(parent.getId(), parent.
-                    getPayload());
+            message = new OnionAuthSessionIncomingHS2(parent.id, parent.payload);
         } catch (MessageSizeExceededException ex) {
-            throw new MessageParserException();
+            throw new MessageParserException("invalid message encoding");
         }
         return message;
     }
+
 }

@@ -16,7 +16,7 @@
  */
 package tests.auth;
 
-import onionauth.api.OnionAuthSessionIncomingHS2;
+import auth.api.OnionAuthSessionIncomingHS2;
 import protocol.Connection;
 import protocol.MessageSizeExceededException;
 

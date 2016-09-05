@@ -14,39 +14,54 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package onionauth.api;
+package auth.api;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
 
 /**
+ * The onion auth encrypt response message.
+ *
+ * This message is given as a response for OnionAuthEncrypt message
  *
  * @author totakura
  */
-public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
+public class OnionAuthEncryptResp extends OnionAuthApiMessage {
 
-    protected long id;
-    protected byte[] payload;
+    private final int id;
+    private final byte[] payload;
 
-    public OnionAuthSessionHS1(long id, byte[] payload) throws MessageSizeExceededException {
-        assert (id <= ((1L << 32) - 1));
-        this.addHeader(Protocol.MessageType.API_AUTH_SESSION_HS1);
+    public OnionAuthEncryptResp(int id, byte[] payload) throws MessageSizeExceededException {
+        this.addHeader(Protocol.MessageType.API_AUTH_LAYER_ENCRYPT_RESP);
         this.id = id;
-        this.size += 4;
-        if ((this.size + payload.length) > Protocol.MAX_MESSAGE_SIZE) {
-            throw new MessageSizeExceededException();
-        }
+        this.size += 4; //2 id + 2 reserved
         this.payload = payload;
         this.size += payload.length;
+        if (this.size > Protocol.MAX_MESSAGE_SIZE) {
+            throw new MessageSizeExceededException();
+        }
     }
 
-    public long getId() {
+    /**
+     * Get the response ID.
+     *
+     * The response ID matches a previous request.
+     *
+     * @return the response ID
+     */
+    public int getId() {
         return id;
     }
 
+    /**
+     * Get the encrypted payload.
+     *
+     * @return the encrypted payload
+     */
     public byte[] getPayload() {
         return payload;
     }
@@ -54,34 +69,44 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        out.putInt((int) this.id);
-        out.put(this.payload);
+        out.putShort((short) this.id);
+        this.sendEmptyBytes(out, 2); //reserved
+        out.put(payload);
     }
 
-    public static OnionAuthSessionHS1 parse(ByteBuffer buf)
+    /**
+     * Create a OnionAuthEncryptedResp message by parsing the given buffer
+     *
+     * @param buf the buffer to parse the message data from
+     * @return the message
+     * @throws MessageParserException upon parsing exception
+     */
+    public static OnionAuthEncryptResp parse(ByteBuffer buf)
             throws MessageParserException {
-        OnionAuthSessionHS1 message;
+        int id;
         byte[] payload;
 
         if (buf.remaining() <= 4) {
-            throw new MessageParserException("Missing payload");
+            throw new MessageParserException("Message size is too small");
         }
-        long id = protocol.Message.unsignedLongFromInt(buf.getInt());
+        id = Message.unsignedIntFromShort(buf.getShort());
+        buf.getShort(); //2 reserved
         payload = new byte[buf.remaining()];
         buf.get(payload);
+        OnionAuthEncryptResp message;
         try {
-            message = new OnionAuthSessionHS1(id, payload);
+            message = new OnionAuthEncryptResp(id, payload);
         } catch (MessageSizeExceededException ex) {
-            throw new MessageParserException("invalid message encoding");
+            throw new MessageParserException();
         }
         return message;
     }
 
     @Override
     public int hashCode() {
-        int hash = 5;
-        hash = 89 * hash + (int) (this.id ^ (this.id >>> 32));
-        hash = 89 * hash + Arrays.hashCode(this.payload);
+        int hash = 7;
+        hash = 31 * hash + this.id;
+        hash = 31 * hash + Arrays.hashCode(this.payload);
         return hash;
     }
 
@@ -96,7 +121,7 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final OnionAuthSessionHS1 other = (OnionAuthSessionHS1) obj;
+        final OnionAuthEncryptResp other = (OnionAuthEncryptResp) obj;
         if (this.id != other.id) {
             return false;
         }

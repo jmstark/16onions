@@ -16,6 +16,7 @@
  */
 package onionauth.api;
 
+import auth.api.OnionAuthEncryptResp;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import static onionauth.api.OnionAuthEncryptTest.payload;

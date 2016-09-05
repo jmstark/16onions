@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import onionauth.OnionAuthConfiguration;
+import auth.OnionAuthConfiguration;
 import org.apache.commons.cli.CommandLine;
 import protocol.ProtocolServer;
 import tests.auth.Context;

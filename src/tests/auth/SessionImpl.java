@@ -16,7 +16,7 @@
  */
 package tests.auth;
 
-import onionauth.api.OnionAuthClose;
+import auth.api.OnionAuthClose;
 import protocol.Connection;
 
 /**
