@@ -23,8 +23,8 @@ import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
 import protocol.ProtocolServer;
 import tests.auth.Context;
-import tools.Program;
-import tools.config.CliParser;
+import util.Program;
+import util.config.CliParser;
 
 /**
  *

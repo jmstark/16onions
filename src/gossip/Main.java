@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
-import tools.config.CliParser;
+import util.config.CliParser;
 
 /**
  *

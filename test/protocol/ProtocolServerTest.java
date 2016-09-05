@@ -29,7 +29,7 @@ import protocol.dht.DHTKey;
 import protocol.dht.DhtGetMessage;
 import protocol.dht.DhtMessage;
 import protocol.dht.DhtPutMessage;
-import tools.MyRandom;
+import util.MyRandom;
 
 /**
  *

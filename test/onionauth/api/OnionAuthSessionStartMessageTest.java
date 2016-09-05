@@ -31,7 +31,7 @@ import static org.junit.Assert.*;
 import protocol.Message;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
-import tools.SecurityHelper;
+import util.SecurityHelper;
 
 /**
  *
@@ -40,7 +40,7 @@ import tools.SecurityHelper;
 public class OnionAuthSessionStartMessageTest {
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
-    static final KeyPair keyPair = tools.SecurityHelper.generateRSAKeyPair(2048);
+    static final KeyPair keyPair = util.SecurityHelper.generateRSAKeyPair(2048);
     static final byte[] publicKeyEnc;
 
     static {

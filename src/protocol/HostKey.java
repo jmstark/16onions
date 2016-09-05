@@ -5,7 +5,7 @@
 package protocol;
 
 import java.io.File;
-import tools.MyRandom;
+import util.MyRandom;
 
 /**
  *

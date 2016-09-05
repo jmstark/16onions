@@ -16,7 +16,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.EnumSet;
 import org.ini4j.Ini;
-import tools.MyRandom;
+import util.MyRandom;
 
 
 /*

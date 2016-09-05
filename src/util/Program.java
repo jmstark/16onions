@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package tools;
+package util;
 
 import java.io.IOException;
 import static java.lang.Math.max;
@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.apache.commons.cli.CommandLine;
-import tools.config.CliParser;
+import util.config.CliParser;
 import java.util.logging.Logger;
 import static java.lang.Math.max;
 import static java.lang.Math.max;

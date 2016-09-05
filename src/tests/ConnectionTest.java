@@ -38,8 +38,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.ParseException;
 import org.junit.Assert;
-import tools.MyRandom;
-import tools.config.CliParser;
+import util.MyRandom;
+import util.config.CliParser;
 
 /**
  * Test case for socket connections.

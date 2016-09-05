@@ -31,8 +31,8 @@ import org.apache.commons.cli.Option;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageSizeExceededException;
-import tools.Program;
-import tools.config.CliParser;
+import util.Program;
+import util.config.CliParser;
 
 /**
  * Class to connect to a Gossip module and publish a message

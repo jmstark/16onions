@@ -18,7 +18,7 @@ package onionauth;
 
 import java.io.IOException;
 import java.util.HashMap;
-import tools.config.ConfigurationImpl;
+import util.config.ConfigurationImpl;
 
 /**
  *

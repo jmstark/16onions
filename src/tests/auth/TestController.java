@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import protocol.MessageSizeExceededException;
-import tools.SecurityHelper;
+import util.SecurityHelper;
 
 /**
  *

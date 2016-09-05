@@ -42,7 +42,7 @@ public class OnionAuthSessionIncomingHS1 extends OnionAuthApiMessage {
         this.size += 2; //hostkey size
 
         this.sourceKey = key;
-        this.keyEnc = tools.SecurityHelper.encodeRSAPublicKey(key);
+        this.keyEnc = util.SecurityHelper.encodeRSAPublicKey(key);
         this.size += keyEnc.length;
 
         this.payload = payload;
@@ -122,7 +122,7 @@ public class OnionAuthSessionIncomingHS1 extends OnionAuthApiMessage {
         buf.get(enc);
         size -= enc.length;
         try {
-            key = tools.SecurityHelper.getRSAPublicKeyFromEncoding(enc);
+            key = util.SecurityHelper.getRSAPublicKeyFromEncoding(enc);
         } catch (InvalidKeyException ex) {
             throw new MessageParserException("Invalid hostkey in message");
         }

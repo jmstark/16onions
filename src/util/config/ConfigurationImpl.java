@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package tools.config;
+package util.config;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +24,7 @@ import java.text.MessageFormat;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.ini4j.Ini;
-import tools.Misc;
+import util.Misc;
 
 /**
  * Default implementation of the Configuration interface

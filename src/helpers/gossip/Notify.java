@@ -38,8 +38,8 @@ import protocol.MessageHandler;
 import protocol.MessageParserException;
 import protocol.Protocol;
 import protocol.ProtocolException;
-import tools.Program;
-import tools.config.CliParser;
+import util.Program;
+import util.config.CliParser;
 
 /**
  *

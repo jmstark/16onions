@@ -16,6 +16,7 @@
  */
 package tools.config;
 
+import util.config.ConfigurationImpl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;

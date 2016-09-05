@@ -23,7 +23,7 @@ import java.util.Arrays;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
-import tools.SecurityHelper;
+import util.SecurityHelper;
 
 /**
  *

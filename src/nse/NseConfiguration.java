@@ -19,7 +19,7 @@ package nse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import tools.config.ConfigurationImpl;
+import util.config.ConfigurationImpl;
 
 /**
  *

@@ -17,7 +17,7 @@
 package gossip;
 
 import java.util.NoSuchElementException;
-import tools.config.Configuration;
+import util.config.Configuration;
 
 /**
  *

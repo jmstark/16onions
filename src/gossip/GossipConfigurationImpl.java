@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
-import tools.config.ConfigurationImpl;
+import util.config.ConfigurationImpl;
 
 public class GossipConfigurationImpl
         extends ConfigurationImpl implements GossipConfiguration {

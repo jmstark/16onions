@@ -29,8 +29,8 @@ import java.util.logging.Logger;
 import onionauth.OnionAuthConfiguration;
 import org.apache.commons.cli.CommandLine;
 import protocol.DisconnectHandler;
-import tools.Program;
-import tools.config.CliParser;
+import util.Program;
+import util.config.CliParser;
 
 /**
  *

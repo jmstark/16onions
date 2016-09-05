@@ -16,6 +16,7 @@
  */
 package tools;
 
+import util.SecurityHelper;
 import java.security.InvalidParameterException;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;

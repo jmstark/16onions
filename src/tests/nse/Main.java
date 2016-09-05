@@ -29,8 +29,8 @@ import nse.api.QueryMessage;
 import org.apache.commons.cli.CommandLine;
 import protocol.Connection;
 import protocol.DisconnectHandler;
-import tools.Program;
-import tools.config.CliParser;
+import util.Program;
+import util.config.CliParser;
 
 /**
  * Main class for testing Main API
