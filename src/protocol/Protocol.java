@@ -31,6 +31,9 @@ public class Protocol {
         // NSE API message
         API_NSE_QUERY(520),
         API_NSE_ESTIMATE(521),
+        // RPS API messages
+        API_RPS_QUERY(540),
+        API_RPS_PEER(541),
         //ONION AUTH API messages
         API_AUTH_SESSION_START(600),
         API_AUTH_SESSION_HS1(601),
