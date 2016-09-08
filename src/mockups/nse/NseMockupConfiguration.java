@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import nse.NseConfiguration;
+import org.ini4j.ConfigParser;
 
 /**
  *
@@ -43,12 +44,14 @@ public class NseMockupConfiguration extends NseConfiguration {
         super(filename, defaults);
     }
 
-    public int getMockupMaxEstimate() {
+    public int getMockupMaxEstimate() throws ConfigParser.NoSectionException,
+            ConfigParser.NoOptionException, ConfigParser.InterpolationException {
         return Integer.parseInt(this.parser.get(this.section,
                 OPTION_MOCKUP_ESTIMATE_MAX));
     }
 
-    public int getMockupMaxDeviation() {
+    public int getMockupMaxDeviation() throws ConfigParser.NoSectionException,
+            ConfigParser.NoOptionException, ConfigParser.InterpolationException {
         return Integer.parseInt(this.parser.get(this.section,
                 OPTION_MOCKUP_DEVIATION_MAX));
     }

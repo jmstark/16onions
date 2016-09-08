@@ -18,8 +18,15 @@ package gossip;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.ini4j.ConfigParser;
+import org.ini4j.ConfigParser.InterpolationException;
+import org.ini4j.ConfigParser.NoOptionException;
+import org.ini4j.ConfigParser.NoSectionException;
 import util.config.ConfigurationImpl;
 
 public class GossipConfigurationImpl
@@ -56,11 +63,23 @@ public class GossipConfigurationImpl
 
     @Override
     public int getCacheSize() throws NoSuchElementException {
-        return this.parser.get(section, OPTION_CACHE_SIZE, Integer.class);
+        String option = OPTION_CACHE_SIZE;
+        try {
+            return this.parser.getInt(section, option);
+        } catch (NoSectionException | NoOptionException | InterpolationException ex) {
+            throw new NoSuchElementException(MessageFormat.format(
+                    "Option {0} not found in section {1}", option, this.section));
+        }
     }
 
     @Override
     public int getMaxConnections() throws NoSuchElementException {
-        return this.parser.get(section, OPTION_MAX_CONNECTIONS, Integer.class);
+        String option = OPTION_MAX_CONNECTIONS;
+        try {
+            return this.parser.getInt(section, OPTION_MAX_CONNECTIONS);
+        } catch (NoSectionException | NoOptionException | InterpolationException ex) {
+            throw new NoSuchElementException(MessageFormat.format(
+                    "Option {0} not found in section {1}", option, this.section));
+        }
     }
 }
