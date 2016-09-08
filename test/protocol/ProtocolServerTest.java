@@ -24,11 +24,11 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import protocol.dht.DHTContent;
-import protocol.dht.DHTKey;
-import protocol.dht.DhtGetMessage;
-import protocol.dht.DhtMessage;
-import protocol.dht.DhtPutMessage;
+import dht.api.DHTContent;
+import dht.api.DHTKey;
+import dht.api.DhtGetMessage;
+import dht.api.DhtMessage;
+import dht.api.DhtPutMessage;
 import util.MyRandom;
 
 /**

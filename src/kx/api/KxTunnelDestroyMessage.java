@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package protocol.kx;
+package kx.api;
 
 import java.nio.ByteBuffer;
 import protocol.Message;

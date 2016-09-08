@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package protocol.dht;
+package dht.api;
 
 import java.nio.ByteBuffer;
 import protocol.Protocol;
@@ -12,11 +12,11 @@ import protocol.Protocol;
  *
  * @author troll
  */
-public class DhtGetMessage extends DhtMessage {
+public class DhtTraceMessage extends DhtMessage {
 
-    public DhtGetMessage(DHTKey key) {
+    public DhtTraceMessage(DHTKey key) {
         this.addKey(key);
-        this.addHeader(Protocol.MessageType.DHT_GET);
+        this.addHeader(Protocol.MessageType.DHT_TRACE);
     }
 
     @Override
@@ -24,7 +24,7 @@ public class DhtGetMessage extends DhtMessage {
         super.send(out);
     }
 
-    static public DhtGetMessage parse(final ByteBuffer buf, DHTKey key) {
-        return new DhtGetMessage(key);
+    public static DhtTraceMessage parse(final ByteBuffer buf, DHTKey key) {
+        return new DhtTraceMessage(key);
     }
 }
