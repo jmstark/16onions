@@ -14,10 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package rps;
+package onion;
 
-import java.io.File;
-import java.net.InetSocketAddress;
 import java.security.interfaces.RSAPublicKey;
 import java.util.NoSuchElementException;
 import util.config.Configuration;
@@ -26,37 +24,8 @@ import util.config.Configuration;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface RpsConfiguration extends Configuration {
-    
-    /**
-     * Return the periodicity in seconds at which we have to publish our hostkey
-     * in Gossip
-       * 
-     * @return 
-     */
-    public int getPublishInterval() throws NoSuchElementException;
+public interface OnionConfiguration extends Configuration {
 
-    /**
-     * Get the socket address for the Gossip module
-     *
-     * @return socket address
-     */
-    public InetSocketAddress getGossipAPIAddress() throws NoSuchElementException;
-
-    /**
-     * Get the socket address where the onion module on the current peer listens
-     * for p2p connections
-     *
-     * @return the socket address
-     */
-    public InetSocketAddress getOnionP2PAddress() throws NoSuchElementException;
-
-    /**
-     * Get the hostkey of the peer by parsing the hostkey option in
-     * configuration
-     *
-     * @return the hostkey filepath
-     */
     public RSAPublicKey getHostKey() throws NoSuchElementException;
 
 }
