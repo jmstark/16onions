@@ -28,7 +28,13 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1StreamParser;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
@@ -57,17 +63,35 @@ public class PEMParser {
         }
     }
 
-    private static org.bouncycastle.asn1.pkcs.RSAPrivateKey readPKCSPrivateKeyFromPEM(
+    private static org.bouncycastle.asn1.pkcs.RSAPrivateKey readPKCS8PrivateKeyFromPEM(
             File file) throws
             IOException {
-        return org.bouncycastle.asn1.pkcs.RSAPrivateKey.getInstance(
-                readPEM(file));
+        PrivateKeyInfo keyInfo;
+        keyInfo = PrivateKeyInfo.getInstance(readPEM(file));
+        ASN1Primitive primitive;
+        primitive = keyInfo.toASN1Primitive();
+        ASN1Sequence sequence = (ASN1Sequence) primitive;
+        assert (3 <= sequence.size());
+        primitive = sequence.getObjectAt(1).toASN1Primitive(); //extract sequence primitive
+        ASN1OctetString octetStr = (ASN1OctetString) sequence.getObjectAt(2).
+                toASN1Primitive();
+        sequence = (ASN1Sequence) primitive;
+        ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) sequence.
+                getObjectAt(0).toASN1Primitive();
+        assert (oid.equals(PKCSObjectIdentifiers.rsaEncryption));
+
+        ASN1Primitive encodedPrivateKey = ASN1Primitive.fromByteArray(octetStr.
+                getOctets());
+        org.bouncycastle.asn1.pkcs.RSAPrivateKey key;
+        key = org.bouncycastle.asn1.pkcs.RSAPrivateKey.getInstance(
+                encodedPrivateKey);
+        return key;
     }
 
     public static RSAPrivateKey getPrivateKeyFromPEM(File file) throws
             IOException, InvalidKeyException {
-        org.bouncycastle.asn1.pkcs.RSAPrivateKey key;
-        key = readPKCSPrivateKeyFromPEM(file);
+        org.bouncycastle.asn1.pkcs.RSAPrivateKey key = readPKCS8PrivateKeyFromPEM(
+                file);
         RSAPrivateKeySpec spec;
         spec = new RSAPrivateKeySpec(key.getModulus(), key.getPrivateExponent());
         try {
@@ -79,7 +103,7 @@ public class PEMParser {
 
     public static RSAPublicKey getPublicKeyFromPEM(File file) throws
             IOException, InvalidKeyException {
-        org.bouncycastle.asn1.pkcs.RSAPrivateKey priv = readPKCSPrivateKeyFromPEM(
+        org.bouncycastle.asn1.pkcs.RSAPrivateKey priv = readPKCS8PrivateKeyFromPEM(
                 file);
         RSAPublicKeySpec spec = new RSAPublicKeySpec(priv.getModulus(), priv.
                 getPublicExponent());
