@@ -16,6 +16,8 @@
  */
 package onion;
 
+import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.NoSuchElementException;
 import util.config.Configuration;
@@ -26,6 +28,6 @@ import util.config.Configuration;
  */
 public interface OnionConfiguration extends Configuration {
 
-    public RSAPublicKey getHostKey() throws NoSuchElementException;
+    public RSAPublicKey getHostKey() throws NoSuchElementException, IOException, InvalidKeyException;
 
 }

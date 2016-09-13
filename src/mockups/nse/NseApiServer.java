@@ -18,12 +18,12 @@ package mockups.nse;
 
 import java.io.IOException;
 import static java.lang.Math.max;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.util.Random;
 import java.util.logging.Level;
 import nse.api.EstimateMessage;
+import org.ini4j.ConfigParser;
 import protocol.Connection;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
@@ -41,7 +41,7 @@ class NseApiServer extends ProtocolServer<MessageHandler> {
     private final int maxDeviation;
 
     NseApiServer(NseMockupConfiguration config, AsynchronousChannelGroup group)
-            throws IOException {
+            throws IOException, ConfigParser.NoSectionException, ConfigParser.NoOptionException, ConfigParser.InterpolationException {
         super(config.getAPIAddress(), group);
         this.maxEstimate = config.getMockupMaxEstimate();
         this.maxDeviation = config.getMockupMaxDeviation();

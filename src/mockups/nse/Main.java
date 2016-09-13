@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
+import org.ini4j.ConfigParser;
 import protocol.ProtocolServer;
 import tests.auth.Context;
 import util.Program;
@@ -66,7 +67,8 @@ public class Main extends Program {
     protected void run() {
         try {
             server = new NseApiServer(config, this.group);
-        } catch (IOException ex) {
+        } catch (IOException | ConfigParser.NoSectionException |
+                ConfigParser.NoOptionException | ConfigParser.InterpolationException ex) {
             throw new RuntimeException("Cannot start API server; cannot continue");
         }
         server.start();

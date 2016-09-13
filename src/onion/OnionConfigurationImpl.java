@@ -18,12 +18,14 @@ package onion;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.ini4j.ConfigParser;
+import util.PEMParser;
 import util.config.ConfigurationImpl;
 
 public class OnionConfigurationImpl extends ConfigurationImpl implements
@@ -43,7 +45,7 @@ public class OnionConfigurationImpl extends ConfigurationImpl implements
     }
 
     @Override
-    public RSAPublicKey getHostKey() throws NoSuchElementException {
+    public RSAPublicKey getHostKey() throws NoSuchElementException, IOException, InvalidKeyException {
         String filename;
         String option = OPTION_HOSTKEY;
         try {
@@ -54,7 +56,8 @@ public class OnionConfigurationImpl extends ConfigurationImpl implements
             throw new NoSuchElementException(MessageFormat.format(
                     "Option {0} not found in section {1}", option, this.section));
         }
-        return new File(filename);
+        File file = new File(filename);
+        return PEMParser.getPublicKeyFromPEM(file);
     }
 
 }
