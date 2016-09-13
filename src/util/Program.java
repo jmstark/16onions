@@ -25,12 +25,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
 import util.config.CliParser;
-import java.util.logging.Logger;
-import static java.lang.Math.max;
-import static java.lang.Math.max;
-import static java.lang.Math.max;
 
 /**
  *
