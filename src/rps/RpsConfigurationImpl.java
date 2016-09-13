@@ -18,9 +18,9 @@ package rps;
 
 import gossip.GossipConfiguration;
 import gossip.GossipConfigurationImpl;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -75,7 +75,8 @@ public class RpsConfigurationImpl extends ConfigurationImpl implements
     }
 
     @Override
-    public RSAPublicKey getHostKey() throws NoSuchElementException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public RSAPublicKey getHostKey()
+            throws NoSuchElementException, IOException, InvalidKeyException {
+        return this.onionConfig.getHostKey();
     }
 }

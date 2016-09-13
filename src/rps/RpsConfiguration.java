@@ -16,8 +16,9 @@
  */
 package rps;
 
-import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.NoSuchElementException;
 import util.config.Configuration;
@@ -27,12 +28,12 @@ import util.config.Configuration;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 public interface RpsConfiguration extends Configuration {
-    
+
     /**
      * Return the periodicity in seconds at which we have to publish our hostkey
      * in Gossip
-       * 
-     * @return 
+       *
+     * @return
      */
     public int getPublishInterval() throws NoSuchElementException;
 
@@ -56,7 +57,12 @@ public interface RpsConfiguration extends Configuration {
      * configuration
      *
      * @return the hostkey filepath
+     * @throws java.io.IOException if the configured hostkey file could not be
+     * read
+     * @throws java.security.InvalidKeyException if the key in the given hostkey
+     * file is not well-formed.
      */
-    public RSAPublicKey getHostKey() throws NoSuchElementException;
+    public RSAPublicKey getHostKey()
+            throws NoSuchElementException, IOException, InvalidKeyException;
 
 }
