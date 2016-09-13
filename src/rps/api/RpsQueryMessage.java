@@ -33,4 +33,9 @@ public class RpsQueryMessage extends RpsApiMessage {
     public void send(ByteBuffer out) {
         super.send(out);
     }
+
+    /**
+     * This message does not have any specific body; hence there is no parser
+     * method
+     */
 }
