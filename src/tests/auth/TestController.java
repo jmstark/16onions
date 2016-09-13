@@ -44,7 +44,10 @@ public class TestController {
     }
 
     public void start() throws Exception {
-        KeyStore keyStore = SecurityHelper.keyStore;
+        KeyStore keyStore = SecurityHelper.KEY_STORE;
+        if (null == keyStore) {
+            throw new Exception("Keystore has to be initialized for this testcase");
+        }
         if (keyStore.size() < 2) {
             throw new RuntimeException("keystore needs to have atleast two keys");
         }

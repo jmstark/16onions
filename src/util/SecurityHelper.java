@@ -50,12 +50,13 @@ import javax.security.auth.DestroyFailedException;
 public class SecurityHelper {
 
     private static final Logger LOGGER = Logger.getLogger("SecurityHelper");
-    private static final KeyFactory factory;
-    public static final KeyStore keyStore;
+    private static final KeyFactory FACTORY;
+    public static final KeyStore KEY_STORE;
 
     static {
+        KeyStore keyStore;
         try {
-            factory = KeyFactory.getInstance("RSA");
+            FACTORY = KeyFactory.getInstance("RSA");
         } catch (NoSuchAlgorithmException ex) {
             LOGGER.log(Level.WARNING, ex.getLocalizedMessage());
             throw new RuntimeException(
@@ -95,11 +96,9 @@ public class SecurityHelper {
         }
         try (FileInputStream input = new FileInputStream(ksFile)) {
             keyStore.load(input, ksPass.getPassword());
-        } catch (IOException ex) {
-            throw new RuntimeException(ex.toString());
-        } catch (NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex.toString());
-        } catch (CertificateException ex) {
+        } catch (FileNotFoundException ex) {
+            keyStore = null;
+        } catch (IOException | NoSuchAlgorithmException | CertificateException ex) {
             throw new RuntimeException(ex.toString());
         } finally {
             try {
@@ -109,12 +108,13 @@ public class SecurityHelper {
                         log(Level.SEVERE, null, ex);
             }
         }
+        KEY_STORE = keyStore;
     }
 
     public static byte[] encodeRSAPublicKey(PublicKey pkey) {
         X509EncodedKeySpec spec;
         try {
-            spec = factory.getKeySpec(pkey,
+            spec = FACTORY.getKeySpec(pkey,
                     X509EncodedKeySpec.class);
         } catch (InvalidKeySpecException ex) {
             throw new InvalidParameterException(
@@ -128,7 +128,7 @@ public class SecurityHelper {
         X509EncodedKeySpec spec = new X509EncodedKeySpec(encoding);
         PublicKey pkey;
         try {
-            pkey = factory.generatePublic(spec);
+            pkey = FACTORY.generatePublic(spec);
         } catch (InvalidKeySpecException ex) {
             throw new InvalidKeyException();
         }
@@ -138,7 +138,7 @@ public class SecurityHelper {
     public static byte[] encodeRSAPrivateKey(PrivateKey skey) {
         PKCS8EncodedKeySpec spec;
         try {
-            spec = factory.getKeySpec(skey, PKCS8EncodedKeySpec.class);
+            spec = FACTORY.getKeySpec(skey, PKCS8EncodedKeySpec.class);
         } catch (InvalidKeySpecException ex) {
             throw new InvalidParameterException(
                     "Given parameter is not a RSA private key");
@@ -151,7 +151,7 @@ public class SecurityHelper {
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(encoding);
         PrivateKey skey;
         try {
-            skey = factory.generatePrivate(spec);
+            skey = FACTORY.generatePrivate(spec);
         } catch (InvalidKeySpecException ex) {
             throw new InvalidKeyException();
         }
