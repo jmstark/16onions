@@ -16,15 +16,29 @@
  */
 package mockups.rps;
 
+import gossip.api.NotificationMessage;
+import gossip.api.NotifyMessage;
+import gossip.api.ValidationMessage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.security.InvalidKeyException;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
 import protocol.Connection;
 import protocol.DisconnectHandler;
+import protocol.MessageHandler;
+import protocol.MessageParserException;
+import protocol.MessageSizeExceededException;
+import protocol.Protocol;
+import protocol.ProtocolException;
 import protocol.ProtocolServer;
 import rps.RpsConfiguration;
 import rps.RpsConfigurationImpl;
@@ -44,6 +58,7 @@ public class Main extends Program {
     private RpsConfiguration config;
     private Connection gossipConnection;
     private static boolean success;
+    private ScheduledFuture<?> publishFuture;
 
     public Main() {
         super("mockups.rps", "Mockup module for RPS");
@@ -66,6 +81,9 @@ public class Main extends Program {
             server.stop();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
+        }
+        if (null != publishFuture) {
+            publishFuture.cancel(false);
         }
     }
 
@@ -90,10 +108,30 @@ public class Main extends Program {
     /**
      * Contruct the publish message and give it to gossip.
      */
-    private void sendMessage() {
-        /*
-        The message has to be defined first.
-         */
+    private void publish() {
+        MembershipMessage message;
+        try {
+            message = new MembershipMessage(config.getHostKey(),
+                    config.getOnionP2PAddress());
+        } catch (InvalidKeyException | NoSuchElementException | IOException ex) {
+            throw new RuntimeException("Hostkey not found or could not be read");
+        }
+        try {
+            gossipConnection.sendMsg(message.encapsulateAsAnnounce());
+        } catch (MessageSizeExceededException ex) {
+            throw new RuntimeException("This should not happen; please report this as bug");
+        }
+    }
+
+    private void schedulePublish() {
+        publishFuture = scheduledExecutor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                if ((null != gossipConnection) && gossipConnection.getChannel().isOpen()) {
+                    publish();
+                }
+            }
+        }, 30, 30, TimeUnit.SECONDS);
     }
 
     private class ConnectHandler implements
@@ -101,6 +139,7 @@ public class Main extends Program {
 
         @Override
         public void completed(Void arg0, AsynchronousSocketChannel channel) {
+            NotifyMessage notify;
             gossipConnection = new Connection(channel, new DisconnectHandler(null) {
                 @Override
                 protected void handleDisconnect(Object closure) {
@@ -110,7 +149,10 @@ public class Main extends Program {
                     }
                 }
             });
-            sendMessage();
+            notify = new NotifyMessage(MembershipMessage.DATATYPE);
+            gossipConnection.sendMsg(notify);
+            publish();
+            schedulePublish();
         }
 
         @Override
@@ -118,5 +160,58 @@ public class Main extends Program {
             logger.log(Level.SEVERE, "Cannot connect to Gossip API");
             shutdown();
         }
+    }
+
+    private static class GossipNotificationHandler extends MessageHandler<Connection> {
+
+        private final Set<OnionAddress> set;
+
+        public GossipNotificationHandler(Set<OnionAddress> set, Connection connection) {
+            super(connection);
+            this.set = set;
+        }
+
+        @Override
+        public void parseMessage(ByteBuffer buf, Protocol.MessageType type,
+                Connection connection)
+                throws MessageParserException, ProtocolException {
+            switch (type) {
+                case API_GOSSIP_NOTIFICATION:
+                    /**
+                     * Parse notification and add the peer to the set. Send a
+                     * validation message signalling to Gossip if the
+                     * notification message is valid or not.
+                     */
+                    NotificationMessage notification;
+                    MembershipMessage membershipMessage;
+                    OnionAddress onion;
+                    ValidationMessage validation;
+                    notification = NotificationMessage.parse(buf);
+                    membershipMessage = MembershipMessage.parseFromNotification(notification);
+                    onion = null;
+                    try {
+                        onion = new OnionAddress(membershipMessage.getAddress(),
+                                membershipMessage.getKeyEncoding());
+                    } catch (InvalidKeyException ex) {
+                        LOGGER.warning("Received a malformed RPS membership message");
+                    }
+                    if (null != onion) {
+                        set.add(onion);
+                    }
+                    validation = new ValidationMessage(notification.getMsgId(),
+                            null != onion);
+                    connection.sendMsg(validation);
+                    return;
+                default:
+                    throw new ProtocolException("Unexpected message received");
+            }
+        }
+
+    }
+
+    public static void main(String[] args) throws IOException {
+        Main mockup = new Main();
+        LOGGER = mockup.logger;
+        mockup.start(args);
     }
 }
