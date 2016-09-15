@@ -209,6 +209,7 @@ public class Main extends Program {
                     } catch (InvalidKeyException ex) {
                         LOGGER.warning("Received a malformed RPS membership message");
                     }
+                    LOGGER.fine("Learnt an onion address from Gossip");
                     if (null != onion) {
                         set.add(onion);
                     }
