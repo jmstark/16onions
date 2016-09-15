@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.security.InvalidKeyException;
+import java.util.LinkedHashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
@@ -59,9 +60,11 @@ public class Main extends Program {
     private Connection gossipConnection;
     private static boolean success;
     private ScheduledFuture<?> publishFuture;
+    private final LinkedHashSet peers;
 
     public Main() {
         super("mockups.rps", "Mockup module for RPS");
+        this.peers = new LinkedHashSet(300);
     }
 
     @Override
@@ -71,7 +74,8 @@ public class Main extends Program {
         try {
             config = new RpsConfigurationImpl(filename);
         } catch (IOException ex) {
-            throw new RuntimeException("Unable to read config file");
+            throw new RuntimeException("Unable to read config file: " + ex.
+                    getMessage());
         }
     }
 
@@ -98,11 +102,19 @@ public class Main extends Program {
         }
         channel.connect(config.getGossipAPIAddress(),
                 channel, new ConnectHandler());
-        /**
-         * then start the api server; api server should have a context and the
-         * context should have functions to add new peers learnt from Gossip to
-         * a list
-         */
+        try {
+            /**
+             * then start the api server; api server should have a context and
+             * the context should have functions to add new peers learnt from
+             * Gossip to a list
+             */
+            server = new RpsApiServer(config, peers, group);
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE,
+                    "Could not start the API server due to {0}.  Cannot continue.",
+                    ex.getCause());;
+            shutdown();
+        }
     }
 
     /**
@@ -151,6 +163,8 @@ public class Main extends Program {
             });
             notify = new NotifyMessage(MembershipMessage.DATATYPE);
             gossipConnection.sendMsg(notify);
+            gossipConnection.receive(new GossipNotificationHandler(peers,
+                    gossipConnection));
             publish();
             schedulePublish();
         }
