@@ -88,6 +88,7 @@ public class Main extends Program {
                     }
                 }
             });
+            logger.fine("Connected to RPS API");
             connection.receive(new Context(connection, scheduledExecutor, logger));
         }
 
@@ -96,6 +97,11 @@ public class Main extends Program {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
 
+    }
+
+    public static void main(String[] args) throws IOException {
+        Main mockup = new Main();
+        mockup.start(args);
     }
 
 }

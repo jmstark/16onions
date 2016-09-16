@@ -69,11 +69,11 @@ class Context extends MessageHandler<Void> {
                 int delay;
 
                 query = new RpsQueryMessage();
+                logger.info("Sent a RPS query");
                 connection.sendMsg(query);
                 delay = random.nextInt(30 * 1000); // 30 seconds
                 scheduleNextQuery(delay);
             }
-
         }, delay, TimeUnit.MILLISECONDS);
     }
 

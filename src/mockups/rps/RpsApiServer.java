@@ -37,7 +37,7 @@ import rps.api.RpsPeerMessage;
  *
  * @author totakura
  */
-public class RpsApiServer extends ProtocolServer<Void> {
+public class RpsApiServer extends ProtocolServer<Connection> {
 
     private final Logger logger;
     private final Set<OnionAddress> peers;
@@ -50,14 +50,15 @@ public class RpsApiServer extends ProtocolServer<Void> {
     }
 
     @Override
-    protected Void handleNewClient(Connection connection) {
+    protected Connection handleNewClient(Connection connection) {
+        logger.fine("Recevied a new client connection");
         RpsMessageHandler handler = new RpsMessageHandler(connection);
         connection.receive(handler);
-        return null;
+        return connection;
     }
 
     @Override
-    protected void handleDisconnect(Void closure) {
+    protected void handleDisconnect(Connection connection) {
         Main.LOGGER.log(Level.INFO, "Client disconnected");
     }
 
@@ -94,7 +95,7 @@ public class RpsApiServer extends ProtocolServer<Void> {
                         throw new RuntimeException("This should not happen; please report this as bug");
                     }
                     connection.sendMsg(reply);
-                    logger.fine("Send RPS PEER");
+                    logger.fine("Sent RPS PEER");
                     return;
                 }
                 default:

@@ -115,6 +115,7 @@ public class Main extends Program {
                     ex.getCause());;
             shutdown();
         }
+        server.start();
     }
 
     /**
