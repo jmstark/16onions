@@ -19,6 +19,10 @@ package util;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.security.InvalidKeyException;
+import java.security.interfaces.RSAPublicKey;
+import protocol.MessageParserException;
 
 /**
  * Collection for miscellaneous utility functions. Instances of this class are
@@ -35,5 +39,25 @@ public abstract class Misc {
         String hostname = uri.getHost();
         int port = uri.getPort();
         return new InetSocketAddress(hostname, port);
+    }
+
+    public static RSAPublicKey parseKey(ByteBuffer buffer, int offset) throws
+            MessageParserException {
+        RSAPublicKey key;
+        byte[] keyBytes;
+        buffer.mark();
+        try {
+            buffer.position(buffer.position() + offset);
+            keyBytes = new byte[buffer.remaining()];
+            buffer.get(keyBytes);
+            try {
+                key = SecurityHelper.getRSAPublicKeyFromEncoding(keyBytes);
+            } catch (InvalidKeyException ex) {
+                throw new MessageParserException(ex.toString());
+            }
+        } finally {
+            buffer.reset();
+        }
+        return key;
     }
 }

@@ -14,15 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package rps.api;
+package onion.api;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Objects;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -33,80 +31,50 @@ import util.SecurityHelper;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class RpsPeerMessage extends RpsApiMessage {
+public class OnionTunnelBuildMessage extends OnionApiMessage {
 
     private final InetSocketAddress address;
-    private final RSAPublicKey hostkey;
-    private final byte[] addressBytes;
+    private final RSAPublicKey key;
     private final byte[] encoding;
 
-    public RpsPeerMessage(InetSocketAddress address, RSAPublicKey hostkey)
+    public OnionTunnelBuildMessage(InetSocketAddress address, RSAPublicKey key)
             throws MessageSizeExceededException {
-
-        this.addHeader(Protocol.MessageType.API_RPS_PEER);
-        addressBytes = address.getAddress().getAddress();
-        this.size += addressBytes.length;
-        this.size += 2; //for port
-        this.size += 2; //reserved
+        this.addHeader(Protocol.MessageType.API_ONION_TUNNEL_BUILD);
         this.address = address;
-        encoding = SecurityHelper.encodeRSAPublicKey(hostkey);
-        if ((this.size + encoding.length) > Protocol.MAX_MESSAGE_SIZE) {
-            throw new MessageSizeExceededException("Given Hostkey is too long");
+        size += address.getAddress().getAddress().length;
+        size += 4;//2 for reserved;2 for port
+        this.key = key;
+        this.encoding = SecurityHelper.encodeRSAPublicKey(key);
+        size += this.encoding.length;
+        if (size > Protocol.MAX_MESSAGE_SIZE) {
+            throw new MessageSizeExceededException();
         }
-        this.size += encoding.length;
-        this.hostkey = hostkey;
     }
 
     public InetSocketAddress getAddress() {
         return address;
     }
 
-    public RSAPublicKey getHostkey() {
-        return hostkey;
+    public RSAPublicKey getKey() {
+        return key;
     }
 
-    @Override
-    public int hashCode() {
-        int hash = 5;
-        hash = 43 * hash + Objects.hashCode(this.address);
-        hash = 43 * hash + Objects.hashCode(this.hostkey);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final RpsPeerMessage other = (RpsPeerMessage) obj;
-        if (!Objects.equals(this.address, other.address)) {
-            return false;
-        }
-        if (!Objects.equals(this.hostkey, other.hostkey)) {
-            return false;
-        }
-        return true;
+    public byte[] getEncoding() {
+        return encoding;
     }
 
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        out.putShort((short) this.address.getPort());
         super.sendEmptyBytes(out, 2); //reserved
-        out.put(addressBytes);
+        out.putShort((short) this.address.getPort());
+        out.put(address.getAddress().getAddress());
         out.put(encoding);
     }
 
-
-    public static RpsPeerMessage parse(ByteBuffer buffer) throws
+    public static OnionTunnelBuildMessage parse(ByteBuffer buffer) throws
             MessageParserException {
-        RpsPeerMessage message;
+        OnionTunnelBuildMessage message;
         InetSocketAddress address;
         RSAPublicKey hostkey;
         int port;
@@ -119,8 +87,8 @@ public class RpsPeerMessage extends RpsApiMessage {
             throw new MessageParserException(
                     "Message size too small for RPS Peer message");
         }
-        port = buffer.getShort();
         buffer.getShort();//ignore reserved field
+        port = buffer.getShort();
         //this is bad hack
         //assume address is 4 bytes
         try {
@@ -139,7 +107,7 @@ public class RpsPeerMessage extends RpsApiMessage {
             throw new MessageParserException("Invalid IP address");
         }
         try {
-            message = new RpsPeerMessage(address, hostkey);
+            message = new OnionTunnelBuildMessage(address, hostkey);
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException(ex.toString());
         }

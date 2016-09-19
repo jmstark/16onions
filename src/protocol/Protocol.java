@@ -34,6 +34,14 @@ public class Protocol {
         // RPS API messages
         API_RPS_QUERY(540),
         API_RPS_PEER(541),
+        //ONION API messages
+        API_ONION_TUNNEL_BUILD(560),
+        API_ONION_TUNNEL_READY(561),
+        API_ONION_TUNNEL_INCOMING(562),
+        API_ONION_TUNNEL_DESTROY(563),
+        API_ONION_TUNNEL_DATA(564),
+        API_ONION_ERROR(565),
+        API_ONION_COVER(566),
         //ONION AUTH API messages
         API_AUTH_SESSION_START(600),
         API_AUTH_SESSION_HS1(601),
