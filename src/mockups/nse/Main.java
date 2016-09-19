@@ -56,6 +56,9 @@ public class Main extends Program {
 
     @Override
     protected void cleanup() {
+        if (null == server) {
+            return;
+        }
         try {
             server.stop();
         } catch (IOException ex) {
@@ -68,7 +71,10 @@ public class Main extends Program {
         try {
             server = new NseApiServer(config, this.group);
         } catch (IOException | ConfigParser.NoSectionException |
-                ConfigParser.NoOptionException | ConfigParser.InterpolationException ex) {
+                ConfigParser.NoOptionException |
+                ConfigParser.InterpolationException ex) {
+            LOGGER.severe(ex.getLocalizedMessage());
+            shutdown();
             throw new RuntimeException("Cannot start API server; cannot continue");
         }
         server.start();
