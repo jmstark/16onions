@@ -24,6 +24,7 @@ package tests.rps;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -43,6 +44,7 @@ class Context extends MessageHandler<Void> {
     private final ScheduledExecutorService scheduledExecutor;
     private final Connection connection;
     private final Random random;
+    private ScheduledFuture<?> future;
 
     public Context(Connection connection,
             ScheduledExecutorService scheduledExecutor,
@@ -52,7 +54,7 @@ class Context extends MessageHandler<Void> {
         this.connection = connection;
         this.scheduledExecutor = scheduledExecutor;
         this.random = new Random();
-        scheduleNextQuery(5 * 1000); // run query after 5 seconds
+        this.future = scheduleNextQuery(5 * 1000); // run query after 5 seconds
     }
 
     /**
@@ -61,8 +63,8 @@ class Context extends MessageHandler<Void> {
      * @param delay delay in milliseconds after which the next query should be
      * made.
      */
-    private void scheduleNextQuery(int delay) {
-        scheduledExecutor.schedule(new Runnable() {
+    private ScheduledFuture<?> scheduleNextQuery(int delay) {
+        return scheduledExecutor.schedule(new Runnable() {
             @Override
             public void run() {
                 RpsQueryMessage query;
@@ -72,7 +74,7 @@ class Context extends MessageHandler<Void> {
                 logger.info("Sent a RPS query");
                 connection.sendMsg(query);
                 delay = random.nextInt(30 * 1000); // 30 seconds
-                scheduleNextQuery(delay);
+                future = scheduleNextQuery(delay);
             }
         }, delay, TimeUnit.MILLISECONDS);
     }
@@ -95,6 +97,10 @@ class Context extends MessageHandler<Void> {
             default:
 
         }
+    }
+
+    void shutdown() {
+        this.future.cancel(true);
     }
 
 }

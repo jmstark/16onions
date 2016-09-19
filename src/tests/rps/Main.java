@@ -37,6 +37,7 @@ public class Main extends Program {
 
     private InetSocketAddress api_address;
     private Connection connection;
+    private Context context;
 
     Main() {
         super("tests.rps", "API conformance test case for RPS");
@@ -59,6 +60,9 @@ public class Main extends Program {
         if (null != connection) {
             connection.disconnect();
             connection = null;
+        }
+        if (null != context) {
+            context.shutdown();
         }
     }
 
@@ -89,12 +93,14 @@ public class Main extends Program {
                 }
             });
             logger.fine("Connected to RPS API");
-            connection.receive(new Context(connection, scheduledExecutor, logger));
+            context = new Context(connection, scheduledExecutor, logger);
+            connection.receive(context);
         }
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel arg1) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            logger.severe("Could not connect to RPS API");
+            shutdown();
         }
 
     }

@@ -81,6 +81,10 @@ public abstract class Program {
         do {
             try {
                 terminated = group.awaitTermination(1, TimeUnit.SECONDS);
+                if (terminated) {
+                    terminated = scheduledExecutor.awaitTermination(1,
+                            TimeUnit.SECONDS);
+                }
             } catch (InterruptedException ex) {
                 break;
             }
@@ -98,6 +102,7 @@ public abstract class Program {
         cleanup();
         logger.fine("shutting down...");
         group.shutdown();
+        scheduledExecutor.shutdown();
     }
 
     public void start(String args[]) throws IOException {
