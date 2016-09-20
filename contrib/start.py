@@ -8,8 +8,8 @@ import signal
 JAVA_PATH = "java"
 
 MODULES = ["gossip.Main",
-           "mockups.rps.Main",
            "mockups.nse.Main",
+           "mockups.rps.Main",
            "mockups.auth.Main"]
 PROCESSES = []
 
@@ -21,14 +21,19 @@ def start_module(name, args):
     java_args = args[:split_index]
     java_args.append(name)
     java_args.extend(args[split_index:])
+    java_args.insert(0, "java")
     print(java_args)
-    return proc.Popen(args=java_args, executable=JAVA_PATH, cwd=os.getcwd())
+    return proc.Popen(args=java_args,
+                      executable=JAVA_PATH,
+                      cwd=os.getcwd(),
+                      stderr = proc.STDOUT)
 
 def start_all():
     global MODULES
     global PROCESSES
     for module in MODULES:
         PROCESSES.append(start_module(module,args))
+        time.sleep(1)
 
 def terminate_all():
     for process in PROCESSES:
