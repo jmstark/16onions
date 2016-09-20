@@ -36,6 +36,6 @@ public class OnionAuthConfiguration extends ConfigurationImpl {
     }
 
     public OnionAuthConfiguration(String filename) throws IOException {
-        super(filename, "AUTH", getDefaults());
+        super(filename, "auth", getDefaults());
     }
 }
