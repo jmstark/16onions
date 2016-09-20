@@ -17,8 +17,7 @@
 package onion.api;
 
 import java.nio.ByteBuffer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Objects;
 import protocol.Message;
 import protocol.MessageParserException;
 import protocol.Protocol;
@@ -68,6 +67,35 @@ public class OnionErrorMessage extends OnionApiMessage {
         out.putInt((int) id);
     }
 
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 37 * hash + Objects.hashCode(this.requestType);
+        hash = 37 * hash + (int) (this.id ^ (this.id >>> 32));
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionErrorMessage other = (OnionErrorMessage) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        if (this.requestType != other.requestType) {
+            return false;
+        }
+        return true;
+    }
+
     public static OnionErrorMessage parser(ByteBuffer buffer) throws
             MessageParserException {
         long id;
@@ -79,6 +107,7 @@ public class OnionErrorMessage extends OnionApiMessage {
             throw new MessageParserException(
                     "Unknown request type for ONION ERROR");
         }
+        buffer.getShort(); //skip reserved
         id = Message.unsignedLongFromInt(buffer.getInt());
         return new OnionErrorMessage(rType, id);
     }

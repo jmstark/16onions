@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Objects;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -70,6 +71,35 @@ public class OnionTunnelBuildMessage extends OnionApiMessage {
         out.putShort((short) this.address.getPort());
         out.put(address.getAddress().getAddress());
         out.put(encoding);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 89 * hash + Objects.hashCode(this.address);
+        hash = 89 * hash + Objects.hashCode(this.key);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionTunnelBuildMessage other = (OnionTunnelBuildMessage) obj;
+        if (!Objects.equals(this.address, other.address)) {
+            return false;
+        }
+        if (!Objects.equals(this.key, other.key)) {
+            return false;
+        }
+        return true;
     }
 
     public static OnionTunnelBuildMessage parse(ByteBuffer buffer) throws

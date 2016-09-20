@@ -19,6 +19,7 @@ package onion.api;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Arrays;
 import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -59,6 +60,35 @@ public class OnionTunnelReadyMessage extends OnionApiMessage {
         super.send(out);
         out.putInt((int) id);
         out.put(encodedKey);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 83 * hash + Arrays.hashCode(this.encodedKey);
+        hash = 83 * hash + (int) (this.id ^ (this.id >>> 32));
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionTunnelReadyMessage other = (OnionTunnelReadyMessage) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        if (!Arrays.equals(this.encodedKey, other.encodedKey)) {
+            return false;
+        }
+        return true;
     }
 
     public static OnionTunnelReadyMessage parse(ByteBuffer buffer) throws

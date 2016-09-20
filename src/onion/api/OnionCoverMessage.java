@@ -46,6 +46,31 @@ public class OnionCoverMessage extends OnionApiMessage {
         super.sendEmptyBytes(out, 2); //reserved
     }
 
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 67 * hash + this.coverSize;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionCoverMessage other = (OnionCoverMessage) obj;
+        if (this.coverSize != other.coverSize) {
+            return false;
+        }
+        return true;
+    }
+
     public static OnionCoverMessage parse(ByteBuffer buffer) throws
             MessageParserException {
         int cSize;

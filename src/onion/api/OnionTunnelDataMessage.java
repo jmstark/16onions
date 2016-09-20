@@ -17,6 +17,7 @@
 package onion.api;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -26,12 +27,12 @@ import protocol.Protocol;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class OnionTunnelData extends OnionApiMessage {
+public class OnionTunnelDataMessage extends OnionApiMessage {
 
     private final long id;
     private final byte[] data;
 
-    public OnionTunnelData(long id, byte[] data) throws
+    public OnionTunnelDataMessage(long id, byte[] data) throws
             MessageSizeExceededException {
         this.addHeader(Protocol.MessageType.API_ONION_TUNNEL_DATA);
         this.id = id;
@@ -58,17 +59,46 @@ public class OnionTunnelData extends OnionApiMessage {
         out.put(data);
     }
 
-    public static OnionTunnelData parse(ByteBuffer buffer) throws
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 89 * hash + (int) (this.id ^ (this.id >>> 32));
+        hash = 89 * hash + Arrays.hashCode(this.data);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final OnionTunnelDataMessage other = (OnionTunnelDataMessage) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        if (!Arrays.equals(this.data, other.data)) {
+            return false;
+        }
+        return true;
+    }
+
+    public static OnionTunnelDataMessage parse(ByteBuffer buffer) throws
             MessageParserException {
         long id;
         byte[] data;
-        OnionTunnelData message;
+        OnionTunnelDataMessage message;
 
         id = Message.unsignedLongFromInt(buffer.getInt());
         data = new byte[buffer.remaining()];
         buffer.get(data);
         try {
-            message = new OnionTunnelData(id, data);
+            message = new OnionTunnelDataMessage(id, data);
         } catch (MessageSizeExceededException ex) {
             throw new RuntimeException("This is a bug; please report");
         }
