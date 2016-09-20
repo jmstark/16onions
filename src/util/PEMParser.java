@@ -52,7 +52,6 @@ public class PEMParser {
             IOException {
         try (PemReader reader = new PemReader(new FileReader(file))) {
             PemObject object = reader.readPemObject();
-            System.out.println("Read pem object of type: " + object.getType());
             return new ASN1StreamParser(object.getContent()).readObject();
         }
     }
