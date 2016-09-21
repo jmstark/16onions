@@ -71,7 +71,7 @@ public class OnionTunnelDestroyMessage extends OnionApiMessage {
         return true;
     }
 
-    public static OnionTunnelDestroyMessage parser(ByteBuffer buffer) throws
+    public static OnionTunnelDestroyMessage parse(ByteBuffer buffer) throws
             MessageParserException {
         long id;
         id = Message.unsignedLongFromInt(buffer.getInt());

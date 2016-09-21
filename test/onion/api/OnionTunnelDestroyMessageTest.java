@@ -74,7 +74,8 @@ public class OnionTunnelDestroyMessageTest {
         System.out.println("parser");
         testSend();
         buffer.position(buffer.position() + 4);
-        OnionTunnelDestroyMessage result = OnionTunnelDestroyMessage.parser(buffer);
+        OnionTunnelDestroyMessage result = OnionTunnelDestroyMessage.parse(
+                buffer);
         assertEquals(message, result);
     }
 
