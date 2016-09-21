@@ -23,15 +23,20 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import mockups.onion.OnionApiServer.Interests;
 import onion.api.OnionCoverMessage;
 import onion.api.OnionErrorMessage;
 import onion.api.OnionTunnelBuildMessage;
 import onion.api.OnionTunnelDataMessage;
 import onion.api.OnionTunnelDestroyMessage;
+import onion.api.OnionTunnelIncomingMessage;
 import onion.api.OnionTunnelReadyMessage;
 import protocol.Connection;
 import protocol.DisconnectHandler;
@@ -52,6 +57,7 @@ class ClientContext extends MessageHandler<Void> {
     private AtomicInteger tunnelID;
     private final Logger logger;
     private final Map<Integer, Connection> tunnelMap;
+    private final Map<Integer, Interests> incomingMap;
 
     ClientContext(Connection connection, AsynchronousChannelGroup group) {
         super(null);
@@ -60,6 +66,7 @@ class ClientContext extends MessageHandler<Void> {
         this.tunnelID = new AtomicInteger(0);
         this.logger = Main.LOGGER;
         this.tunnelMap = new HashMap(20);
+        this.incomingMap = new HashMap(10);
     }
 
     private void onionConnect(InetSocketAddress address, byte[] hostkey) throws
@@ -137,6 +144,19 @@ class ClientContext extends MessageHandler<Void> {
         }
     }
 
+    public void propagateIncoming(Interests interest, byte[] keyEncoding) throws
+            MessageSizeExceededException {
+        int id = tunnelID.getAndIncrement();
+        OnionTunnelIncomingMessage message;
+        message = new OnionTunnelIncomingMessage(id, keyEncoding);
+        synchronized (connection) {
+            connection.sendMsg(message);
+        }
+        synchronized (incomingMap) {
+            incomingMap.put((int) id, interest);
+        }
+    }
+
     @Override
     public void parseMessage(ByteBuffer buf, Protocol.MessageType type,
             Void closure) throws MessageParserException, ProtocolException {
@@ -168,9 +188,20 @@ class ClientContext extends MessageHandler<Void> {
             }
             case API_ONION_TUNNEL_DESTROY: {
                 OnionTunnelDestroyMessage request;
+                Object present;
                 request = OnionTunnelDestroyMessage.parse(buf);
                 long id = request.getId();
-                Object present = tunnelMap.remove((int) id);
+                /**
+                 * First try to remove from the tunnelMap. If the tunnel ID is
+                 * not present in tunnel Map, see if it is present in the
+                 * incomingMap and remove it from there
+                 */
+                present = tunnelMap.remove((int) id);
+                if (null == present) {
+                    Interests interest = incomingMap.remove((int) id);
+                    present = interest;
+                    interest.removeInterest(this);
+                }
                 if (null == present) {
                     logger.log(Level.WARNING,
                             "Asked to destroy an unknown tunnel {0}", id);
@@ -188,5 +219,4 @@ class ClientContext extends MessageHandler<Void> {
                 throw new ProtocolException("Received unknown request");
         }
     }
-
 }

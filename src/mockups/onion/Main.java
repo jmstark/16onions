@@ -16,6 +16,7 @@
  */
 package mockups.onion;
 
+import mockups.onion.p2p.OnionP2pServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -41,7 +42,8 @@ public class Main extends Program {
 
     private OnionConfigurationImpl config;
     private InetSocketAddress rpsAddress;
-    private ProtocolServer server;
+    private ProtocolServer apiServer;
+    private ProtocolServer p2pServer;
     private Connection rpsConnection;
 
     private Main() {
@@ -64,9 +66,9 @@ public class Main extends Program {
 
     @Override
     protected void cleanup() {
-        if (null != server) {
+        if (null != apiServer) {
             try {
-                server.stop();
+                apiServer.stop();
             } catch (IOException ex) {
                 logger.warning("failed to stop the API server");
             }
@@ -86,14 +88,22 @@ public class Main extends Program {
         }
         channel.connect(rpsAddress, channel, new RpsConnectHandler());
         try {
-            // create Onion API server
-            server = new OnionApiServer(config, group);
+            // create Onion API apiServer
+            apiServer = new OnionApiServer(config, group);
         } catch (IOException ex) {
             LOGGER.severe("Could not start API server; quitting");
             shutdown();
             return;
         }
-        server.start();
+        try {
+            p2pServer = new OnionP2pServer(config, group);
+        } catch (IOException ex) {
+            LOGGER.severe("Could not start P2p server; quitting");
+            shutdown();
+            return;
+        }
+        apiServer.start();
+        p2pServer.start();
     }
 
     private class RpsConnectHandler implements

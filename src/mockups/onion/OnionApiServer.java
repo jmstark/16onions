@@ -18,6 +18,10 @@ package mockups.onion;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
 import onion.OnionConfigurationImpl;
 import protocol.Connection;
@@ -31,6 +35,11 @@ class OnionApiServer extends ProtocolServer<ClientContext> {
 
     private final Logger logger;
     private final AsynchronousChannelGroup group;
+    private static final ConcurrentLinkedQueue<ClientContext> contexts;
+
+    static {
+        contexts = new ConcurrentLinkedQueue();
+    }
 
     public OnionApiServer(OnionConfigurationImpl config,
             AsynchronousChannelGroup group) throws IOException {
@@ -51,4 +60,26 @@ class OnionApiServer extends ProtocolServer<ClientContext> {
         context.destroy();
     }
 
+    class Interests {
+
+        private final List<ClientContext> list;
+
+        Interests() {
+            list = new LinkedList(contexts);
+        }
+
+        void removeInterest(ClientContext context) {
+            list.remove(context);
+        }
+    }
+
+    /**
+     * Propagate a new incoming tunnel to all client contexts currently
+     * existing.
+     *
+     * @param keyEncoding the encoding of the otherend's public key
+     */
+    public static Interests propagateIncoming(byte[] keyEncoding) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }
