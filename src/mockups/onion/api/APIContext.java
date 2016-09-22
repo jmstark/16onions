@@ -16,8 +16,6 @@
  */
 package mockups.onion.api;
 
-import mockups.onion.p2p.TunnelEventHandler;
-
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>

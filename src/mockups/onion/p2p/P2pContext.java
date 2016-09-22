@@ -17,6 +17,12 @@
 package mockups.onion.p2p;
 
 import java.nio.ByteBuffer;
+import java.security.interfaces.RSAPublicKey;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import mockups.onion.api.OnionApiServer;
 import protocol.Connection;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
@@ -27,16 +33,84 @@ import protocol.ProtocolException;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class P2pContext extends MessageHandler<Void> {
+class P2pContext {
+
+    private final List<SimpleImmutableEntry<TunnelEventHandler, Tunnel>> mappings;
+    private final Connection connection;
+
+    private enum State {
+        STATE_NEW,
+        STATE_VERIFIED;
+    };
+    private State state;
 
     public P2pContext(Connection connection) {
-        super(null);
-        connection.receive(this);
+        this.connection = connection;
+        mappings = new LinkedList();
+        this.state = State.STATE_NEW;
+
+        connection.receive(new ConnectionReader());
     }
 
-    @Override
-    public void parseMessage(ByteBuffer buf, Protocol.MessageType type,
-            Void closure) throws MessageParserException, ProtocolException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private <A, B> void notifyNewTunnel(RSAPublicKey key) {
+        Iterator<TunnelEventHandler> iterator = OnionApiServer.getAllHandlers();
+        while (iterator.hasNext()) {
+            TunnelEventHandler<A, B> handler = iterator.next();
+            A context = handler.newContext();
+            IncomingTunnel<A> tunnel;
+            tunnel = new IncomingTunnel<>(context,
+                    connection,
+                    new TunnelDestroyHandler(handler));
+            handler.newIncomingTunnel(tunnel, key);
+            SimpleImmutableEntry entry = new SimpleImmutableEntry(handler,
+                    tunnel);
+            mappings.add(entry);
+        }
+    }
+
+    private class TunnelDestroyHandler implements IncomingTunnelDestroyHandler {
+
+        private final TunnelEventHandler handler;
+
+        private TunnelDestroyHandler(TunnelEventHandler handler) {
+            this.handler = handler;
+        }
+
+        @Override
+        public void incomingTunnelDestroyed(Tunnel tunnel) {
+            SimpleImmutableEntry entry = new SimpleImmutableEntry(handler,
+                    tunnel);
+            mappings.remove(entry);
+            if (0 == mappings.size()) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private class ConnectionReader extends MessageHandler<Void> {
+
+        private ConnectionReader() {
+            super(null);
+        }
+
+        @Override
+        public void parseMessage(ByteBuffer buf, Protocol.MessageType type,
+                Void closure) throws MessageParserException, ProtocolException {
+            switch (type) {
+                case ONION_HELLO:
+                    //FIXME: parse HELLO and change state to verify then tripper new tunnel
+                    return;
+                case ONION_DATA:
+                    DataMessage message = DataMessage.parse(buf);
+                    for (SimpleImmutableEntry<TunnelEventHandler, Tunnel> entry : mappings) {
+                        TunnelEventHandler handler = entry.getKey();
+                        Tunnel tunnel = entry.getValue();
+                        handler.handleReceivedData(tunnel, message.getData());
+                    }
+                    return;
+                default:
+                    throw new ProtocolException("Received unknown data message");
+            }
+        }
     }
 }

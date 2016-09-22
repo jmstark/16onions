@@ -107,6 +107,20 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
     }
 
     @Override
+    public void newIncomingTunnel(Tunnel<Integer> tunnel, RSAPublicKey key) {
+        OnionTunnelIncomingMessage message;
+        try {
+            message = new OnionTunnelIncomingMessage(tunnel.getContext(),
+                    SecurityHelper.encodeRSAPublicKey(key));
+        } catch (MessageSizeExceededException ex) {
+            throw new RuntimeException("This is a bug; please report");
+        }
+        synchronized (connection) {
+            connection.sendMsg(message);
+        }
+    }
+
+    @Override
     public void handleReceivedData(Tunnel<Integer> tunnel, byte[] data) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -121,7 +135,7 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
     @Override
     public void destroy() {
         for (Tunnel tunnel : tunnelMap.values()) {
-            tunnel.destory();
+            tunnel.destroy();
         }
     }
 
@@ -180,7 +194,7 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
                             "Asked to destroy an unknown tunnel {0}", id);
                     return;
                 }
-                tunnel.destory();
+                tunnel.destroy();
                 return;
             }
             case API_ONION_COVER: {

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
 import mockups.onion.Main;
+import mockups.onion.p2p.TunnelEventHandler;
 import onion.OnionConfigurationImpl;
 import protocol.Connection;
 import protocol.ProtocolServer;
@@ -36,11 +37,7 @@ public class OnionApiServer extends ProtocolServer<APIContextImpl> {
 
     private final Logger logger;
     private final AsynchronousChannelGroup group;
-    private static final ConcurrentLinkedQueue<APIContextImpl> contexts;
-
-    static {
-        contexts = new ConcurrentLinkedQueue();
-    }
+    private static final List<TunnelEventHandler> contexts = new LinkedList();
 
     public OnionApiServer(OnionConfigurationImpl config,
             AsynchronousChannelGroup group) throws IOException {
@@ -53,11 +50,16 @@ public class OnionApiServer extends ProtocolServer<APIContextImpl> {
     protected APIContextImpl handleNewClient(Connection connection) {
         logger.fine("A new client has connected");
         APIContextImpl context = new APIContextImpl(connection, group);
+        contexts.add(context);
         return context;
     }
 
     @Override
     protected void handleDisconnect(APIContextImpl context) {
         context.destroy();
+    }
+
+    public static Iterator<TunnelEventHandler> getAllHandlers() {
+        return contexts.iterator();
     }
 }

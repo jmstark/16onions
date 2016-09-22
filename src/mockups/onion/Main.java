@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import onion.OnionConfigurationImpl;
 import org.apache.commons.cli.CommandLine;

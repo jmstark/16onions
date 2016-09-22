@@ -16,32 +16,10 @@
  */
 package mockups.onion.p2p;
 
-import protocol.MessageSizeExceededException;
-
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface Tunnel<A> {
-
-    /**
-     * Return the context associated with this tunnel
-     *
-     * @return the context
-     */
-    public A getContext();
-
-    /**
-     * Forward data through this tunnel
-     *
-     * @param data
-     * @throws protocol.MessageSizeExceededException
-     */
-    public void forwardData(byte[] data) throws MessageSizeExceededException;
-
-    /**
-     * Destroy this tunnel.
-     */
-    public void destroy();
-
+interface IncomingTunnelDestroyHandler {
+    public void incomingTunnelDestroyed(Tunnel tunnel);
 }

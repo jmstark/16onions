@@ -42,7 +42,7 @@ class TunnelImpl<A> implements Tunnel<A> {
     }
 
     @Override
-    public void destory() {
+    public void destroy() {
         connection.disconnect();
     }
 

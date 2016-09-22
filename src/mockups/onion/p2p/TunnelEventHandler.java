@@ -17,6 +17,7 @@
 package mockups.onion.p2p;
 
 import java.net.InetSocketAddress;
+import java.security.interfaces.RSAPublicKey;
 
 /**
  * Interface for tunnel objects.
@@ -28,7 +29,11 @@ import java.net.InetSocketAddress;
 public interface TunnelEventHandler<A, B> {
 
     /**
-     * Called to ask for a new context to be associated with a new tunnel
+     * Called to ask for a new context to be associated with a new tunnel.
+     *
+     * This call is called for both tunnels which are created from this peer and
+     * also for incoming tunnels.
+     *
      * @return
      */
     public A newContext();
@@ -54,6 +59,14 @@ public interface TunnelEventHandler<A, B> {
     public void tunnelCreatefailed(Throwable exc,
             InetSocketAddress address,
             B attachment);
+
+    /**
+     * Called when a peer opened a tunnel to us.
+     *
+     * @param tunnel the new incoming tunnel
+     * @param key the public key of the other peer
+     */
+    public void newIncomingTunnel(Tunnel<A> tunnel, RSAPublicKey key);
 
     /**
      * Function called for data that is received from the P2P connection.
