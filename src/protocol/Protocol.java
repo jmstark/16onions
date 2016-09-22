@@ -56,7 +56,9 @@ public class Protocol {
         //Gossip P2P Messages
         GOSSIP_HELLO(9500),
         GOSSIP_NEIGHBORS(9501),
-        GOSSIP_DATA(9502);
+        GOSSIP_DATA(9502),
+        //Onion P2P Messages
+        ONION_DATA(9700);
 
         private final int numVal;
 

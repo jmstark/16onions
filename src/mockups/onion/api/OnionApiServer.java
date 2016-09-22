@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package mockups.onion;
+package mockups.onion.api;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousChannelGroup;
@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
+import mockups.onion.Main;
 import onion.OnionConfigurationImpl;
 import protocol.Connection;
 import protocol.ProtocolServer;
@@ -31,11 +32,11 @@ import protocol.ProtocolServer;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class OnionApiServer extends ProtocolServer<ClientContext> {
+public class OnionApiServer extends ProtocolServer<APIContextImpl> {
 
     private final Logger logger;
     private final AsynchronousChannelGroup group;
-    private static final ConcurrentLinkedQueue<ClientContext> contexts;
+    private static final ConcurrentLinkedQueue<APIContextImpl> contexts;
 
     static {
         contexts = new ConcurrentLinkedQueue();
@@ -49,37 +50,14 @@ class OnionApiServer extends ProtocolServer<ClientContext> {
     }
 
     @Override
-    protected ClientContext handleNewClient(Connection connection) {
+    protected APIContextImpl handleNewClient(Connection connection) {
         logger.fine("A new client has connected");
-        ClientContext context = new ClientContext(connection, group);
+        APIContextImpl context = new APIContextImpl(connection, group);
         return context;
     }
 
     @Override
-    protected void handleDisconnect(ClientContext context) {
+    protected void handleDisconnect(APIContextImpl context) {
         context.destroy();
-    }
-
-    class Interests {
-
-        private final List<ClientContext> list;
-
-        Interests() {
-            list = new LinkedList(contexts);
-        }
-
-        void removeInterest(ClientContext context) {
-            list.remove(context);
-        }
-    }
-
-    /**
-     * Propagate a new incoming tunnel to all client contexts currently
-     * existing.
-     *
-     * @param keyEncoding the encoding of the otherend's public key
-     */
-    public static Interests propagateIncoming(byte[] keyEncoding) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

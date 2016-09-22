@@ -57,7 +57,7 @@ public final class Connection {
         channel.read(readBuffer, this, this.readCompletionHandler);
     }
 
-    public void sendMsg(Message message) {
+    public synchronized void sendMsg(Message message) {
         writeQueue.add(message);
         if (writeQueued) {
             return;

@@ -16,6 +16,7 @@
  */
 package mockups.onion;
 
+import mockups.onion.api.OnionApiServer;
 import mockups.onion.p2p.OnionP2pServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,7 +39,7 @@ import util.config.CliParser;
  */
 public class Main extends Program {
 
-    static Logger LOGGER;
+    static public Logger LOGGER;
 
     private OnionConfigurationImpl config;
     private InetSocketAddress rpsAddress;
