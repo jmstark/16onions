@@ -98,15 +98,25 @@ class P2pContext {
                 Void closure) throws MessageParserException, ProtocolException {
             switch (type) {
                 case ONION_HELLO:
-                    //FIXME: parse HELLO and change state to verify then tripper new tunnel
+                {
+                    if (State.STATE_NEW != state) {
+                        throw new ProtocolException("Invalid state");
+                    }
+                    HelloMessage message;
+                    message = HelloMessage.parse(buf);
+                    notifyNewTunnel(message.getHostkey());
+                    state = State.STATE_VERIFIED;
+                }
                     return;
                 case ONION_DATA:
+                {
                     DataMessage message = DataMessage.parse(buf);
                     for (SimpleImmutableEntry<TunnelEventHandler, Tunnel> entry : mappings) {
                         TunnelEventHandler handler = entry.getKey();
                         Tunnel tunnel = entry.getValue();
                         handler.handleReceivedData(tunnel, message.getData());
                     }
+                }
                     return;
                 default:
                     throw new ProtocolException("Received unknown data message");

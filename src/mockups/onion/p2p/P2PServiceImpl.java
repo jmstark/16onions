@@ -22,25 +22,27 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Map;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
+import protocol.MessageSizeExceededException;
 import protocol.Protocol;
 import protocol.ProtocolException;
 
 public class P2PServiceImpl implements P2PService {
 
     @Override
-    public <A, B> void createTunnel(AsynchronousChannelGroup group,
-            InetSocketAddress address, B attachment,
-            TunnelEventHandler<A, B> handler) throws IOException {
+    public <A> void createTunnel(AsynchronousChannelGroup group,
+            InetSocketAddress address, RSAPublicKey hostkey,
+            TunnelEventHandler<A, RSAPublicKey> handler) throws IOException {
         AsynchronousSocketChannel channel;
         channel = AsynchronousSocketChannel.open(group);
         channel.connect(address, channel,
-                new OnionConnectCompletionHandler(address, attachment, handler));
+                new OnionConnectCompletionHandler(address, hostkey, handler));
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -48,38 +50,47 @@ public class P2PServiceImpl implements P2PService {
      * Connection completion handler to be called when the connection to the
      * other peer's onion has been successfully completed.
      */
-    private static class OnionConnectCompletionHandler<A, B> implements
+    private static class OnionConnectCompletionHandler<A> implements
             CompletionHandler<Void, AsynchronousSocketChannel> {
 
         private final InetSocketAddress address;
-        private final TunnelEventHandler<A, B> handler;
-        private final B attachment;
+        private final TunnelEventHandler<A, RSAPublicKey> handler;
+        private final RSAPublicKey hostkey;
 
         private OnionConnectCompletionHandler(InetSocketAddress address,
-                B attachment,
-                TunnelEventHandler<A, B> handler) {
+                RSAPublicKey hostkey,
+                TunnelEventHandler<A, RSAPublicKey> handler) {
             this.address = address;
             this.handler = handler;
-            this.attachment = attachment;
+            this.hostkey = hostkey;
         }
 
         @Override
         public void completed(Void arg0, AsynchronousSocketChannel channel) {
             Connection connection;
             OnionDisconnectHandler disconnectHandler;
+            HelloMessage hello;
             disconnectHandler = new OnionDisconnectHandler(handler);
             connection = new Connection(channel, disconnectHandler);
             A context = handler.newContext();
             TunnelImpl<A> tunnel;
             tunnel = new TunnelImpl(context, connection);
-            handler.tunnelCreated(tunnel, attachment);
+            handler.tunnelCreated(tunnel, hostkey);
             disconnectHandler.setTunnel(tunnel);
+            try {
+                hello = new HelloMessage(hostkey);
+            } catch (MessageSizeExceededException ex) {
+                handler.tunnelCreatefailed(ex, address, hostkey);
+                connection.disconnect();
+                return;
+            }
+            connection.sendMsg(hello);
             connection.receive(new TunnelDataHandler(tunnel, handler));
         }
 
         @Override
         public void failed(Throwable arg0, AsynchronousSocketChannel channel) {
-            handler.tunnelCreatefailed(arg0, address, attachment);
+            handler.tunnelCreatefailed(arg0, address, hostkey);
         }
     }
 

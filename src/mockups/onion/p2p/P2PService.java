@@ -19,6 +19,7 @@ package mockups.onion.p2p;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.security.interfaces.RSAPublicKey;
 
 /**
  * P2PService Module for Onion.
@@ -36,12 +37,12 @@ public interface P2PService {
      * @param <A>
      * @param group
      * @param address
-     * @param attachment
+     * @param hostkey
      * @param handler
      * @throws java.io.IOException
      */
-    public <A, B> void createTunnel(AsynchronousChannelGroup group,
+    public <A> void createTunnel(AsynchronousChannelGroup group,
             InetSocketAddress address,
-            B attachment,
-            TunnelEventHandler<A, B> handler) throws IOException;
+            RSAPublicKey hostkey,
+            TunnelEventHandler<A, RSAPublicKey> handler) throws IOException;
 }

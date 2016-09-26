@@ -17,7 +17,6 @@
 package mockups.onion.p2p;
 
 import java.nio.ByteBuffer;
-import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -26,7 +25,7 @@ import protocol.Protocol;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-class DataMessage extends Message {
+class DataMessage extends OnionP2PMessage {
 
     private byte[] data;
 
