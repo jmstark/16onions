@@ -38,7 +38,7 @@ public class P2PServiceImpl implements P2PService {
     @Override
     public <A> void createTunnel(AsynchronousChannelGroup group,
             InetSocketAddress address, RSAPublicKey hostkey,
-            TunnelEventHandler<A, RSAPublicKey> handler) throws IOException {
+            TunnelEventHandler<A> handler) throws IOException {
         AsynchronousSocketChannel channel;
         channel = AsynchronousSocketChannel.open(group);
         channel.connect(address, channel,
@@ -54,12 +54,12 @@ public class P2PServiceImpl implements P2PService {
             CompletionHandler<Void, AsynchronousSocketChannel> {
 
         private final InetSocketAddress address;
-        private final TunnelEventHandler<A, RSAPublicKey> handler;
+        private final TunnelEventHandler<A> handler;
         private final RSAPublicKey hostkey;
 
         private OnionConnectCompletionHandler(InetSocketAddress address,
                 RSAPublicKey hostkey,
-                TunnelEventHandler<A, RSAPublicKey> handler) {
+                TunnelEventHandler<A> handler) {
             this.address = address;
             this.handler = handler;
             this.hostkey = hostkey;

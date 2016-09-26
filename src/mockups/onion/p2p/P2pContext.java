@@ -55,7 +55,7 @@ class P2pContext {
     private <A, B> void notifyNewTunnel(RSAPublicKey key) {
         Iterator<TunnelEventHandler> iterator = OnionApiServer.getAllHandlers();
         while (iterator.hasNext()) {
-            TunnelEventHandler<A, B> handler = iterator.next();
+            TunnelEventHandler<A> handler = iterator.next();
             A context = handler.newContext();
             IncomingTunnel<A> tunnel;
             tunnel = new IncomingTunnel<>(context,

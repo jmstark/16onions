@@ -24,9 +24,8 @@ import java.security.interfaces.RSAPublicKey;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  * @param <A> Type for the context
- * @param <B> Type for the attachment
  */
-public interface TunnelEventHandler<A, B> {
+public interface TunnelEventHandler<A> {
 
     /**
      * Called to ask for a new context to be associated with a new tunnel.
@@ -45,20 +44,20 @@ public interface TunnelEventHandler<A, B> {
      * this tunnel.
      *
      * @param tunnel
-     * @param attachment
+     * @param hostkey the hostkey given to the P2PService.createTunnel() method
      */
-    public void tunnelCreated(Tunnel<A> tunnel, B attachment);
+    public void tunnelCreated(Tunnel<A> tunnel, RSAPublicKey hostkey);
 
     /**
      * Tunnel creation has failed.
      *
      * @param exc the exception to indicate why tunnel creation failed
      * @param address
-     * @param attachment
+     * @param hostkey the hostkey given to the P2PService.createTunnel() method
      */
     public void tunnelCreatefailed(Throwable exc,
             InetSocketAddress address,
-            B attachment);
+            RSAPublicKey hostkey);
 
     /**
      * Called when a peer opened a tunnel to us.

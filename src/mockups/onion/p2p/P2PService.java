@@ -44,5 +44,5 @@ public interface P2PService {
     public <A> void createTunnel(AsynchronousChannelGroup group,
             InetSocketAddress address,
             RSAPublicKey hostkey,
-            TunnelEventHandler<A, RSAPublicKey> handler) throws IOException;
+            TunnelEventHandler<A> handler) throws IOException;
 }

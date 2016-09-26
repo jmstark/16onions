@@ -30,6 +30,7 @@ import mockups.onion.Main;
 import mockups.onion.p2p.P2PService;
 import mockups.onion.p2p.P2PServiceImpl;
 import mockups.onion.p2p.Tunnel;
+import mockups.onion.p2p.TunnelEventHandler;
 import onion.api.OnionCoverMessage;
 import onion.api.OnionTunnelBuildMessage;
 import onion.api.OnionTunnelDataMessage;
@@ -43,14 +44,13 @@ import protocol.MessageSizeExceededException;
 import protocol.Protocol;
 import protocol.ProtocolException;
 import util.SecurityHelper;
-import mockups.onion.p2p.TunnelEventHandler;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 class APIContextImpl extends MessageHandler<Void> implements APIContext,
-        TunnelEventHandler<Integer, RSAPublicKey> {
+        TunnelEventHandler<Integer> {
 
     private final Connection connection;
     private final AsynchronousChannelGroup group;
