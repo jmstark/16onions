@@ -10,7 +10,8 @@ JAVA_PATH = "java"
 MODULES = ["gossip.Main",
            "mockups.nse.Main",
            "mockups.rps.Main",
-           "mockups.auth.Main"]
+           "mockups.auth.Main",
+           "mockups.onion.Main"]
 PROCESSES = []
 
 #Flag used for signalling termination
