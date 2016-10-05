@@ -31,6 +31,7 @@ import mockups.onion.p2p.P2PService;
 import mockups.onion.p2p.P2PServiceImpl;
 import mockups.onion.p2p.Tunnel;
 import mockups.onion.p2p.TunnelEventHandler;
+import onion.OnionConfiguration;
 import onion.api.OnionCoverMessage;
 import onion.api.OnionTunnelBuildMessage;
 import onion.api.OnionTunnelDataMessage;
@@ -57,22 +58,24 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
     private final AtomicInteger tunnelID;
     private final Logger logger;
     private final Map<Integer, Tunnel> tunnelMap;
+    private final RSAPublicKey hostkey;
 
-    APIContextImpl(Connection connection, AsynchronousChannelGroup group) {
+    APIContextImpl(RSAPublicKey hostkey, Connection connection,
+            AsynchronousChannelGroup group) {
         super(null);
         this.connection = connection;
         this.group = group;
         this.tunnelID = new AtomicInteger(0);
         this.logger = Main.LOGGER;
         this.tunnelMap = new HashMap(20);
+        this.hostkey = hostkey;
     }
 
-    private void onionConnect(InetSocketAddress address, RSAPublicKey hostkey)
-            throws
-            IOException {
+    private void onionConnect(InetSocketAddress address,
+            RSAPublicKey destHostkey) throws IOException {
         P2PService p2p;
-        p2p = P2PServiceImpl.getInstance();
-        p2p.createTunnel(group, address, hostkey, this);
+        p2p = P2PServiceImpl.getInstance(hostkey);
+        p2p.createTunnel(group, address, destHostkey, this);
     }
 
     @Override

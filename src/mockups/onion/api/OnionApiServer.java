@@ -18,14 +18,16 @@ package mockups.onion.api;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.security.InvalidKeyException;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.NoSuchElementException;
 import java.util.logging.Logger;
 import mockups.onion.Main;
 import mockups.onion.p2p.TunnelEventHandler;
-import onion.OnionConfigurationImpl;
+import onion.OnionConfiguration;
 import protocol.Connection;
 import protocol.ProtocolServer;
 
@@ -38,18 +40,30 @@ public class OnionApiServer extends ProtocolServer<APIContextImpl> {
     private final Logger logger;
     private final AsynchronousChannelGroup group;
     private static final List<TunnelEventHandler> contexts = new LinkedList();
+    private final RSAPublicKey hostkey;
 
-    public OnionApiServer(OnionConfigurationImpl config,
-            AsynchronousChannelGroup group) throws IOException {
+    /**
+     * Create the onion API server
+     *
+     * @param config the configuration
+     * @param group the async group to be a part of
+     * @throws IOException When unable to create the server
+     * @throws NoSuchElementException when hostkey is not found in config
+     * @throws InvalidKeyException when hostkey is not found in config
+     */
+    public OnionApiServer(OnionConfiguration config,
+            AsynchronousChannelGroup group) throws IOException,
+            NoSuchElementException, InvalidKeyException {
         super(config.getAPIAddress(), group);
         this.logger = Main.LOGGER;
         this.group = group;
+        this.hostkey = config.getHostKey();
     }
 
     @Override
     protected APIContextImpl handleNewClient(Connection connection) {
         logger.fine("A new client has connected");
-        APIContextImpl context = new APIContextImpl(connection, group);
+        APIContextImpl context = new APIContextImpl(hostkey, connection, group);
         contexts.add(context);
         return context;
     }

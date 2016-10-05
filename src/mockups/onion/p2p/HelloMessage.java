@@ -30,6 +30,9 @@ import util.SecurityHelper;
  */
 public class HelloMessage extends OnionP2PMessage {
 
+    /**
+     * The hostkey of the sender of this message
+     */
     private final RSAPublicKey hostkey;
 
     public HelloMessage(RSAPublicKey hostkey) throws MessageSizeExceededException {

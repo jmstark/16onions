@@ -25,6 +25,7 @@ import java.nio.channels.CompletionHandler;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Map;
+import onion.OnionConfiguration;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
@@ -110,8 +111,9 @@ public class P2PServiceImpl implements P2PService {
 
         @Override
         protected void handleDisconnect(Void nothing) {
-            if (null != tunnel)
-            handler.handleDisconnect(tunnel);
+            if (null != tunnel) {
+                handler.handleDisconnect(tunnel);
+            }
         }
     }
 
@@ -141,10 +143,13 @@ public class P2PServiceImpl implements P2PService {
 
     }
 
-    static P2PService service = new P2PServiceImpl();
-    static Map<TunnelEventHandler, Connection> connectionMap = new HashMap(30);
+    static final P2PService service = new P2PServiceImpl();
+    static RSAPublicKey ourHostkey;
 
-    public static P2PService getInstance() {
+    public static P2PService getInstance(RSAPublicKey hostkey) {
+        if (null == ourHostkey) {
+            ourHostkey = hostkey;
+        }
         return service;
     }
 
