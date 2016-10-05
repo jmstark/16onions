@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import onion.OnionConfigurationImpl;
 import org.apache.commons.cli.CommandLine;
@@ -71,6 +72,13 @@ public class Main extends Program {
                 apiServer.stop();
             } catch (IOException ex) {
                 logger.warning("failed to stop the API server");
+            }
+        }
+        if (null != p2pServer) {
+            try {
+                p2pServer.stop();
+            } catch (IOException ex) {
+                logger.warning("failed to stop the P2P server");
             }
         }
         if (null != rpsConnection) {
