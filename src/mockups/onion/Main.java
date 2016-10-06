@@ -16,14 +16,15 @@
  */
 package mockups.onion;
 
-import mockups.onion.api.OnionApiServer;
-import mockups.onion.p2p.OnionP2pServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.logging.Level;
+import java.security.InvalidKeyException;
+import java.util.NoSuchElementException;
 import java.util.logging.Logger;
+import mockups.onion.api.OnionApiServer;
+import mockups.onion.p2p.OnionP2pServer;
 import onion.OnionConfigurationImpl;
 import org.apache.commons.cli.CommandLine;
 import protocol.Connection;
@@ -96,8 +97,12 @@ public class Main extends Program {
         }
         channel.connect(rpsAddress, channel, new RpsConnectHandler());
         try {
-            // create Onion API apiServer
-            apiServer = new OnionApiServer(config, group);
+            try {
+                // create Onion API apiServer
+                apiServer = new OnionApiServer(config, group);
+            } catch (NoSuchElementException | InvalidKeyException ex) {
+                throw new RuntimeException(ex);
+            }
         } catch (IOException ex) {
             LOGGER.severe("Could not start API server; quitting");
             shutdown();
