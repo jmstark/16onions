@@ -23,7 +23,7 @@ def start_module(name, args):
     java_args.append(name)
     java_args.extend(args[split_index:])
     java_args.insert(0, "java")
-    print(java_args)
+    print("Starting service: " + name)
     return proc.Popen(args=java_args,
                       executable=JAVA_PATH,
                       cwd=os.getcwd(),
