@@ -105,7 +105,8 @@ class Context extends MessageHandler<Void> {
                             "We did not ask to create a tunnel");
                 }
                  {
-                    state = State.TUNNEL_CREATED;
+                     state = State.TUNNEL_CREATED;
+                     logger.fine(("Our tunnel is now ready"));
                 OnionTunnelReadyMessage ready;
                 ready = OnionTunnelReadyMessage.parse(buf);
                 long id = ready.getId();
@@ -127,7 +128,9 @@ class Context extends MessageHandler<Void> {
                 String actual = new String(message.getData());
                 logger.log(Level.FINE, "Received data from Tunnel {0}: {1}",
                         new Object[]{message.getId(), actual});
-                sendData(message.getId(), "ACK back to you");
+                if (listenMode) {
+                    sendData(message.getId(), "ACK back to you");
+                }
             }
             return;
             case API_ONION_ERROR:
