@@ -43,6 +43,7 @@ class Context extends MessageHandler<Void> {
     private final RSAPublicKey targetHostkey;
     private final Connection connection;
     private final Logger logger;
+    private final boolean listenMode;
 
     enum State {
         CREATE_TUNNEL, TUNNEL_CREATED,
@@ -50,18 +51,22 @@ class Context extends MessageHandler<Void> {
 
     private State state;
 
-    Context(Connection connection, RSAPublicKey targetHostkey,
+    Context(boolean listenMode, Connection connection, RSAPublicKey targetHostkey,
             InetSocketAddress targetAddress, Logger logger) {
         super(null);
         this.connection = connection;
         this.targetHostkey = targetHostkey;
         this.targetAddress = targetAddress;
         this.logger = logger;
+        this.listenMode = listenMode;
     }
 
     void ready() {
         this.connection.receive(this);
         state = State.CREATE_TUNNEL;
+        if (!listenMode) {
+            createTunnel();
+        }
     }
 
     private void createTunnel() {

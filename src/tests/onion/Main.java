@@ -47,6 +47,7 @@ public class Main extends Program {
     private Connection connection;
     private Context context;
     private RSAPublicKey targetHostkey;
+    private boolean listenMode;
 
     Main() {
         super("tests.onion", "API conformance test case for ONION");
@@ -80,6 +81,12 @@ public class Main extends Program {
                 .optionalArg(false)
                 .argName("PORT")
                 .hasArg().build());
+        parser.addOption(Option.builder("l")
+                .required(false)
+                .longOpt("listen")
+                .desc("Activate listen mode")
+                .optionalArg(true)
+                .hasArg(false).build());
     }
 
     @Override
@@ -102,6 +109,10 @@ public class Main extends Program {
                     target_hostkey));
         } catch (IOException | InvalidKeyException ex) {
             throw new RuntimeException(ex);
+        }
+        listenMode = cli.hasOption("l");
+        if (listenMode) {
+            logger.info("Running in listen mode; waiting for incoming tunnel connections");
         }
     }
 
@@ -145,7 +156,8 @@ public class Main extends Program {
                     }
                 }
             });
-            context = new Context(connection, targetHostkey, targetAddress,
+            context = new Context(listenMode,
+                    connection, targetHostkey, targetAddress,
                     Main.this.logger);
             context.ready();
         }
