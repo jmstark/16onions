@@ -53,6 +53,13 @@ public class OnionTunnelIncomingMessage extends OnionApiMessage {
     }
 
     @Override
+    public void send(ByteBuffer out) {
+        super.send(out);
+        out.putInt((int) tunnelID);
+        out.put(keyEncoding);
+    }
+
+    @Override
     public int hashCode() {
         int hash = 7;
         hash = 41 * hash + (int) (this.tunnelID ^ (this.tunnelID >>> 32));

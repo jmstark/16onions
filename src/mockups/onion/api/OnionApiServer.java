@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import mockups.onion.Main;
 import mockups.onion.p2p.TunnelEventHandler;
@@ -58,6 +59,7 @@ public class OnionApiServer extends ProtocolServer<APIContextImpl> {
         this.logger = Main.LOGGER;
         this.group = group;
         this.hostkey = config.getHostKey();
+        logger.log(Level.INFO, "ONION API running on {0}", config.getAPIAddress());
     }
 
     @Override
@@ -65,6 +67,7 @@ public class OnionApiServer extends ProtocolServer<APIContextImpl> {
         logger.fine("A new client has connected");
         APIContextImpl context = new APIContextImpl(hostkey, connection, group);
         contexts.add(context);
+        connection.receive(context);
         return context;
     }
 

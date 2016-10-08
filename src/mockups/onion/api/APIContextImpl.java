@@ -31,7 +31,6 @@ import mockups.onion.p2p.P2PService;
 import mockups.onion.p2p.P2PServiceImpl;
 import mockups.onion.p2p.Tunnel;
 import mockups.onion.p2p.TunnelEventHandler;
-import onion.OnionConfiguration;
 import onion.api.OnionCoverMessage;
 import onion.api.OnionTunnelBuildMessage;
 import onion.api.OnionTunnelDataMessage;
@@ -121,11 +120,25 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
         synchronized (connection) {
             connection.sendMsg(message);
         }
+        synchronized (tunnelMap) {
+            tunnelMap.put(tunnel.getContext(), tunnel);
+        }
     }
 
     @Override
     public void handleReceivedData(Tunnel<Integer> tunnel, byte[] data) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        String msg = new String(data);
+        logger.log(Level.FINE, "Sending data \"{0}\" on API through tunnel with ID {1}",
+                new Object[]{msg, tunnel.getContext()});
+        OnionTunnelDataMessage message;
+        try {
+            message = new OnionTunnelDataMessage(tunnel.getContext(), data);
+        } catch (MessageSizeExceededException ex) {
+            throw new RuntimeException("This is a bug; please report");
+        }
+        synchronized (connection) {
+            connection.sendMsg(message);
+        }
     }
 
     @Override
@@ -157,6 +170,7 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
                 InetSocketAddress address;
                 request = OnionTunnelBuildMessage.parse(buf);
                 address = request.getAddress();
+                logger.fine("Received TUNNEL BUILD");
                 try {
                     onionConnect(address, request.getKey());
                 } catch (IOException ex) {
@@ -192,6 +206,7 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
                  * incomingMap and remove it from there
                  */
                 tunnel = tunnelMap.remove((int) id);
+                logger.fine("Received TUNNEL DESTROY");
                 if (null == tunnel) {
                     logger.log(Level.WARNING,
                             "Asked to destroy an unknown tunnel {0}", id);

@@ -23,9 +23,6 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.security.interfaces.RSAPublicKey;
-import java.util.HashMap;
-import java.util.Map;
-import onion.OnionConfiguration;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
@@ -44,7 +41,6 @@ public class P2PServiceImpl implements P2PService {
         channel = AsynchronousSocketChannel.open(group);
         channel.connect(address, channel,
                 new OnionConnectCompletionHandler(address, hostkey, handler));
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     /**
