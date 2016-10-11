@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.crypto.digests.SHA256Digest;
 import protocol.Connection;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
@@ -45,6 +46,7 @@ class Context extends MessageHandler<Void> {
     private final Connection connection;
     private final Random random;
     private ScheduledFuture<?> future;
+    private final SHA256Digest digest;
 
     public Context(Connection connection,
             ScheduledExecutorService scheduledExecutor,
@@ -55,6 +57,7 @@ class Context extends MessageHandler<Void> {
         this.scheduledExecutor = scheduledExecutor;
         this.random = new Random();
         this.future = scheduleNextQuery(5 * 1000); // run query after 5 seconds
+        this.digest = new SHA256Digest();
     }
 
     /**
@@ -87,12 +90,21 @@ class Context extends MessageHandler<Void> {
             case API_RPS_PEER:
                 RpsPeerMessage message;
                 byte[] encoding;
+                byte[] digestOut;
                 message = RpsPeerMessage.parse(buf);
-                encoding = SecurityHelper.encodeRSAPublicKey(message.getHostkey());
+                encoding = SecurityHelper.encodeRSAPublicKey(message.
+                        getHostkey());
+                digest.reset();
+                digestOut = new byte[digest.getDigestSize()];
+                digest.update(encoding, 0, encoding.length);
+                digest.doFinal(digestOut, 0);
                 logger.log(Level.INFO,
                         "Received a random peer with address: {0} and PubKey: {1}",
                         new Object[]{message.getAddress(),
-                            Base64.toBase64String(encoding, 0, 16)});
+                            Base64.
+                                    toBase64String(digestOut, 0,
+                                            digestOut.length)});
+                digest.reset();
                 break;
             default:
 
