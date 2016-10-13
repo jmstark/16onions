@@ -27,7 +27,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import auth.OnionAuthConfiguration;
+import java.security.InvalidKeyException;
+import java.security.interfaces.RSAPublicKey;
 import org.apache.commons.cli.CommandLine;
+import org.ini4j.ConfigParser;
 import protocol.DisconnectHandler;
 import util.Program;
 import util.config.CliParser;
@@ -40,6 +43,8 @@ public class Main extends Program {
 
     private InetSocketAddress apiAddress1;
     private InetSocketAddress apiAddress2;
+    private RSAPublicKey hostkey1;
+    private RSAPublicKey hostkey2;
     private Context[] contexts;
     private TestController controller;
     static Logger LOGGER;
@@ -53,14 +58,23 @@ public class Main extends Program {
     @Override
     protected void parseCommandLine(CommandLine cli, CliParser parser) {
         String filename = parser.getConfigFilename("auth.conf");
-        OnionAuthConfiguration config;
+        OnionAuthTesterConfiguration config;
         try {
-            config = new OnionAuthConfiguration(filename);
+            config = new OnionAuthTesterConfiguration(filename);
         } catch (IOException ex) {
             throw new RuntimeException("Unable to read config file");
         }
         apiAddress1 = config.getAPIAddress();
         apiAddress2 = config.getAddress("api_address2");
+        try {
+            hostkey1 = config.getHostkey("hostkey1");
+            hostkey2 = config.getHostkey("hostkey2");
+        } catch (ConfigParser.NoSectionException
+                | ConfigParser.NoOptionException
+                | ConfigParser.InterpolationException | IOException
+                | InvalidKeyException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
     }
 
     @Override
@@ -99,6 +113,7 @@ public class Main extends Program {
         }
         assert (null == controller);
         controller = new TestController(contexts[0], contexts[1],
+                hostkey1, hostkey2,
                 scheduledExecutor);
         try {
             controller.start();

@@ -16,14 +16,12 @@
  */
 package tests.auth;
 
-import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import protocol.MessageSizeExceededException;
-import util.SecurityHelper;
 
 /**
  *
@@ -34,33 +32,22 @@ public class TestController {
     private final Context context1;
     private final ScheduledExecutorService scheduledExecutor;
     private final Context context2;
+    private final RSAPublicKey pub1;
+    private final RSAPublicKey pub2;
 
     public TestController(Context context1,
             Context context2,
+            RSAPublicKey pub1,
+            RSAPublicKey pub2,
             ScheduledExecutorService scheduledExecutor) {
         this.context1 = context1;
         this.context2 = context2;
         this.scheduledExecutor = scheduledExecutor;
+        this.pub1 = pub1;
+        this.pub2 = pub2;
     }
 
     public void start() throws Exception {
-        KeyStore keyStore = SecurityHelper.KEY_STORE;
-        if (null == keyStore) {
-            throw new Exception("Keystore has to be initialized for this testcase");
-        }
-        if (keyStore.size() < 2) {
-            throw new RuntimeException("keystore needs to have atleast two keys");
-        }
-        RSAPublicKey pub1;
-        RSAPublicKey pub2;
-        {
-            Certificate cert1 = keyStore.getCertificate("sel.A");
-            Certificate cert2 = keyStore.getCertificate("hostkey.A");
-
-            pub1 = (RSAPublicKey) cert1.getPublicKey();
-            pub2 = (RSAPublicKey) cert2.getPublicKey();
-        }
-
         PartialSession partial1;
         PartialSession partial2;
         {
