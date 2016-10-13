@@ -51,20 +51,25 @@ public class TestController {
         if (keyStore.size() < 2) {
             throw new RuntimeException("keystore needs to have atleast two keys");
         }
-        Certificate cert1 = keyStore.getCertificate("sel.A");
-        Certificate cert2 = keyStore.getCertificate("hostkey.A");
+        RSAPublicKey pub1;
+        RSAPublicKey pub2;
+        {
+            Certificate cert1 = keyStore.getCertificate("sel.A");
+            Certificate cert2 = keyStore.getCertificate("hostkey.A");
+
+            pub1 = (RSAPublicKey) cert1.getPublicKey();
+            pub2 = (RSAPublicKey) cert2.getPublicKey();
+        }
 
         PartialSession partial1;
         PartialSession partial2;
         {
-            Future<PartialSession> future = context1.startSession(
-                    (RSAPublicKey) cert2.getPublicKey(), null);
+            Future<PartialSession> future = context1.startSession(pub2, null);
             partial1 = future.get();
         }
         {
-            Future<PartialSession> future = context2.deriveSession(
-                    (RSAPublicKey) cert1.getPublicKey(), partial1.
-                    getDiffiePayload(), null);
+            Future<PartialSession> future = context2.deriveSession(pub1,
+                    partial1.getDiffiePayload(), null);
             partial2 = future.get();
         }
         Session session1;
@@ -99,11 +104,10 @@ public class TestController {
             B = new Session[fB.length];
             int index;
             for (index = 0; index < fA.length; index++) {
-                fA[index] = context2.startSession((RSAPublicKey) cert1.
-                        getPublicKey(), null);
+                fA[index] = context2.startSession(pub1, null);
                 PartialSession pa = fA[index].get();
-                fB[index] = context1.deriveSession((RSAPublicKey) cert2.
-                        getPublicKey(), pa.getDiffiePayload(), null);
+                fB[index] = context1.deriveSession(pub2,
+                        pa.getDiffiePayload(), null);
                 PartialSession pb = fB[index].get();
                 A[index] = pa.completeSession(pb.getDiffiePayload());
                 B[index] = pb.completeSession(pa.getDiffiePayload());
