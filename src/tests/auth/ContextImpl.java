@@ -185,6 +185,8 @@ class ContextImpl implements Context {
                         case API_AUTH_LAYER_ENCRYPT_RESP: {
                             OnionAuthEncryptResp message
                                     = OnionAuthEncryptResp.parse(buf);
+                            logger.log(Level.FINE,
+                                    "Received AUTH LAYER ENCRYPT RESP message");
                             FutureImpl future;
                             try {
                                 future = TunnelImpl.getFuture(message.getId());
@@ -199,6 +201,8 @@ class ContextImpl implements Context {
                         case API_AUTH_LAYER_DECRYPT_RESP: {
                             OnionAuthDecryptResp message
                                     = OnionAuthDecryptResp.parse(buf);
+                            logger.log(Level.FINE,
+                                    "Received AUTH LAYER DECRYPT RESP message");
                             FutureImpl future;
                             try {
                                 future = TunnelImpl.getFuture(message.getId());
@@ -214,6 +218,8 @@ class ContextImpl implements Context {
                     }
                     break;
             }
+            logger.log(Level.SEVERE, "Received unexpected message of type {0}",
+                    type.toString());
             throw new ProtocolException("Protocol reached incorrect state");
         }
     }
