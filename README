@@ -3,7 +3,7 @@ Requirements
 
 You need Java SDK version 7 or above.
 
-Additionally, you need Apache Ant to be installed as that is used as a build
+Additionally, you need Apache Ant to be installed as that is used as a the build
 system.
 
 
