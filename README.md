@@ -3,20 +3,20 @@ Requirements
 
 You need JDK version 7 or above.
 
-Additionally, you need Apache Ant to be installed as that is used as a the build
+Additionally, you need Apache Ant to be installed as that is used as the build
 system.
 
 
 Building
 ========
 
-Before you use the testing framework, you should build the code:
+Before you use the testing framework, you should build it:
 
     ant compile
 
 Usually the master branch should be stable.  To check if you didn't pull any
-broken commit you should run the test suites which test the testing suite ---
-how ironical!
+broken commit you should run the test suites which test the testing suite
+--- ironical; I know!
 
     ant test
 
@@ -27,7 +27,8 @@ sockets they use are usually bound to localhost (127.0.0.1 by default); they can
 also use IPv6 when available.  Additionally refer to the Testing Caveats section
 below.
 
-The build does not produce any JAR, which is actually useful, to do that:
+The build does not produce any JAR yet.  Having a jar is useful; you can build
+it by:
 
     ant jar
 
@@ -35,21 +36,21 @@ The build does not produce any JAR, which is actually useful, to do that:
 Running
 =======
 
-The run the sample Gossip module of the bootstrap peer:
+To run the sample Gossip module of the bootstrap peer:
   
     java -cp dist/voip.jar gossip.Main --config config/bootstrap.conf
 
-The framework is equipped with flexible logging mechanism.  For example to
+The framework is equipped with a flexible logging mechanism.  For example, to
 increase the verbosity of Gossip module try:
   
     java -Djava.util.logging.config.file=logging.properties -cp dist/voip.jar \
       gossip.Main --config config/peer-2.conf
 
-You can edit the logging.properties file to set the verbosity of different
+You can edit the `logging.properties` file to set the verbosity of different
 components.
 
 Depending on your setup you may have to set the classpath for java to find the
-dependency libraries.  In this case extend the `-cp dist/voip.jar' argument as
+dependency libraries.  In this case extend the `-cp dist/voip.jar` argument as
 following:
   
     -cp dist/voip.jar:libs/commons-cli-1.3.1.jar:libs/ini4j-0.5.4.jar:junit-4.12.jar
@@ -58,10 +59,10 @@ following:
 Debugging
 =========
 
-If you'd like to debug the code it is helpful to run the code and then attach a
-debugger to it.
+If you'd like to debug it is helpful to run the code and then attach a debugger
+to it.
 
-To start the debugger run the Java VM with options:
+To start the debugger, run the Java VM with the following options:
   
     -Xdebug -Xrunjdwp:transport=dt_socket,address=4001,server=y
 
@@ -76,15 +77,15 @@ connections to the server.  This works until the system runs out of ports and
 the connect() syscall fails with address unavailable error.  Observing
 experimentally, this seems to happen after ~24500 connections.
 
-This behavior is due to TCP connections waiting in TCP_WAIT state.  TCP_WAIT is
-configured by default to have a timeout of ~1 minute.
+This behavior is due to TCP connections waiting in TCP\_WAIT state.  TCP\_WAIT
+is configured by default to have a timeout of ~1 minute.
 
-To fix this, you have to either shrink the TCP_WAIT timeout to 1 sec.  This is
+To fix this, you have to either shrink the TCP\_WAIT timeout to 1 sec.  This is
 not a problem for testing as the test cases use loopback interface.  However,
-you should be careful to reset TCP_WAIT timeout to the default setting
+you should be careful to reset TCP\_WAIT timeout to the default setting
 afterwards.
 
-An another way, on Linux, is to enable TCP_TW_REUSE.  This is done by writing
+An another way, on Linux, is to enable TCP\_TW\_REUSE.  This is done by writing
 `1` to `/proc/sys/net/ipv4/tcp_tw_reuse`.  This causes new TCP connections to
 reuse the ports occupied by TCP connections in TCP_WAIT state.
 
