@@ -11,6 +11,3 @@ StandardInput=null
 StandardOutput=journal
 StandardError=journal
 Restart=always
-
-[Install]
-Alias=gossip.service
