@@ -1,0 +1,16 @@
+[Unit]
+Description=VoidPhone Gossip module
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/java -Djava.util.logging.config.file=%h/repos/p2p-projects/2016/testing/logging.properties \
+   -cp %h/repos/p2p-projects/2016/testing/dist/voip.jar gossip.Main \
+   --config %h/repos/p2p-projects/2016/testing/config/bootstrap.conf
+KillMode=process
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+Restart=always
+
+[Install]
+Alias=gossip.service
