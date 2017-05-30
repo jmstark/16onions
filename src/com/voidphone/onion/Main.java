@@ -2,6 +2,7 @@ package com.voidphone.onion;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,18 +20,22 @@ import java.util.Set;
 import org.ini4j.InvalidFileFormatException;
 import org.ini4j.Wini;
 
-import sun.net.InetAddressCachePolicy;
+import com.voidphone.api.APISocket;
 
+import sun.net.InetAddressCachePolicy;
 
 public class Main
 {
 
+	//for tunnel building, we don't know if its IPv4 or IPv6 addresses
+	//TODO: remove this variable and find it out for each message
+	public final int ipAddressLength = 4;
 	private String apiAddress;
 	private int apiPort;
 	private String onionAddress;
 	private int onionPort;
-	private String hostKeyPath;
-	
+	private String hostkeyPath;
+
 	/**
 	 * Returns one.
 	 * 
@@ -44,24 +49,24 @@ public class Main
 	/**
 	 * Reads values from config file into variables
 	 * 
-	 * @param configFilePath Path to the config file in INI format
+	 * @param configFilePath
+	 *            Path to the config file in INI format
 	 */
 	private void readConfigValues(String configFilePath)
 	{
 		try
 		{
-			
+
 			Wini configFile = new Wini(new File(configFilePath));
-			Set<String> sectionNames = configFile.keySet();
-			hostKeyPath = configFile.get("?", "HOSTKEY", String.class);
-			
-			//api_address contains address and port, separated by a colon (':')
-			String apiAddressAndPort = configFile.get("ONION","api_address",String.class);
+			hostkeyPath = configFile.get("?", "HOSTKEY", String.class);
+
+			// api_address contains address and port, separated by a colon (':')
+			String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
 			int colonPos = apiAddressAndPort.lastIndexOf(':');
 			apiAddress = apiAddressAndPort.substring(0, colonPos);
 			apiPort = Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
-			
-			//Onion hostname and port are separate config lines
+
+			// Onion hostname and port are separate config lines
 			onionAddress = configFile.get("ONION", "P2P_HOSTNAME", String.class);
 			onionPort = configFile.get("ONION", "P2P_PORT", Integer.class).intValue();
 		}
@@ -71,92 +76,134 @@ public class Main
 			System.exit(1);
 		}
 	}
-	
+
 	/**
-	 * Runs the Onion module.
+	 * Listens for incoming TCP API connection, accepts API requests, unpacks
+	 * them and calls the appropriate methods, and sends answers (if
+	 * applicable).
+	 * Needs to process 
+	 * ONION_TUNNEL_BUILD, ONION_TUNNEL_DESTROY, ONION_TUNNEL_DATA, ONION_COVER
 	 * 
-	 * @param configFilePath Path to the config file in INI format
+	 * @throws IOException
 	 */
-	private void run(String configFilePath) throws IOException
+	private void runApiListener()
 	{
-		
-		readConfigValues(configFilePath);
-		
-		System.out.println("Hostkey: " + hostKeyPath + "; API will listen on "
-				+ apiAddress + ", Port " + apiPort  + "; Onion will listen on " 
-				+ onionAddress + ", Port " + onionPort + ". ");
-		
-		
-		//run onion socket accepting onion connections from other peers here
-		//in another thread? i think so.
-		
-		
-		//run the API-loop				
-		
-		
-		// from https://www.cs.uic.edu/~troy/spring05/cs450/sockets/EchoServer.java
-		ServerSocket apiServerSocket = null;
-
-		try
+		while (true)
 		{
-			apiServerSocket = new ServerSocket();
-			apiServerSocket.bind(new InetSocketAddress(apiAddress, apiPort));
+			ServerSocket apiServerSocket = null;
+			Socket clientSocket = null;
+			DataInputStream in = null;
+			
+			try
+			{
+				apiServerSocket = new ServerSocket();
+				apiServerSocket.bind(new InetSocketAddress(apiAddress, apiPort));
+				System.out.println("Waiting for API connection.....");
+				clientSocket = apiServerSocket.accept();
+				System.out.println("API Connection successful");
+				System.out.println("Waiting for API input.....");
+				//BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+				in = new DataInputStream(clientSocket.getInputStream());
+
+				boolean exitLoop = false;
+				while(!exitLoop)
+				{
+					short msgLength = in.readShort();
+					if(msgLength < 8)
+					{
+						throw new IOException("API message too short: " + msgLength + "Bytes.");
+					}
+					short msgType = in.readShort();
+					switch(msgType)
+					{
+					case APISocket.MSG_TYPE_ONION_TUNNEL_BUILD:
+						//skip reserved 2 bytes
+						in.readShort();
+						int targetPort = in.readShort();
+						byte[] targetIpAddress = new byte[ipAddressLength];
+						if(in.read(targetIpAddress) < targetIpAddress.length)
+							throw new IOException("Target IP-Address too short or read() returned less bytes");
+						int hostkeyLength = msgLength - (8 + targetIpAddress.length);
+						if(hostkeyLength <= 0)
+							throw new IOException("API message or target DER-hostkey too short");
+						byte[] targetHostkey = new byte[hostkeyLength];
+						if(in.read(targetHostkey) < targetHostkey.length)
+							throw new IOException("Target hostkey too short or read() returned less bytes");
+						//TODO: call function with the now unpacked arguments.
+						// e.g. onionTunnelBuild(targetIpAddress,targetPort,targetHostkey);
+						break;
+					case APISocket.MSG_TYPE_ONION_TUNNEL_DESTROY:
+						int tunnelId = in.readInt();
+						//TODO: call function with the now unpacked arguments.
+						break;
+					case APISocket.MSG_TYPE_ONION_TUNNEL_DATA:
+						tunnelId = in.readInt();
+						int dataLength = msgLength - 8;
+						if(dataLength <= 0)
+							throw new IOException("API message or data too short");
+						byte[] data = new byte[dataLength];
+						if(in.read(data) < dataLength)
+							throw new IOException("Data too short or read() returned less bytes");
+						//TODO: call function with the now unpacked arguments.
+						break;
+					case APISocket.MSG_TYPE_ONION_COVER:
+						short coverSize = in.readShort();
+						//skip reserved 2 bytes
+						in.readShort();
+						//TODO: call function with the now unpacked arguments.
+						break;
+					}
+					
+				}
+				
+				in.close();
+				clientSocket.close();
+				apiServerSocket.close();
+				
+
+			}
+			catch (IOException e)
+			{
+				System.out.println("API connection lost: " + e.getMessage());
+			}
 		}
-		catch (IOException e)
-		{
-			System.err.println("Could not listen on " + apiAddress + ':' + apiPort);
-			System.exit(1);
-		}
-
-		Socket clientSocket = null;
-		System.out.println("Waiting for connection.....");
-
-		try
-		{
-			clientSocket = apiServerSocket.accept();
-		}
-		catch (IOException e)
-		{
-			System.err.println("Accept failed.");
-			System.exit(1);
-		}
-
-		System.out.println("Connection successful");
-		System.out.println("Waiting for input.....");
-
-		PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-		BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
-		String inputLine;
-
-		while ((inputLine = in.readLine()) != null)
-		{
-			System.out.println("Server: " + inputLine);
-			out.println(inputLine);
-
-			if (inputLine.equals("Bye."))
-				break;
-		}
-
-		out.close();
-		in.close();
-		clientSocket.close();
-		apiServerSocket.close();
 	}
 
 	/**
-	 * @param args Command line arguments
+	 * Runs the Onion module.
 	 * 
-	 * @throws IOException 
+	 * @param configFilePath
+	 *            Path to the config file in INI format
+	 */
+	private void run(String configFilePath) throws IOException
+	{
+
+		readConfigValues(configFilePath);
+
+		System.out.println("Hostkey: " + hostkeyPath + "; API will listen on " + apiAddress + ", Port " + apiPort
+				+ "; Onion will listen on " + onionAddress + ", Port " + onionPort + ". ");
+
+		// run onion socket accepting onion connections from other peers here
+		// in another thread? i think so.
+
+		// run the API-loop
+		runApiListener();
+	}
+
+	/**
+	 * @param args
+	 *            Command line arguments
+	 * 
+	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException
 	{
-		if(args.length < 2 || !"-c".equals(args[0]))
+		if (args.length < 2 || !"-c".equals(args[0]))
 		{
-			System.out.println("Usage: java Main -c <path_to_config_file>");	
+			System.out.println("Usage: java Main -c <path_to_config_file>");
 			System.exit(1);
-		}		
-		
+		}
+
 		new Main().run(args[1]);
 	}
 }
