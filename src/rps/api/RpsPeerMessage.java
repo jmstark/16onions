@@ -20,7 +20,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Objects;
 import protocol.MessageParserException;
@@ -98,7 +97,11 @@ public class RpsPeerMessage extends RpsApiMessage {
     public void send(ByteBuffer out) {
         super.send(out);
         out.putShort((short) this.address.getPort());
-        super.sendEmptyBytes(out, 2); //reserved
+        if (4 == addressBytes.length) { //0 for IPv4; 1 for IPv6
+            this.sendEmptyBytes(out, 2);
+        } else {
+            out.putShort((short) 1);
+        }
         out.put(addressBytes);
         out.put(encoding);
     }
@@ -111,6 +114,8 @@ public class RpsPeerMessage extends RpsApiMessage {
         RSAPublicKey hostkey;
         int port;
         byte[] addressBytes;
+        boolean isIPv4;
+        short flags;
 
         int minSize = 8
                 + 4 //ipv4
@@ -120,16 +125,14 @@ public class RpsPeerMessage extends RpsApiMessage {
                     "Message size too small for RPS Peer message");
         }
         port = buffer.getShort();
-        buffer.getShort();//ignore reserved field
-        //this is bad hack
-        //assume address is 4 bytes
-        try {
+        flags = buffer.getShort();
+        isIPv4 = (0 == (flags << 15)); //0 for IPv4; 1 for IPv6
+        if (isIPv4) {
             addressBytes = new byte[4];
-            hostkey = Misc.parseKey(buffer, addressBytes.length);
-        } catch (MessageParserException ex) {
+        } else {
             addressBytes = new byte[16];
-            hostkey = Misc.parseKey(buffer, addressBytes.length);
         }
+        hostkey = Misc.parseKey(buffer, addressBytes.length);
         buffer.get(addressBytes);
         try {
             address = new InetSocketAddress(InetAddress.getByAddress(
