@@ -56,6 +56,30 @@ following:
     -cp dist/voip.jar:libs/commons-cli-1.3.1.jar:libs/ini4j-0.5.4.jar:junit-4.12.jar
 
 
+The following applications are available in the testing module:
+
+1. ConnectionTest: Opens a number of TCP connections, writes random data and
+   expects to read the written data.  Useful as a fuzzy test.
+
+        java -cp dist/voip.jar tests.ConnectionTest --help
+
+2. gossip.Notify: Application to receive notifications from Gossip
+
+        java -cp dist/voip.java helpers.gossip.Notify --help
+
+3. gossip.Publish: Application to publish a mesage via Gossip
+
+        java -cp dist/voip.java helpers.gossip.Publish --help
+
+4. mockups.*: mockups for various modules
+
+        java -cp dist/voip.java mockups.<module_name>.Main --help
+
+5 tests.*: API conformance tests for various modules
+
+        java -cp dist/voip.java tests.<module_name>.Main --help
+
+
 Debugging
 =========
 
@@ -89,15 +113,6 @@ An another way, on Linux, is to enable TCP\_TW\_REUSE.  This is done by writing
 `1` to `/proc/sys/net/ipv4/tcp_tw_reuse`.  This causes new TCP connections to
 reuse the ports occupied by TCP connections in TCP_WAIT state.
 
-
-Protocol Issues
-===============
-
-The specified protocol has issues, mainly breaking the REST semantics.  These
-are observed in OnionAuth: during session creation the client has to
-synchronously wait for HS1, HS2 messages.  Futhermore, there is no reply to
-incoming HS2 message.  This could be solved by issues a request ID to each of
-those requests and having the reply contain the ID of its corresponding request.
 
 Security
 ========
