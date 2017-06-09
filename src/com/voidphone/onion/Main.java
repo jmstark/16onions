@@ -121,14 +121,12 @@ public class Main
 						in.readShort();
 						int targetPort = in.readShort();
 						byte[] targetIpAddress = new byte[ipAddressLength];
-						if(in.read(targetIpAddress) < targetIpAddress.length)
-							throw new IOException("Target IP-Address too short or read() returned less bytes");
+						in.readFully(targetIpAddress, 0, targetIpAddress.length);
 						int hostkeyLength = msgLength - (8 + targetIpAddress.length);
 						if(hostkeyLength <= 0)
 							throw new IOException("API message or target DER-hostkey too short");
 						byte[] targetHostkey = new byte[hostkeyLength];
-						if(in.read(targetHostkey) < targetHostkey.length)
-							throw new IOException("Target hostkey too short or read() returned less bytes");
+						in.readFully(targetHostkey, 0, targetHostkey.length);
 						//TODO: call function with the now unpacked arguments.
 						// e.g. onionTunnelBuild(targetIpAddress,targetPort,targetHostkey);
 						break;
@@ -142,8 +140,7 @@ public class Main
 						if(dataLength <= 0)
 							throw new IOException("API message or data too short");
 						byte[] data = new byte[dataLength];
-						if(in.read(data) < dataLength)
-							throw new IOException("Data too short or read() returned less bytes");
+						in.readFully(data, 0, dataLength);
 						//TODO: call function with the now unpacked arguments.
 						break;
 					case APISocket.MSG_TYPE_ONION_COVER:

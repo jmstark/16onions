@@ -1,9 +1,13 @@
 package com.voidphone.onion;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import com.voidphone.api.APIOnionAuthSocket;
 
@@ -13,33 +17,36 @@ import com.voidphone.api.APIOnionAuthSocket;
  */
 public abstract class OnionBaseSocket
 {
+	public final static int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
+	public final static int VERSION = 1;
+	
 	protected static APIOnionAuthSocket oasock = null;
 
-	abstract void initiateOnionConnection(InputStream in, OutputStream out, byte hostkey[], int size)
+	abstract void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte hostkey[], int bufferSize)
 			throws IOException;
 
-	private OnionBaseSocket(InputStream in, OutputStream out, byte hostkey[], int size) throws IOException
+	private OnionBaseSocket(DataInputStream in, DataOutputStream out, byte hostkey[], int bufferSize) throws IOException
 	{
-		initiateOnionConnection(in, out, hostkey, size);
+		initiateOnionConnection(in, out, hostkey, bufferSize);
 
 	}
 
-	public OnionBaseSocket(Socket sock, byte hostkey[], int size) throws IOException
+	public OnionBaseSocket(Socket sock, byte hostkey[], int bufferSize) throws IOException
 	{
-		this(sock.getInputStream(), sock.getOutputStream(), hostkey, size);
+		this(new DataInputStream(sock.getInputStream()), new DataOutputStream(sock.getOutputStream()), hostkey, bufferSize);
 	}
 
-	public OnionBaseSocket(OnionBaseSocket sock, byte hostkey[], int size) throws IOException
+	public OnionBaseSocket(OnionBaseSocket sock, byte hostkey[], int bufferSize) throws IOException
 	{
-		this(sock.getInputStream(), sock.getOutputStream(), hostkey, size);
+		this(sock.getDataInputStream(), sock.getDataOutputStream(), hostkey, bufferSize);
 	}
 
-	public InputStream getInputStream()
+	public DataInputStream getDataInputStream()
 	{
 		return null;
 	}
 
-	public OutputStream getOutputStream()
+	public DataOutputStream getDataOutputStream()
 	{
 		return null;
 	}
