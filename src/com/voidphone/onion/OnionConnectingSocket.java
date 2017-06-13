@@ -17,7 +17,7 @@ import com.voidphone.api.APIOnionAuthSocket;
  */
 public class OnionConnectingSocket extends OnionBaseSocket
 {
-
+	
 	public OnionConnectingSocket(Socket sock, byte[] hostkey, int size) throws IOException
 	{
 		super(sock, hostkey, size);

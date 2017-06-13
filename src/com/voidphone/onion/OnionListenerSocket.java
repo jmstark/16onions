@@ -40,6 +40,7 @@ public class OnionListenerSocket extends OnionBaseSocket
 		super(sock, hostkey, size);
 	}
 
+	
 	/**
 	 * This function is used to build and destroy tunnels. Building/destroying
 	 * is done iteratively. A control message only consists of message type,
@@ -65,10 +66,12 @@ public class OnionListenerSocket extends OnionBaseSocket
 			nextHopAddress = null;
 			nextHopPort = 0;
 			nextHopDataOutgoing.close();
+			nextHopDataOutgoing = null;
 
 			lastHopAddress = null;
 			lastHopPort = 0;
 			lastHopDataOutgoing.close();
+			lastHopDataOutgoing = null;
 		}
 		// construct next hop
 		byte destinationAddressLength = lastHopControlMsgIncoming.readByte();
@@ -94,6 +97,7 @@ public class OnionListenerSocket extends OnionBaseSocket
 				nextHopControlMsgOutgoing = new DataOutputStream(nextHopSocket.getOutputStream());
 				nextHopAddress = destinationAddress.clone();
 				nextHopPort = destinationPort;
+				nextHopDataOutgoing = new DatagramSocket();
 				nextHopDataOutgoing.connect(InetAddress.getByAddress(nextHopAddress), nextHopPort);
 
 			}

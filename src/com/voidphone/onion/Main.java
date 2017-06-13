@@ -78,6 +78,41 @@ public class Main
 	}
 
 	/**
+	 * Constructs iteratively a tunnel to the target.
+	 * If targetAddress is null, a random target node is selected.
+	 * @param targetAddress
+	 * @param targetPort
+	 * @param targetHostkey
+	 * @param numHops
+	 * @throws Exception
+	 */
+	private void constructTunnel(byte[] targetAddress, short targetPort, byte[] targetHostkey, int numHops) throws Exception
+	{
+		final int bufsize=12345;
+		byte[][] hopAddress = new byte[numHops + 1][];
+		short[] hopPort = new short[numHops + 1];
+		byte[][] hopHostkey = new byte[numHops + 1][];
+		OnionConnectingSocket[] onionSockets = new OnionConnectingSocket[numHops+1];
+		if(targetAddress!=null)
+		{
+			hopAddress[numHops] = targetAddress;
+			hopPort[numHops] = targetPort;
+			hopHostkey[numHops] = targetHostkey;
+		}
+		for(int i=0;i <= numHops;i++)
+		{
+			if(hopAddress[i] == null)
+			{
+				//TODO: RPS-query -> hopAddress, hopPort, hopHostkey
+			}
+		}
+		Socket nextHop = new Socket(InetAddress.getByAddress(hopAddress[0]),hopPort[0]);
+		onionSockets[0] = new OnionConnectingSocket(nextHop, hopHostkey[0], bufsize);
+		
+
+	}
+
+	/**
 	 * Listens for incoming TCP API connection, accepts API requests, unpacks
 	 * them and calls the appropriate methods, and sends answers (if
 	 * applicable).
