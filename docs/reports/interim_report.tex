@@ -33,6 +33,8 @@ To preserve anonymity, all UDP packets are of the same size (64 KiB) and there i
 
 
 \subsection{Control message flow}
+TODO Josef all messages should be of same size, including TCP data (one data size for TCP, e.g. 16 bytes and one for UDP, e.g. 64 KiB). 
+
 When a node A wants to directly connect to another node B, it has to pass the following stages:
 \begin{itemize}
 	\item Establish a simple TCP connection to B.
