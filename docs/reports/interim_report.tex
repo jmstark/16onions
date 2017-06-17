@@ -2,6 +2,7 @@
 \usepackage[english]{babel}
 \usepackage{url}
 \usepackage{bytefield}
+
 \begin{document}
 \title{\Huge Interim Report \normalsize}
 \date{\today}
@@ -17,8 +18,14 @@ We are the team ``16 Onions'' consisting of Josef Stark and Charlie Groh,
 and our goal is to develop a prototype implementation of the Onion module.
 
 \section{Process Architecture}
+Because of the simpler process architecture and better debugging support we will try to implement
+our module event-driven. This means there will run one main loop waiting for incoming packets from
+multiple sockets and issuing appropriate actions. As a result the program will not be able to
+utilize multiple processor cores, but since our application is not performance critical, that
+should not induce any problems.
+
+
 TODO Charlie: haben uns für EventLoops entschieden; falls sich während der Implementierung Threads als günstiger erweisen (weniger Aufwand/einfachere Modulstruktur/bessere Performance/sonstwas) schwenken wir evtl doch darauf um. Multiprocess wird aber ausgeschlossen, da es in Java unüblich und schwierig zu realisieren ist, mehr Resourcen benötigt und die Isolierung bei der geringen Modulkomplexität noch wenig Sinn macht.
-ausserdem noch einleitung und schluss wenn du meinst, und ich habe dir weiter unten noch ein TODO wg. bytefield markiert, das ich nicht loesen konnte.
 
 \section{Inter-Module Protocol}
 For the communication between distinct onion instances we decided to use both TCP and UDP as underlying protocols in order to avoid reinventing the wheel, since they both fulfill the respective requirements perfectly.
@@ -41,8 +48,9 @@ When a node A wants to directly connect to another node B, it has to pass the fo
 	\item Authenticate as onion node to avoid connecting to unrelated services running on the onion port.
 	\item Do the onion handshake using OnionAuth module.
 \end{itemize}
-This all happens over TCP. Once the handshake has completed, the two peers can now exchange other control messages (see BLA) as well as user data (UDP), everything from this point on being encrypted with an ephemeral session key, so no one else can read their communication. \\
+This all happens over TCP. Once the handshake has completed, the two peers can now exchange other control messages (see \ref{subsec:control_message_types}) as well as user data (UDP), everything from this point on being encrypted with an ephemeral session key, so no one else can read their communication. \\
 
+\label{subsec:control_message_types}
 \subsubsection{Control message types}
 \begin{itemize}
 	\item Authentication as onion node (TCP):
@@ -69,7 +77,7 @@ This all happens over TCP. Once the handshake has completed, the two peers can n
 \end{bytefield}
 Once A has established an encrypted connection to its first hop H1, it can send this message to it. H1 will then establish an unencrypted TCP connection to the hop H2 specified in this package and from that point on it will forward all TCP and UDP traffic it receives from A to H2 and for UDP packets also vice-versa. A can now do the authentication and handshake process with H2 over the encrypted connection to H1. It can iteratively add more hops like this until it reaches the desired target node.
 
-
+\label{itm:heartbeat}
 \item HEARTBEAT (TCP): \\
 
 \begin{bytefield}[bitwidth=2.2em]{16}
@@ -77,7 +85,10 @@ Once A has established an encrypted connection to its first hop H1, it can send 
 	\bitbox{8}{HEARTBEAT} 
 \end{bytefield}
 
-This is sent at regular intervals from the tunnel initiator to the node at the end of the tunnel and vice-versa. If one of the two nodes does not receive a heartbeat in a certain time interval, it needs to assume that the tunnel is down and establish or wait for a new one. 
+This is sent if one of the nodes at the end of the tunnel has a suspicion that the tunnel went down.
+If the originator did not receive the same message as reply in a certain time interval, it needs to
+assume that the tunnel is down and it has to do further exception handling (see
+\ref{subsec:packet_loss_exception}).
 	
 \item TUNNEL TEARDOWN (TCP): \\
 
@@ -88,17 +99,16 @@ This is sent at regular intervals from the tunnel initiator to the node at the e
 
 This is used for the controlled destruction of a tunnel. The tunnel initiator has to send this to every hop, starting from the farthest to the closest one.
 
+\subsubsection{Data message types}
+
 \item COVER DATA (UDP): \\
-
-TODO Charlie ich weiss nicht warum die 64KiB-Klammer auf der rechten Seite so saublöd nach unten verschoben ist. Bei DATA hab ichs genauso und da passt es.
-
 
 \begin{bytefield}[bitwidth=2.2em]{16}
 	\begin{rightwordgroup}{64 KiB}
 		\bitheader{0,7,8,15} \\
 		\bitbox{8}{COVER DATA}
 		\bitbox[lrt]{8}{} \\
-		\wordbox[lrb]{3}{random fake data} \\
+		\wordbox[lrb]{3}{random fake data}
 	\end{rightwordgroup}
 \end{bytefield}
 
@@ -120,9 +130,34 @@ Used for fake data if there is no active call between two peers. The packet alwa
 Used for actual VoIP data. If a peer starts receiving these packets, it should start interpret it as a call request and start interpreting the data and responding with VoIP data once the user has accepted the call. Once the requesting peer starts receiving  those answers, it knows that the call has been accepted.
 
 \end{itemize}
-\subsection{Exception handling}
-TODO Charlie: Exceptions cause the app to blow up.
 
+\subsection{Exception handling}
+In general there are three possible exception which could occur:
+\begin{itemize}
+\item a packet gets lost
+\item an unexpected packet arrives
+\item a packet is malformed
+\end{itemize}
+
+\label{subsec:packet_loss_exception}
+\subsubsection{Packet-loss}
+If the lost packet is an UDP-packet, the loss can not be detected by the Onion module and is
+therefore ignored. Nevertheless we consider implementing a watchdog-like mechanism to catch
+abnormal low rates of UDP-packets.
+
+When the module suspects the onion tunnel of being broken it will try to ping the destination peer
+by sending the heartbeat (see \ref{itm:heartbeat}) message. If the suspicion substantiates an
+appropriate ONION-ERROR-message is delivered.
+
+Since TCP will try to handle lost packets by itself an exception originated by a TCP-socket is
+considered as critical and will cause an ONION-ERROR-message immediately.
+
+\subsubsection{Unexpected and malformed packets}
+Due to the reason that unexpected packets can not be distinguished from malformed packets both
+exceptions will be handled in the same way. We assume that the Onion Auth module is preventing
+replay-attacks and is guaranteeing the integrity of every message sent or received. Therefore our
+module has to consider every received malformed message as an attack against our peer. Such
+situation will cause an immediate termination of the onion tunnel and an ONION-ERROR-message.
 
 \end{document}
 \grid
