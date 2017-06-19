@@ -41,20 +41,20 @@ public class OnionAuthSessionIncomingHS1Test {
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
     static final KeyPair keyPair = util.SecurityHelper.generateRSAKeyPair(2048);
-    static final long sessionID;
+    static final long requestID;
     static final byte[] payload;
 
     static {
         Random rand = new Random();
-        sessionID = Message.unsignedLongFromInt(rand.nextInt());
+        requestID = util.MyRandom.randUInt();
         payload = new byte[rand.nextInt(32000)];
         rand.nextBytes(payload);
     }
     private OnionAuthSessionIncomingHS1 message;
 
     public OnionAuthSessionIncomingHS1Test() throws MessageSizeExceededException {
-        message = new OnionAuthSessionIncomingHS1((RSAPublicKey) keyPair.
-                getPublic(), payload);
+        message = new OnionAuthSessionIncomingHS1(requestID,
+                (RSAPublicKey) keyPair.getPublic(), payload);
     }
 
     /**
