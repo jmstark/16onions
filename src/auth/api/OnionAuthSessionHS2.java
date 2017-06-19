@@ -31,9 +31,9 @@ public class OnionAuthSessionHS2 extends OnionAuthSessionHS1 {
 
     private static final MessageType TYPE = MessageType.API_AUTH_SESSION_HS2;
 
-    public OnionAuthSessionHS2(long id, byte[] payload) throws
-            MessageSizeExceededException {
-        super(id, payload);
+    public OnionAuthSessionHS2(int sessionID, long requestID, byte[] payload)
+            throws MessageSizeExceededException {
+        super(sessionID, requestID, payload);
         this.changeMessageType(TYPE);
     }
 
@@ -43,7 +43,8 @@ public class OnionAuthSessionHS2 extends OnionAuthSessionHS1 {
         OnionAuthSessionHS1 parent;
         parent = OnionAuthSessionHS1.parse(buf);
         try {
-            message = new OnionAuthSessionHS2(parent.id, parent.payload);
+            message = new OnionAuthSessionHS2(parent.getSessionID(),
+                    parent.getRequestID(), parent.getPayload());
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException();
         }
