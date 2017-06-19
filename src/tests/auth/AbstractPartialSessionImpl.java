@@ -28,7 +28,7 @@ public abstract class AbstractPartialSessionImpl extends SessionImpl
 
     private final byte[] payload;
 
-    public AbstractPartialSessionImpl(long id, byte[] payload,
+    public AbstractPartialSessionImpl(int id, byte[] payload,
             Connection connection) {
         super(id, connection);
         this.payload = payload;

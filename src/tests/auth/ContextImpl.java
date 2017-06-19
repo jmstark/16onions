@@ -16,6 +16,12 @@
  */
 package tests.auth;
 
+import auth.api.OnionAuthDecryptResp;
+import auth.api.OnionAuthEncryptResp;
+import auth.api.OnionAuthSessionHS1;
+import auth.api.OnionAuthSessionHS2;
+import auth.api.OnionAuthSessionIncomingHS1;
+import auth.api.OnionAuthSessionStartMessage;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -26,14 +32,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import auth.api.OnionAuthClose;
-import auth.api.OnionAuthDecryptResp;
-import auth.api.OnionAuthEncryptResp;
-import auth.api.OnionAuthSessionHS1;
-import auth.api.OnionAuthSessionHS2;
-import auth.api.OnionAuthSessionIncomingHS1;
-import auth.api.OnionAuthSessionIncomingHS2;
-import auth.api.OnionAuthSessionStartMessage;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
@@ -52,6 +50,7 @@ class ContextImpl implements Context {
     private final HashMap<Integer, Future> map;
     private FutureImpl future;
     private final Logger logger;
+    private long requestID;
 
     private enum State {
         START_SESSION, //we start a session by sending SESSION_START
@@ -69,12 +68,21 @@ class ContextImpl implements Context {
         state = State.OTHER;
     }
 
+    /**
+     * Return a new requestID
+     *
+     * @return the newly generated request ID
+     */
+    private long newRequestID() {
+        return requestID++;
+    }
+
     @Override
     public Future<PartialSession> startSession(RSAPublicKey key,
             CompletionHandler<PartialSession, Void> handler) {
         OnionAuthSessionStartMessage message;
         try {
-            message = new OnionAuthSessionStartMessage(key);
+            message = new OnionAuthSessionStartMessage(newRequestID(), key);
         } catch (MessageSizeExceededException ex) {
             throw new RuntimeException("Public key too big");
         }
@@ -90,7 +98,7 @@ class ContextImpl implements Context {
             CompletionHandler<PartialSession, Void> handler) throws
             MessageSizeExceededException {
         OnionAuthSessionIncomingHS1 message;
-        message = new OnionAuthSessionIncomingHS1(key, diffiePayload);
+        message = new OnionAuthSessionIncomingHS1(newRequestID(), key, diffiePayload);
         connection.sendMsg(message);
         /**
          * we assume that SESSION_START and START_SESSION_HS1 are progressed
@@ -149,7 +157,7 @@ class ContextImpl implements Context {
                     }
                          logger.log(Level.FINER, "Parsed AUTH SESSION HS1");
                     if (null != message) {
-                        session = new PartialSessionHS1Impl(message.getId(),
+                        session = new PartialSessionHS1Impl(message.getSessionID(),
                                 message.getPayload(), connection);
                         logger.log(Level.FINEST, "Created IncompleteSession");
                         future.trigger(session, null);

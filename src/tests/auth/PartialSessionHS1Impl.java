@@ -26,7 +26,7 @@ import protocol.MessageSizeExceededException;
  */
 public class PartialSessionHS1Impl extends AbstractPartialSessionImpl {
 
-    public PartialSessionHS1Impl(long id, byte[] payload, Connection connection) {
+    public PartialSessionHS1Impl(int id, byte[] payload, Connection connection) {
         super(id, payload, connection);
     }
 
