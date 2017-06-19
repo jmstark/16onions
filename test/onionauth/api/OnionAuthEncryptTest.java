@@ -37,23 +37,23 @@ public class OnionAuthEncryptTest {
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
     static final byte[] payload;
-    static final long[] sessions;
-    static final int requestId;
+    static final int[] sessions;
+    static final long requestID;
 
     static {
         Random rand = new Random();
         payload = new byte[rand.nextInt(32000)];
         rand.nextBytes(payload);
-        sessions = new long[rand.nextInt(100)];
+        sessions = new int[rand.nextInt(100)];
         for (int index = 0; index < sessions.length; index++) {
-            sessions[index] = Message.unsignedLongFromInt(rand.nextInt());
+            sessions[index] = rand.nextInt(Message.UINT16_MAX + 1);
         }
-        requestId = rand.nextInt((Short.MAX_VALUE * 2) + 2);
+        requestID = util.MyRandom.randUInt();
     }
     private final OnionAuthEncrypt message;
 
     public OnionAuthEncryptTest() throws MessageSizeExceededException {
-        message = new OnionAuthEncrypt(requestId, sessions, payload);
+        message = new OnionAuthEncrypt(requestID, sessions, payload);
     }
 
     /**
@@ -62,8 +62,8 @@ public class OnionAuthEncryptTest {
     @Test
     public void testGetId() {
         System.out.println("getId");
-        int expResult = requestId;
-        int result = message.getId();
+        long expResult = requestID;
+        long result = message.getRequestID();
         assertEquals(expResult, result);
     }
 
@@ -73,8 +73,8 @@ public class OnionAuthEncryptTest {
     @Test
     public void testGetSessions() {
         System.out.println("getSessions");
-        long[] expResult = sessions;
-        long[] result = message.getSessions();
+        int[] expResult = sessions;
+        int[] result = message.getSessions();
         assertArrayEquals(expResult, result);
     }
 
