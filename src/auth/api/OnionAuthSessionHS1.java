@@ -19,6 +19,7 @@ package auth.api;
 import java.nio.ByteBuffer;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -35,9 +36,13 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
     @Getter protected long requestID;
 
     public OnionAuthSessionHS1(int sessionID, long requestID, byte[] payload) throws MessageSizeExceededException {
-        assert (sessionID <= ((1L << 32) - 1));
+        assert (sessionID <= Message.UINT16_MAX);
+        assert (requestID <= Message.UINT32_MAX);
         this.addHeader(Protocol.MessageType.API_AUTH_SESSION_HS1);
+        this.size += 2;// for reserved
         this.sessionID = sessionID;
+        this.size += 2;
+        this.requestID = requestID;
         this.size += 4;
         if ((this.size + payload.length) > Protocol.MAX_MESSAGE_SIZE) {
             throw new MessageSizeExceededException();
@@ -49,7 +54,9 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
+        super.sendEmptyBytes(out, 2);//reserved
         out.putShort((short) this.sessionID);
+        out.putInt((int) requestID);
         out.put(this.payload);
     }
 
@@ -57,17 +64,21 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
             throws MessageParserException {
         OnionAuthSessionHS1 message;
         byte[] payload;
+        long requestID;
+        int sessionID;
 
         if (buf.remaining() <= 4) {
             throw new MessageParserException("Missing payload");
         }
-        long id = protocol.Message.unsignedLongFromInt(buf.getInt());
+        buf.getShort(); //read out reserved part
+        sessionID = Message.unsignedIntFromShort(buf.getShort());
+        requestID = Message.unsignedLongFromInt(buf.getInt());
         payload = new byte[buf.remaining()];
         buf.get(payload);
         try {
-            message = new OnionAuthSessionHS1((int) id, 0, payload);
+            message = new OnionAuthSessionHS1(sessionID, requestID, payload);
         } catch (MessageSizeExceededException ex) {
-            throw new MessageParserException("invalid message encoding");
+            throw new MessageParserException("Invalid message encoding");
         }
         return message;
     }
