@@ -9,9 +9,12 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 
-import com.voidphone.api.APIOnionAuthSocket;
+import com.voidphone.api.OnionAuthAPISocket;
+import com.voidphone.api.Config;
 
 /**
  * Base class for OnionConnectingSocket and OnionListenerSocket
@@ -26,7 +29,6 @@ public abstract class OnionBaseSocket
 	protected final byte MSG_DESTROY_TUNNEL = 0xd;
 
 	protected final int MAX_DATA_PACKET_SIZE = 65536/2;
-	protected static APIOnionAuthSocket oasock = null;
 	protected int tunnelId;
 	protected DatagramSocket nextHopDataOutgoing = null;
 	protected DatagramSocket lastHopDataOutgoing = null;	
@@ -34,24 +36,27 @@ public abstract class OnionBaseSocket
 	protected short nextHopPort = 0;
 	protected byte[] lastHopAddress = null;
 	protected short lastHopPort = 0;
+	protected DataInputStream dis;
+	protected DataOutputStream dos;
 
-	abstract void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte hostkey[], int bufferSize)
+	abstract void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte hostkey[], Config config)
 			throws IOException;
 
-	private OnionBaseSocket(DataInputStream in, DataOutputStream out, byte hostkey[], int bufferSize) throws IOException
+	private OnionBaseSocket(DataInputStream in, DataOutputStream out, byte hostkey[], Config config) throws IOException
 	{
-		initiateOnionConnection(in, out, hostkey, bufferSize);
-
+		dis = in;
+		dos = out;
+		initiateOnionConnection(in, out, hostkey, config);
 	}
 
-	public OnionBaseSocket(Socket sock, byte hostkey[], int bufferSize) throws IOException
+	public OnionBaseSocket(SocketChannel sock, byte hostkey[], Config config) throws IOException
 	{
-		this(new DataInputStream(sock.getInputStream()), new DataOutputStream(sock.getOutputStream()), hostkey, bufferSize);
+		this(new DataInputStream(Channels.newInputStream(sock)), new DataOutputStream(Channels.newOutputStream(sock)), hostkey, config);
 	}
 
-	public OnionBaseSocket(OnionBaseSocket sock, byte hostkey[], int bufferSize) throws IOException
+	public OnionBaseSocket(OnionBaseSocket sock, byte hostkey[], Config config) throws IOException
 	{
-		this(sock.getDataInputStream(), sock.getDataOutputStream(), hostkey, bufferSize);
+		this(sock.getDataInputStream(), sock.getDataOutputStream(), hostkey, config);
 	}
 
 	
@@ -61,7 +66,7 @@ public abstract class OnionBaseSocket
 	 * than one tunnel through it, a dispatcher receives
 	 * all incoming UDP packets, extracts the tunnel ID
 	 * and then calls this method of the according instance.
-	 * @param in
+	 * @param dis
 	 * @throws IOException 
 	 */
 	void processNextDataMessage(DatagramPacket incomingPacket) throws IOException
@@ -98,13 +103,5 @@ public abstract class OnionBaseSocket
 	public DataOutputStream getDataOutputStream()
 	{
 		return null;
-	}
-
-	public static void initAPIOnionAuthSocket(APIOnionAuthSocket oasock)
-	{
-		if (oasock == null)
-		{
-			OnionBaseSocket.oasock = oasock;
-		}
 	}
 }

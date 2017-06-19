@@ -3,11 +3,10 @@ package com.voidphone.onion;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
+import java.nio.channels.SocketChannel;
 
-import com.voidphone.api.APIOnionAuthSocket;
+import com.voidphone.api.Config;
+import com.voidphone.api.OnionAuthAPISocket;
 
 /**
  * When the main application wants to connect to a new node, it establishes a
@@ -18,32 +17,32 @@ import com.voidphone.api.APIOnionAuthSocket;
 public class OnionConnectingSocket extends OnionBaseSocket
 {
 	
-	public OnionConnectingSocket(Socket sock, byte[] hostkey, int size) throws IOException
+	public OnionConnectingSocket(SocketChannel sock, byte[] hostkey, Config config) throws IOException
 	{
-		super(sock, hostkey, size);
+		super(sock, hostkey, config);
 	}
 
 	@Override
-	void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte[] hostkey, int size) throws IOException
+	void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte[] hostkey, Config config) throws IOException
 	{
-		APIOnionAuthSocket.AUTHSESSIONHS1 hs1;
-		byte buffer[] = new byte[size];
+		OnionAuthAPISocket.AUTHSESSIONHS1 hs1;
+		short size;
+		byte buffer[];
 		
-		out.write(MAGIC_SEQ_CONNECTION_START);
-		out.write(VERSION);
+		out.writeInt(MAGIC_SEQ_CONNECTION_START);
+		out.writeInt(VERSION);
 
-		//Get hs1 from onionAuth and send it to remote peer
-		//the API reply also contains a requestID and a sessionID.
-		//requestID is implicitely handled but maybe we have to save
-		//the session ID?
-		hs1 = oasock.AUTHSESSIONSTART(new APIOnionAuthSocket.AUTHSESSIONSTART(hostkey));
+		// get hs1 from onionAuth and send it to remote peer
+		hs1 = config.getOnionAuthAPISocket().AUTHSESSIONSTART(new OnionAuthAPISocket.AUTHSESSIONSTART(hostkey));
+		out.writeShort(hs1.getPayload().length);
 		out.write(hs1.getPayload());
+		
 		// read incoming hs2 into buffer. We need to know the length of hs2
-		// TODO: replace 1234 with actual hs2 length
-		in.readFully(buffer, 0, 1234);
+		size = in.readShort();
+		buffer = new byte[size];
+		in.readFully(buffer, 0, size);
 
-		oasock.AUTHSESSIONINCOMINGHS2(new APIOnionAuthSocket.AUTHSESSIONINCOMINGHS2(hs1.getSession(), buffer));
-
+		config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS2(new OnionAuthAPISocket.AUTHSESSIONINCOMINGHS2(hs1.getSession(), buffer));
 	}
 
 }

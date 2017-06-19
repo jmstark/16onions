@@ -1,21 +1,16 @@
 package com.voidphone.onion;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.channels.SocketChannel;
 
-import sun.net.InetAddressCachePolicy;
-
-import com.voidphone.api.APIOnionAuthSocket;
-import com.voidphone.api.APIOnionAuthSocket.AUTHSESSIONINCOMINGHS1;
+import com.voidphone.api.OnionAuthAPISocket;
+import com.voidphone.api.OnionAuthAPISocket.AUTHSESSIONINCOMINGHS1;
+import com.voidphone.api.Config;
 
 /**
  * Main application runs a TCP server socket. There, when it receives a new
@@ -24,22 +19,18 @@ import com.voidphone.api.APIOnionAuthSocket.AUTHSESSIONINCOMINGHS1;
  * constructor. Then it should send a TUNNEL_READY API message.
  * 
  */
-public class OnionListenerSocket extends OnionBaseSocket
+public class OnionListenerSocket extends OnionBaseSocket implements Main.Attachable
 {
-
-	private byte[] ownAddress = { 0, 0, 0, 0 };
-	private short ownPort = 0;
 	private DataOutputStream nextHopControlMsgOutgoing = null;
 	private DataInputStream lastHopControlMsgIncoming = null;
 	private Socket nextHopSocket = null;
 	protected static DatagramSocket dataIncoming;// = new DatagramSocket(1423);
 
 
-	public OnionListenerSocket(Socket sock, byte[] hostkey, int size) throws IOException
+	public OnionListenerSocket(SocketChannel sock, byte[] hostkey, Config config) throws IOException
 	{
-		super(sock, hostkey, size);
+		super(sock, hostkey, config);
 	}
-
 	
 	/**
 	 * This function is used to build and destroy tunnels. Building/destroying
@@ -105,26 +96,36 @@ public class OnionListenerSocket extends OnionBaseSocket
 	}
 
 	@Override
-	void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte[] hostkey, int size) throws IOException
+	void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte[] hostkey, Config config) throws IOException
 	{
-
-		APIOnionAuthSocket.AUTHSESSIONHS2 hs2;
-		byte[] buffer = new byte[size];
-
-		if (in.readInt() != MAGIC_SEQ_CONNECTION_START || in.readInt() != VERSION)
+		OnionAuthAPISocket.AUTHSESSIONHS2 hs2;
+		short size;
+		byte buffer[];
+		
+		if (in.readInt() != MAGIC_SEQ_CONNECTION_START | in.readInt() != VERSION)
 			throw new IOException("Tried to connect with non-onion node or wrong version node");
 
 		// read incoming hs1 from remote peer into buffer
-		// TODO: replace 1234 with actual hs1 length
-		in.readFully(buffer, 0, 1234);
+		size = in.readShort();
+		buffer = new byte[size];
+		in.readFully(buffer, 0, size);
 
 		// get hs2 from onionAuth and send it back to remote peer
-		// the API reply also contains a requestID and a sessionID.
-		// requestID is implicitely handled but maybe we have to save
-		// the session ID?
-		hs2 = oasock.AUTHSESSIONINCOMINGHS1(new AUTHSESSIONINCOMINGHS1(hostkey, buffer));
+		hs2 = config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS1(new AUTHSESSIONINCOMINGHS1(hostkey, buffer));
+		out.writeShort(hs2.getPayload().length);
 		out.write(hs2.getPayload());
-
 	}
 
+	@Override
+	public boolean handle() {
+		try {
+			System.out.println(dis.read());
+			System.out.println(dis.read());
+			System.out.println(dis.read());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.exit(1);
+		return false;
+	}
 }
