@@ -6,6 +6,7 @@ package util;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import protocol.Message;
 
 /**
  *
@@ -40,6 +41,16 @@ public class MyRandom {
 
         int randomNum = rand.nextInt((max - min) + 1) + min;
         return randomNum;
+    }
+
+    /**
+     * Return a random long in the range [0, UINT32_MAX]
+     *
+     * @return a random long uniformly picked from the range [0, UINT32_MAX]
+     */
+    public static long randUInt() {
+        int num = rand.nextInt();
+        return 0 <= num ? num : Message.UINT32_MAX + num + 1;
     }
 
     public static String randLetter(int length) {
