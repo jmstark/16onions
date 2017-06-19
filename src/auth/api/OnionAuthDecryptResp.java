@@ -28,9 +28,9 @@ import protocol.MessageSizeExceededException;
  */
 public class OnionAuthDecryptResp extends OnionAuthEncryptResp {
 
-    public OnionAuthDecryptResp(int id, byte[] payload) throws
+    public OnionAuthDecryptResp(long requestID, byte[] payload) throws
             MessageSizeExceededException {
-        super(id, payload);
+        super(requestID, payload);
     }
 
     public static OnionAuthDecryptResp parse(ByteBuffer buf) throws
@@ -39,7 +39,7 @@ public class OnionAuthDecryptResp extends OnionAuthEncryptResp {
         parent = OnionAuthEncryptResp.parse(buf);
         OnionAuthDecryptResp message;
         try {
-            message = new OnionAuthDecryptResp(parent.getId(), parent.
+            message = new OnionAuthDecryptResp(parent.getRequestID(), parent.
                     getPayload());
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException();

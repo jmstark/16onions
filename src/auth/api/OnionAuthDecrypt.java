@@ -28,9 +28,10 @@ import protocol.Protocol;
  */
 public class OnionAuthDecrypt extends OnionAuthEncrypt {
 
-    public OnionAuthDecrypt(int id, long[] sessions, byte[] payload) throws
+    public OnionAuthDecrypt(long requestID,
+            int[] sessions, byte[] payload) throws
             MessageSizeExceededException {
-        super(id, sessions, payload);
+        super(requestID, sessions, payload);
         this.changeMessageType(Protocol.MessageType.API_AUTH_LAYER_DECRYPT);
     }
 
@@ -40,7 +41,8 @@ public class OnionAuthDecrypt extends OnionAuthEncrypt {
         parent = OnionAuthEncrypt.parse(buf);
         OnionAuthDecrypt message;
         try {
-            message = new OnionAuthDecrypt(parent.getId(), parent.getSessions(),
+            message = new OnionAuthDecrypt(parent.getRequestID(),
+                    parent.getSessions(),
                     parent.getPayload());
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException();
