@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
+import protocol.Protocol;
 
 /**
  *
@@ -31,6 +32,7 @@ public class OnionAuthDecryptResp extends OnionAuthEncryptResp {
     public OnionAuthDecryptResp(long requestID, byte[] payload) throws
             MessageSizeExceededException {
         super(requestID, payload);
+        this.changeMessageType(Protocol.MessageType.API_AUTH_LAYER_DECRYPT_RESP);
     }
 
     public static OnionAuthDecryptResp parse(ByteBuffer buf) throws
