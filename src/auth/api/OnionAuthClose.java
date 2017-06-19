@@ -17,6 +17,9 @@
 package auth.api;
 
 import java.nio.ByteBuffer;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import protocol.Message;
 import protocol.MessageParserException;
 import protocol.Protocol;
 
@@ -24,19 +27,16 @@ import protocol.Protocol;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
+@EqualsAndHashCode(callSuper = true)
 public class OnionAuthClose extends OnionAuthApiMessage {
 
-    int sessionID;
+    @Getter private int sessionID;
 
     public OnionAuthClose(int sessionID) {
         super.addHeader(Protocol.MessageType.API_AUTH_SESSION_CLOSE);
-        assert (sessionID <= ((1 << 16) - 1));
+        assert (sessionID <= Message.UINT16_MAX);
         this.sessionID = sessionID;
         this.size += 4; //2 bytes reserved; 2 for sessionID
-    }
-
-    public int getSessionID() {
-        return sessionID;
     }
 
     public void send(ByteBuffer out) {
@@ -47,7 +47,7 @@ public class OnionAuthClose extends OnionAuthApiMessage {
 
     public static OnionAuthClose parse(ByteBuffer buf) throws
             MessageParserException {
-        int id;
+        int sessionID;
         int remaining;
 
         remaining = buf.remaining();
@@ -56,8 +56,8 @@ public class OnionAuthClose extends OnionAuthApiMessage {
             throw new MessageParserException("unable to parse message");
         }
         buf.getShort();//reserved
-        id = protocol.Message.unsignedIntFromShort(buf.getShort());
-        OnionAuthClose message = new OnionAuthClose(id);
+        sessionID = protocol.Message.unsignedIntFromShort(buf.getShort());
+        OnionAuthClose message = new OnionAuthClose(sessionID);
         return message;
     }
 
