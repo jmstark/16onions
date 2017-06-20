@@ -211,6 +211,7 @@ exceptions will be handled in the same way. We assume that the Onion Auth module
 replay-attacks and is guaranteeing the integrity of every message sent or received. Therefore our
 module has to consider every received malformed message as an attack against our peer. Such
 situation will cause an immediate termination of the onion tunnel and an ONION-ERROR-message.
+Nevertheless an error detected by the Onion Auth module is simply ignored.
 
 \end{document}
 \grid
