@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,29 +16,19 @@
  */
 package tests.auth;
 
-import protocol.Connection;
-import protocol.MessageSizeExceededException;
-
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class PartialSessionHS2Impl extends AbstractPartialSessionImpl {
+class RequestID {
 
-    public PartialSessionHS2Impl(int id, byte[] payload, Connection connection) {
-        super(id, payload, connection);
-    }
+    private static long ID = 0;
 
     /**
-     * Create Session without further interaction
-     *
-     * @param diffiePayload
-     * @return session
-     * @throws MessageSizeExceededException; but it is not thrown here
+     * @return a globally unique requestID
      */
-    @Override
-    public Session completeSession(byte[] diffiePayload) throws
-            MessageSizeExceededException {
-        return this;
+    static long get() {
+        return ID++;
     }
+
 }
