@@ -2,6 +2,7 @@
 \usepackage[english]{babel}
 \usepackage{url}
 \usepackage{bytefield}
+\usepackage{verbatim}
 
 \begin{document}
 \title{\Huge Interim Report \normalsize}
@@ -30,11 +31,12 @@ TODO Charlie: haben uns für EventLoops entschieden; falls sich während der Imp
 \section{Inter-Module Protocol}
 For the communication between distinct onion instances we decided to use both TCP and UDP as underlying protocols in order to avoid reinventing the wheel, since they both fulfill the respective requirements perfectly.
 
-Control messages, i.e. messages for tunnel construction and tunnel destruction are transferred and forwarded over TCP, because for those messages it is very important that they actually arrive and that we get feedback if one of those messages could not be delivered to the target, so we can react in an appropriate manner, e.g. assume that the corresponding node went down and construct an alternative route. TCP satisfies these requirements as it acknowledges the reception of messages, resends messages if necessary and reports a failure if a message still didn't provoke an acknowledgement after a few retries. For this it sacrifices some bandwidth and latency, but those two factors aren't of uttermost importance to control messages anyway. 
+Control messages, i.e. messages for tunnel construction and tunnel destruction are transferred and forwarded over TCP, because for those messages it is very important that they actually arrive or that we get feedback if one of those messages could not be delivered to the target, so we can react in an appropriate manner, e.g. assume that the corresponding node went down and construct an alternative route. TCP satisfies these requirements as it acknowledges the reception of messages, resends messages if necessary and reports a failure if a message still didn't provoke an acknowledgement after a few retries. For this it sacrifices some bandwidth and latency, but those two factors aren't of uttermost importance to control messages anyway. 
 
-User data messages, i.e. messages containing VoIP data, are transferred and forwarded over UDP, since for those a short delay is a requirement which UDP can satisfy. UDP is packet based and does not check the arrival of packets at all, so the lower delay that this causes comes at the price of possibly losing some packets which are not resent and therefore never reach their target, without the sender being informed about the loss. This is acceptable for VoIP data.
+User data messages, i.e. messages containing VoIP data, are transferred and forwarded over UDP, since for those a short delay is a requirement which UDP can satisfy. UDP is packet based and does not acknowledge the arrival of packets at all, so the lower delay that this causes comes at the price of possibly losing some packets which are not resent and therefore never reach their target, without the sender being informed about the loss. This is acceptable for VoIP data.
 
-The only control messages that are sent with UDP instead of TCP are for call handling so that an attacker can not deduce from the amount of TCP traffic if two peers are having a VoIP session or not. \\
+Call handling is very simple. If a peer begins sending UDP packets with real instead of random data, this means a call is requested, and the call partner may accept the call by also sending real data. Since everything is encrypted, an attacker can not distinguish cover and real traffic. Neither can he derive call state from TCP packets, since call handling does not happen over TCP.
+%The only control messages that are sent with UDP instead of TCP are for call handling so that an attacker can not deduce from the amount of TCP traffic if two peers are having a VoIP session or not. \\
 
 To preserve anonymity, all UDP packets are of the same size (64 KiB) and there is always data sent, even if there isn't an active call. Thus, an attacker can not infer from the communication amount and bandwidth if there is an active call between two nodes.
 
@@ -55,17 +57,42 @@ This all happens over TCP. Once the handshake has completed, the two peers can n
 \begin{itemize}
 	\item Authentication as onion node (TCP):
 	
-\begin{bytefield}[bitwidth=1.1em]{32}
-	\bitheader{0,15,16,31} \\
+\begin{bytefield}[bitwidth=1.0em]{32}
+	\bitheader{0,7,8,15,16,23,24,31} \\
 	\bitbox{32}{ONION MAGIC SEQUENCE} \\
-	& \bitbox{32}{version (1)} \\
+	\bitbox{32}{version (1)} \\
+	\bitbox[lrt]{32}{random padding} \\
+	\skippedwords \\
+	\wordbox[blr]{1}{}
 \end{bytefield}
 	
 	After establishing a TCP connection, the connection initiator sends this to the other node, which replies with the same message. This is for both to make sure that the communication partner is actually another onion node and not some different TCP service that coincidentally is running on this port. It also makes sure that both peers are running compatible versions (Only valid version at the time of this writing is 1).
 	
+	\item Onion node authentication reply (TCP):\\
+	
+\begin{bytefield}[bitwidth=1.0em]{32}
+	\bitheader{0,7,8,15,16,23,24,31} \\
+	\bitbox{32}{ONION MAGIC REPLY SEQUENCE} \\
+	\bitbox{32}{version (1)} \\
+	\bitbox[lrt]{32}{random padding} \\
+	\skippedwords \\
+	\wordbox[blr]{1}{}
+\end{bytefield}
+	The reply to the authentication message.
+	
 	\item BUILD TUNNEL (TCP): \\
 	
-	
+\begin{bytefield}[bitwidth=1.0em]{32}
+	\bitheader{0,7,8,15,16,23,24,31} \\
+			& \bitbox{8}{BUILD TUNNEL} 
+			& \bitbox{8}{IP addr. length}
+			& \bitbox{16}{port} \\
+	\wordbox{4}{IPv4 address (32 bits)/IPv6 address (128 bits)} \\					
+	\bitbox[lrt]{32}{random padding} \\
+	\skippedwords \\
+	\wordbox[blr]{1}{}
+\end{bytefield}
+\begin{comment}
 \begin{bytefield}[bitwidth=2.2em]{16}
 	\bitheader{0,7,8,15} \\
 		\bitbox{8}{BUILD TUNNEL} 
@@ -75,11 +102,19 @@ This all happens over TCP. Once the handshake has completed, the two peers can n
 		\wordbox{4}{IPv4 address (32 bits)/IPv6 address (128 bits)}
 		\end{rightwordgroup}	
 \end{bytefield}
+\end{comment}
 Once A has established an encrypted connection to its first hop H1, it can send this message to it. H1 will then establish an unencrypted TCP connection to the hop H2 specified in this package and from that point on it will forward all TCP and UDP traffic it receives from A to H2 and for UDP packets also vice-versa. A can now do the authentication and handshake process with H2 over the encrypted connection to H1. It can iteratively add more hops like this until it reaches the desired target node.
 
 \label{itm:heartbeat}
 \item HEARTBEAT (TCP): \\
 
+\begin{bytefield}[bitwidth=1.0em]{32}
+	\bitheader{0,7,8,15,16,23,24,31} \\
+	\bitbox{8}{BUILD TUNNEL} \\
+	\bitbox[lrt]{32}{random padding} \\
+	\skippedwords \\
+	\wordbox[blr]{1}{}
+\end{bytefield}
 \begin{bytefield}[bitwidth=2.2em]{16}
 	\bitheader{0,7} \\
 	\bitbox{8}{HEARTBEAT} 
@@ -91,7 +126,13 @@ assume that the tunnel is down and it has to do further exception handling (see
 \ref{subsec:packet_loss_exception}).
 	
 \item TUNNEL TEARDOWN (TCP): \\
-
+\begin{bytefield}[bitwidth=1.0em]{32}
+	\bitheader{0,7,8,15,16,23,24,31} \\
+	\bitbox{8}{BUILD TUNNEL} \\
+	\bitbox[lrt]{32}{random padding} \\
+	\skippedwords \\
+	\wordbox[blr]{1}{}
+\end{bytefield}
 \begin{bytefield}[bitwidth=2.2em]{16}
 	\bitheader{0,7} \\
 	\bitbox{8}{TUNNEL TEARDOWN} 
@@ -102,7 +143,13 @@ This is used for the controlled destruction of a tunnel. The tunnel initiator ha
 \subsubsection{Data message types}
 
 \item COVER DATA (UDP): \\
-
+\begin{bytefield}[bitwidth=1.0em]{32}
+	\bitheader{0,7,8,15,16,23,24,31} \\
+	\bitbox{8}{BUILD TUNNEL} \\
+	\bitbox[lrt]{32}{random padding} \\
+	\skippedwords \\
+	\wordbox[blr]{1}{}
+\end{bytefield}
 \begin{bytefield}[bitwidth=2.2em]{16}
 	\begin{rightwordgroup}{64 KiB}
 		\bitheader{0,7,8,15} \\
@@ -116,7 +163,13 @@ Used for fake data if there is no active call between two peers. The packet alwa
 
 
 \item DATA (UDP): \\
-
+\begin{bytefield}[bitwidth=1.0em]{32}
+	\bitheader{0,7,8,15,16,23,24,31} \\
+	\bitbox{8}{BUILD TUNNEL} \\
+	\bitbox[lrt]{32}{random padding} \\
+	\skippedwords \\
+	\wordbox[blr]{1}{}
+\end{bytefield}
 \begin{bytefield}[bitwidth=2.2em]{16}
 	\begin{rightwordgroup}{64 KiB}
 	\bitheader{0,7,8,15} \\
