@@ -60,29 +60,4 @@ public class OnionAuthClose extends OnionAuthApiMessage {
         OnionAuthClose message = new OnionAuthClose(sessionID);
         return message;
     }
-
-    @Override
-    public int hashCode() {
-        int hash = 5;
-        hash = 53 * hash + (int) (this.sessionID ^ (this.sessionID >>> 32));
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final OnionAuthClose other = (OnionAuthClose) obj;
-        if (this.sessionID != other.sessionID) {
-            return false;
-        }
-        return true;
-    }
 }
