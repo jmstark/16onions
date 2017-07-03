@@ -11,6 +11,7 @@ import java.nio.channels.SocketChannel;
 import com.voidphone.api.OnionAuthAPISocket;
 import com.voidphone.api.OnionAuthAPISocket.AUTHSESSIONINCOMINGHS1;
 import com.voidphone.api.Config;
+import com.voidphone.general.General;
 
 /**
  * Main application runs a TCP server socket. There, when it receives a new

@@ -6,7 +6,7 @@ public class OnionAuthAPISocket extends APISocket {
 	}
 
 	public AUTHSESSIONHS2 AUTHSESSIONINCOMINGHS1(AUTHSESSIONINCOMINGHS1 data) {
-		return new AUTHSESSIONHS2((short) 10,new byte[]{42,43,44});
+		return new AUTHSESSIONHS2((short) 10, new byte[] { 42, 43, 44 });
 	}
 
 	public void AUTHSESSIONINCOMINGHS2(AUTHSESSIONINCOMINGHS2 data) {
@@ -24,9 +24,9 @@ public class OnionAuthAPISocket extends APISocket {
 	public void AUTHSESSIONCLOSE(AUTHSESSIONCLOSE data) {
 
 	}
-	
+
 	public OnionAuthAPISocket() {
-		
+
 	}
 
 	public static class AUTHSESSIONSTART {
