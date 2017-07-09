@@ -3,17 +3,11 @@ package com.voidphone.onion;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
 
-import com.voidphone.api.OnionAuthAPISocket;
 import com.voidphone.api.Config;
 
 /**

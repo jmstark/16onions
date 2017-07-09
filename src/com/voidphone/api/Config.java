@@ -34,7 +34,13 @@ public class Config {
 	 */
 	private void readConfigValues(String configFilePath)
 	{
-		onionAuthAPISocket = new OnionAuthAPISocket();
+		// ugly dummy try catch
+		try {
+			onionAuthAPISocket = new OnionAuthAPISocket(null);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		onionAPIPort = 30000;
 		onionPort = 30001;
 /*		try

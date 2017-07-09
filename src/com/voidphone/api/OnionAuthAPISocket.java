@@ -1,5 +1,8 @@
 package com.voidphone.api;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
 public class OnionAuthAPISocket extends APISocket {
 	public AUTHSESSIONHS1 AUTHSESSIONSTART(AUTHSESSIONSTART data) {
 		return null;
@@ -24,9 +27,9 @@ public class OnionAuthAPISocket extends APISocket {
 	public void AUTHSESSIONCLOSE(AUTHSESSIONCLOSE data) {
 
 	}
-
-	public OnionAuthAPISocket() {
-
+	
+	public OnionAuthAPISocket(InetSocketAddress addr) throws IOException {
+		super(addr);
 	}
 
 	public static class AUTHSESSIONSTART {

@@ -32,6 +32,6 @@ public class General {
 		if (debug) {
 			e.printStackTrace();
 		}
-		General.fatal("Unexpected Exception!");
+		General.fatal(e.getMessage());
 	}
 }
