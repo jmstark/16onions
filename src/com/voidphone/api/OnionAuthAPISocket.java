@@ -4,6 +4,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 public class OnionAuthAPISocket extends APISocket {
+	
+	public byte[] encryptData(byte[] data)
+	{
+		//TODO: actually encrypt with onionAuth
+		return data;
+	}
+	
 	public AUTHSESSIONHS1 AUTHSESSIONSTART(AUTHSESSIONSTART data) {
 		return null;
 	}

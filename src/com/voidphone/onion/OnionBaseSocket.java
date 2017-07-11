@@ -9,6 +9,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 
 import com.voidphone.api.Config;
+import com.voidphone.api.OnionAuthAPISocket;
 
 /**
  * Base class for OnionConnectingSocket and OnionListenerSocket
@@ -18,12 +19,13 @@ public abstract class OnionBaseSocket
 {
 	public final static int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
 	public final static int VERSION = 1;
-	
+		
 	protected final byte MSG_BUILD_TUNNEL = 0xb;
 	protected final byte MSG_DESTROY_TUNNEL = 0xd;
 
 	protected final int MAX_DATA_PACKET_SIZE = 65536/2;
 	protected int tunnelId;
+	protected OnionAuthAPISocket onionAuthAPISocket = null;
 	protected DatagramSocket nextHopDataOutgoing = null;
 	protected DatagramSocket lastHopDataOutgoing = null;	
 	protected byte[] nextHopAddress = null;

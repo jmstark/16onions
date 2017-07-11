@@ -44,5 +44,10 @@ public class OnionConnectingSocket extends OnionBaseSocket
 
 		config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS2(new OnionAuthAPISocket.AUTHSESSIONINCOMINGHS2(hs1.getSession(), buffer));
 	}
+	
+	void insertNewHop(byte[] address, short port, byte[] hostKey)
+	{
+		
+	}
 
 }
