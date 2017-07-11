@@ -83,4 +83,8 @@ public class Config {
 	public int getOnionPort() {
 		return onionPort;
 	}
+	
+	public byte[] getHostkey() {
+		return null;
+	}
 }
