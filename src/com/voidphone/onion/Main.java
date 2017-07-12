@@ -1,7 +1,9 @@
 package com.voidphone.onion;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -10,6 +12,7 @@ import java.util.Iterator;
 
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionAPISocket;
+import com.voidphone.api.RPSAPISocket.RPSPEER;
 import com.voidphone.general.General;
 
 public class Main {
@@ -24,26 +27,54 @@ public class Main {
 	 * @param targetHostkey
 	 * @param numHops
 	 * @throws Exception
-	 * 
-	 *             private void constructTunnel(byte[] targetAddress, short
-	 *             targetPort, byte[] targetHostkey, int numHops) throws
-	 *             Exception { final int bufsize=12345; byte[][] hopAddress =
-	 *             new byte[numHops + 1][]; short[] hopPort = new short[numHops
-	 *             + 1]; byte[][] hopHostkey = new byte[numHops + 1][];
-	 *             OnionConnectingSocket[] onionSockets = new
-	 *             OnionConnectingSocket[numHops+1]; if(targetAddress!=null) {
-	 *             hopAddress[numHops] = targetAddress; hopPort[numHops] =
-	 *             targetPort; hopHostkey[numHops] = targetHostkey; } for(int
-	 *             i=0;i <= numHops;i++) { if(hopAddress[i] == null) { //TODO:
-	 *             RPS-query -> hopAddress, hopPort, hopHostkey } } Socket
-	 *             nextHop = new
-	 *             Socket(InetAddress.getByAddress(hopAddress[0]),hopPort[0]);
-	 *             onionSockets[0] = new OnionConnectingSocket(nextHop,
-	 *             hopHostkey[0], config);
-	 * 
-	 * 
-	 *             }
 	 */
+	public static void constructTunnel(byte[] targetAddress, short targetPort, byte[] targetHostkey, int numHops) throws Exception
+	{
+		//TODO: we only need either InetSocketAddress or address+port,
+		//but let's leave this until we're sure of which one.
+		byte[][] hopAddress = new byte[numHops + 1][];
+		short[] hopPort = new short[numHops + 1];
+		byte[][] hopHostkey = new byte[numHops + 1][];
+		Socket[] hopSocket = new Socket[numHops + 1];
+		InetSocketAddress[] hopInetSocketAddress = new InetSocketAddress[numHops + 1];
+		OnionEnd[] onionEnds = new OnionEnd[numHops+1];
+		if(targetAddress!=null)
+		{
+			hopAddress[numHops] = targetAddress;
+			hopPort[numHops] = targetPort;
+			hopHostkey[numHops] = targetHostkey;
+			hopInetSocketAddress[numHops] = new InetSocketAddress(InetAddress.getByAddress(targetAddress), targetPort);
+			hopSocket[numHops] = new Socket(hopInetSocketAddress[numHops].getAddress(),targetPort);
+		}
+		
+		for(int i=0;i <= numHops;i++)
+		{
+			//If destination == null, chose randomly
+			if(hopAddress[i] == null)
+			{
+				RPSPEER newHop = config.getRPSAPISocket().RPSQUERY();
+				hopAddress[i] = newHop.getAddress().getAddress().getAddress();
+				hopPort[i] = (short) newHop.getAddress().getPort();
+				hopHostkey[i] = newHop.getHostkey();
+				hopInetSocketAddress[i] = newHop.getAddress();
+			}
+	
+		}
+		
+		onionEnds[0] = new OnionEnd(hopInetSocketAddress[0], config, hopHostkey[0]);
+		
+		for(int i=1;i <= numHops;i++)
+		{
+			//TODO: send forwarding request to node i-1, 
+			//he should forward everything to the address i
+
+			//make the onion connection to the new hop over the first hop
+			onionEnds[i] = new OnionEnd(hopInetSocketAddress[0], config, hopHostkey[i]);
+		}
+			
+
+	}
+
 
 	/**
 	 * Runs the Onion module.

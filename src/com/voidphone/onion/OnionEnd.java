@@ -6,9 +6,9 @@ import java.net.InetSocketAddress;
 import com.voidphone.api.Config;
 
 public class OnionEnd extends OnionBase {
-	public OnionEnd(InetSocketAddress addr, Config c) throws IOException {
+	public OnionEnd(InetSocketAddress addr, Config c, byte[] targetHostkey) throws IOException {
 		super(c);
-		connect(addr, c.getHostkey());
+		connect(addr, targetHostkey);
 	}
 	
 	public void send() {
