@@ -2,27 +2,22 @@ package com.voidphone.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.ini4j.Wini;
 
-import com.voidphone.general.General;
-
 public class Config {
+	private String apiAddress;
+	private int apiPort;
 	// Socket to the Onion Auth module API
 	private OnionAuthAPISocket onionAuthAPISocket;
 	// Socket to the RPS module API
-	private RPSAPISocket rpsAPISocket;
-
-	// addr + port of the Onion module API
-	private String onionAPIAddress;
-	private short onionAPIPort;
-	
-	// addr + port of the Onion P2P
+	private RPSAPISocket RPSAPISocket;
+	// port of the Onion module API
+	private int onionAPIPort;
 	private String onionAddress;
-	private short onionPort;
+	private int onionPort;
 	private String hostkeyPath;
 	
 	
@@ -39,12 +34,16 @@ public class Config {
 	 */
 	private void readConfigValues(String configFilePath)
 	{
-		String authAPIAddress = null;
-		short authAPIPort = 0;
-		String rpsAPIAddress = null;
-		short rpsAPIPort = 0;
-		
-		try
+		// ugly dummy try catch
+		try {
+			onionAuthAPISocket = new OnionAuthAPISocket(null);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		onionAPIPort = 30000;
+		onionPort = 30001;
+/*		try
 		{
 
 			Wini configFile = new Wini(new File(configFilePath));
@@ -53,45 +52,20 @@ public class Config {
 			// api_address contains address and port, separated by a colon (':')
 			String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
 			int colonPos = apiAddressAndPort.lastIndexOf(':');
-			onionAPIAddress = apiAddressAndPort.substring(0, colonPos);
-			onionAPIPort = (short) Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
+			apiAddress = apiAddressAndPort.substring(0, colonPos);
+			apiPort = Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
 
 			// Onion hostname and port are separate config lines
 			onionAddress = configFile.get("ONION", "P2P_HOSTNAME", String.class);
-			onionPort = (short) configFile.get("ONION", "P2P_PORT", Integer.class).intValue();
-			
-			//OnionAuth
-			String authAddressAndPort = configFile.get("AUTH", "api_address", String.class);
-			colonPos = authAddressAndPort.lastIndexOf(':');
-			authAPIAddress = apiAddressAndPort.substring(0, colonPos);
-			authAPIPort = (short) Integer.parseInt(authAddressAndPort.substring(colonPos + 1));
-
-			//RPS
-			String rpsAddressAndPort = configFile.get("RPS", "api_address", String.class);
-			colonPos = rpsAddressAndPort.lastIndexOf(':');
-			rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
-			rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
-}
+			onionPort = configFile.get("ONION", "P2P_PORT", Integer.class).intValue();
+		}
 		catch (IOException e)
 		{
-			General.fatal("FATAL: Could not read config file!");
+			System.err.println("FATAL: Could not read config file!!!");
 			System.exit(1);
-		}
-
-		// ugly dummy try catch
-		try {
-			onionAuthAPISocket = new OnionAuthAPISocket(new InetSocketAddress(authAPIAddress, authAPIPort));
-			rpsAPISocket = new RPSAPISocket(new InetSocketAddress(rpsAPIAddress, rpsAPIPort));
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		General.debug("Hostkey: " + hostkeyPath + "; \nAPI will listen on " + onionAPIAddress + ", Port " 
-				+ onionAPIPort + "; \nOnion P2P will listen on " + onionAddress + ", Port " + onionPort + ". \n" 
-				+ "connecting to AUTH API on " + authAPIAddress + ":" + authAPIPort 
-				+ "; \nconnecting to RPS API on " + rpsAPIAddress + ":" + rpsAPIPort);
+		}*/
+		System.out.println("DEBUG: Hostkey: " + hostkeyPath + "; API will listen on " + apiAddress + ", Port " + apiPort
+				+ "; Onion will listen on " + onionAddress + ", Port " + onionPort + ". ");
 	}
 	
 	public OnionAuthAPISocket getOnionAuthAPISocket() {
@@ -99,7 +73,7 @@ public class Config {
 	}
 	
 	public RPSAPISocket getRPSAPISocket() {
-		return rpsAPISocket;
+		return RPSAPISocket;
 	}
 	
 	public int getOnionAPIPort() {
