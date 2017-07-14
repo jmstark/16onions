@@ -36,7 +36,7 @@ public class OnionAPISocket implements Main.Attachable {
 				case APISocket.MSG_TYPE_ONION_TUNNEL_BUILD:
 					// skip reserved 2 bytes
 					dis.readShort();
-					short targetPort = dis.readShort();
+					int targetPort = dis.readShort();
 					byte[] targetIpAddress = new byte[ipAddressLength];
 					dis.readFully(targetIpAddress, 0, targetIpAddress.length);
 					int hostkeyLength = msgLength
@@ -46,11 +46,9 @@ public class OnionAPISocket implements Main.Attachable {
 								"API message or target DER-hostkey too short");
 					byte[] targetHostkey = new byte[hostkeyLength];
 					dis.readFully(targetHostkey, 0, targetHostkey.length);
-
-					//build the tunnel
-					Main.constructTunnel(targetIpAddress, targetPort, targetHostkey, 2);
-					
-					//TODO: API response: tunnel built successfully
+					// TODO: call function with the now unpacked arguments.
+					// e.g.
+					// onionTunnelBuild(targetIpAddress,targetPort,targetHostkey);
 					break;
 				case APISocket.MSG_TYPE_ONION_TUNNEL_DESTROY:
 					int tunnelId = dis.readInt();
@@ -74,7 +72,7 @@ public class OnionAPISocket implements Main.Attachable {
 				}
 
 			}
-		} catch (Exception e) {
+		} catch (IOException e) {
 			System.out.println("API connection lost: " + e.getMessage());
 		}
 		return false;
