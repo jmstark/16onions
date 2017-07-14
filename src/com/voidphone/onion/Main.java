@@ -64,46 +64,35 @@ public class Main {
 					.bind(new InetSocketAddress("127.0.0.1", config
 							.getOnionPort()));
 
-			// for API requests
 			OnionAPISocket oas = new OnionAPISocket(onionAPISocket);
 			onionAPISocket.configureBlocking(false);
 			onionAPISocket.register(selector, SelectionKey.OP_READ, oas);
 
-			// for incoming Onion connections
 			onionServerSocket.configureBlocking(false);
 			onionServerSocket.register(selector, SelectionKey.OP_ACCEPT);
 
-			// wait for any socket getting ready
 			while (selector.select() != 0) {
 				Iterator<SelectionKey> iterator = selector.selectedKeys()
 						.iterator();
 				while (iterator.hasNext()) {
 					SelectionKey key = iterator.next();
 					if (key.isAcceptable()) {
-						// OnionServerSocket got a connection request
 						General.debug("Onion connection requested.....");
 						SocketChannel onionSocket = onionServerSocket.accept();
 						General.debug("Onion connection successful");
-						// create a new OnionListenerSocket ...
-						OnionMiddle om = new OnionMiddle(onionSocket, config);
+						OnionListenerSocket ols = new OnionListenerSocket(
+								onionSocket, null, config);
 						General.debug("Got connection from "
 								+ onionSocket.getRemoteAddress());
 						onionSocket.configureBlocking(false);
-						// ... and add it to the selector
-						onionSocket
-								.register(selector, SelectionKey.OP_READ, om);
+						onionSocket.register(selector, SelectionKey.OP_READ,
+								ols);
 					} else if (key.isReadable()) {
-						// an OnionListenerSocket or the OnionAPISocket received
-						// data
 						General.debug("Received packet");
-						// enable blocking
 						key.cancel();
 						selector.selectNow();
 						key.channel().configureBlocking(true);
-						// handle the received data
-						// TODO: handle IOExcpetion thrown by handle()
 						if (!((Attachable) key.attachment()).handle()) {
-							// the connection is still alive
 							key.channel().configureBlocking(false);
 							key.channel().register(selector,
 									SelectionKey.OP_READ, key.attachment());
@@ -142,6 +131,6 @@ public class Main {
 	}
 
 	public static interface Attachable {
-		public boolean handle() throws IOException;
+		public boolean handle();
 	}
 }
