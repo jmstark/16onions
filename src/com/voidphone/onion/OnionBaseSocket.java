@@ -89,13 +89,4 @@ public abstract class OnionBaseSocket
 	}
 	
 	
-	public DataInputStream getDataInputStream()
-	{
-		return null;
-	}
-
-	public DataOutputStream getDataOutputStream()
-	{
-		return null;
-	}
 }

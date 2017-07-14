@@ -3,6 +3,7 @@ package com.voidphone.onion;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.channels.SocketChannel;
 
 import com.voidphone.api.Config;
@@ -17,9 +18,9 @@ import com.voidphone.api.OnionAuthAPISocket;
 public class OnionConnectingSocket extends OnionBaseSocket
 {
 	
-	public OnionConnectingSocket(SocketChannel sock, byte[] hostkey, Config config) throws IOException
+	public OnionConnectingSocket(InetAddress addr, byte[] hostkey, Config config) throws IOException
 	{
-		super(sock, hostkey, config);
+		super(addr, hostkey, config);
 	}
 
 	@Override
