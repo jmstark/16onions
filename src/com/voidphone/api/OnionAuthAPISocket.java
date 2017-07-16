@@ -4,8 +4,31 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 public class OnionAuthAPISocket extends APISocket {
-	public AUTHSESSIONHS1 AUTHSESSIONSTART(AUTHSESSIONSTART data) {
-		return null;
+	public AUTHSESSIONHS1 AUTHSESSIONSTART(AUTHSESSIONSTART data) throws Exception {
+		return AUTHSESSIONSTART(data.hostkey);
+	}	
+	
+	public AUTHSESSIONHS1 AUTHSESSIONSTART(byte[] hostkey) throws Exception {
+		short size = (short) (hostkey.length + 8);
+		short msgType = AUTH_SESSION_START;
+		int reqID = new Float(Math.random()).hashCode();
+		dos.writeShort(size);
+		dos.writeShort(msgType);
+		dos.writeInt(0);
+		dos.writeInt(reqID);
+		dos.write(hostkey);
+		dos.flush();
+		
+		short sessionID;
+		size = dis.readShort();
+		msgType = dis.readShort();
+		dis.readShort();
+		sessionID = dis.readShort();
+		if(msgType != AUTH_SESSION_HS1 || reqID != dis.readInt())
+			throw new Exception("Unexpected message");
+		byte[] hs1Payload = new byte[size-12];
+		dis.readFully(hs1Payload);
+		return new AUTHSESSIONHS1(sessionID, hs1Payload);
 	}
 
 	public AUTHSESSIONHS2 AUTHSESSIONINCOMINGHS1(AUTHSESSIONINCOMINGHS1 data) {

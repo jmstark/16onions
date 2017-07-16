@@ -16,22 +16,85 @@ import com.voidphone.general.General;
 /**
  * Main application runs a TCP server socket. There, when it receives a new
  * connection, it then constructs an OnionServerSocket, passing the new TCP
- * socket, the remote hostkey and the buffersize (how to determine?) to the
- * constructor. Then it should send a TUNNEL_READY API message.
+ * socket to the constructor. Then it should send a TUNNEL_READY API message.
  * 
  */
 public class OnionListenerSocket extends OnionBaseSocket implements Main.Attachable
 {
-	private DataOutputStream nextHopControlMsgOutgoing = null;
-	private DataInputStream lastHopControlMsgIncoming = null;
-	private Socket nextHopSocket = null;
-	protected static DatagramSocket dataIncoming;// = new DatagramSocket(1423);
-
-
-	public OnionListenerSocket(SocketChannel sock, byte[] hostkey, Config config) throws IOException
+	protected DataInputStream previousHopDis;
+	protected DataOutputStream previousHopDos;
+	protected Config config;
+	protected short authSessionId;
+	
+	public OnionListenerSocket(Socket previousHopSocket, Config config) throws IOException
 	{
-		super(sock, hostkey, config);
+		this.config = config;
+		previousHopDis = new DataInputStream(previousHopSocket.getInputStream());
+		previousHopDos = new DataOutputStream(previousHopSocket.getOutputStream());
+		authSessionId = authenticate();
 	}
+
+	
+	/**
+	 * Counterpart to authenticate() of OnionConnectingSocket.
+	 * Since at the moment of authentication this node is the last one,
+	 * we receive the authentication always unencrypted. The encryption
+	 * was removed at the previous hop.
+	 * 
+	 * @return session ID
+	 * 
+	 * @throws IOException
+	 */
+	short authenticate() throws IOException
+	{
+		OnionAuthAPISocket.AUTHSESSIONHS2 hs2;
+		
+		buffer.clear();
+		
+		previousHopDis.readFully(buffer.array());
+		
+		if (buffer.getInt() != MAGIC_SEQ_CONNECTION_START | buffer.getInt() != VERSION)
+			throw new IOException("Tried to connect with non-onion node or wrong version node");
+
+		// read incoming hostkey
+		byte[] previousHopHostkey = new byte[buffer.getShort()];
+		buffer.get(previousHopHostkey);
+		
+		// read incoming hs1 from remote peer
+		byte[] hs1Payload = new byte[buffer.getShort()];
+		buffer.get(hs1Payload);
+
+		buffer.clear();
+		
+		// get hs2 from onionAuth and send it back to remote peer
+		hs2 = config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS1(new AUTHSESSIONINCOMINGHS1(previousHopHostkey, hs1Payload));
+		buffer.putShort((short)hs2.getPayload().length);
+		buffer.put(hs2.getPayload());
+		previousHopDos.write(buffer.array());
+		
+		buffer.clear();
+		
+		return hs2.getSession();
+	}
+
+	
+	
+	@Override
+	public boolean handle() {
+		try {
+			System.out.println(previousHopDis.read());
+			System.out.println(previousHopDis.read());
+			System.out.println(previousHopDis.read());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.exit(1);
+		return false;
+	}
+	
+
+
+
 	
 	/**
 	 * This function is used to build and destroy tunnels. Building/destroying
@@ -43,6 +106,7 @@ public class OnionListenerSocket extends OnionBaseSocket implements Main.Attacha
 	 * 
 	 * @throws IOException
 	 */
+	/*
 	void processNextControlMessage() throws Exception
 	{
 		byte messageType = lastHopControlMsgIncoming.readByte();
@@ -95,38 +159,7 @@ public class OnionListenerSocket extends OnionBaseSocket implements Main.Attacha
 			}
 
 	}
+	*/
 
-	@Override
-	void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte[] hostkey, Config config) throws IOException
-	{
-		OnionAuthAPISocket.AUTHSESSIONHS2 hs2;
-		short size;
-		byte buffer[];
-		
-		if (in.readInt() != MAGIC_SEQ_CONNECTION_START | in.readInt() != VERSION)
-			throw new IOException("Tried to connect with non-onion node or wrong version node");
-
-		// read incoming hs1 from remote peer into buffer
-		size = in.readShort();
-		buffer = new byte[size];
-		in.readFully(buffer, 0, size);
-
-		// get hs2 from onionAuth and send it back to remote peer
-		hs2 = config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS1(new AUTHSESSIONINCOMINGHS1(hostkey, buffer));
-		out.writeShort(hs2.getPayload().length);
-		out.write(hs2.getPayload());
-	}
-
-	@Override
-	public boolean handle() {
-		try {
-			System.out.println(dis.read());
-			System.out.println(dis.read());
-			System.out.println(dis.read());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		System.exit(1);
-		return false;
-	}
+	
 }

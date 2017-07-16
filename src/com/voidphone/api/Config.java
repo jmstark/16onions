@@ -4,8 +4,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+
 import org.ini4j.Wini;
 import com.voidphone.general.General;
+
+import util.PEMParser;
 public class Config {
 	// Socket to the Onion Auth module API
 	private OnionAuthAPISocket onionAuthAPISocket;
@@ -19,6 +23,8 @@ public class Config {
 	private String onionAddress;
 	private short onionPort;
 	private String hostkeyPath;
+	
+	byte[] hostkey;
 	
 	
 	public Config(String configFilePath)
@@ -62,11 +68,21 @@ public class Config {
 			colonPos = rpsAddressAndPort.lastIndexOf(':');
 			rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
 			rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
-}
+			
+	        File file = new File(hostkeyPath);
+	        hostkey = PEMParser.getPublicKeyFromPEM(file).getEncoded();
+
+			
+		}
 		catch (IOException e)
 		{
 			General.fatal("FATAL: Could not read config file!");
 			System.exit(1);
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			General.fatal("FATAL: Invalid key!");
+			System.exit(1);
+			e.printStackTrace();
 		}
 		// ugly dummy try catch
 		try {

@@ -17,7 +17,7 @@ public class RPSAPISocket extends APISocket {
 	 * @throws IOException
 	 *             if an I/O error occurs
 	 */
-	public RPSPEER RPSQUERY() throws IOException {
+	public OnionPeer RPSQUERY() throws IOException {
 		short size;
 		short type;
 		short port;
@@ -60,14 +60,14 @@ public class RPSAPISocket extends APISocket {
 		}
 		hostkey = new byte[size];
 		dis.readFully(hostkey);
-		return new RPSPEER(new InetSocketAddress(addr, port), hostkey);
+		return new OnionPeer(new InetSocketAddress(addr, port), hostkey);
 	}
 
-	public static class RPSPEER {
+	public static class OnionPeer {
 		private InetSocketAddress address;
 		private byte hostkey[];
 
-		public RPSPEER(InetSocketAddress address, byte[] hostkey) {
+		public OnionPeer(InetSocketAddress address, byte[] hostkey) {
 			this.address = address;
 			this.hostkey = hostkey;
 		}

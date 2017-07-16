@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 
@@ -16,14 +17,24 @@ import com.voidphone.api.Config;
  */
 public abstract class OnionBaseSocket
 {
+
 	public final static int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
 	public final static int VERSION = 1;
+	protected final int CONTROL_PACKET_SIZE = 8192;
 	
+	
+	// buffer is used to construct packets before encrypting/decrypting 
+	// and sending/receiving them via dos or dis.
+	// Using it makes sure that always same-sized packets are sent and received.
+	protected ByteBuffer buffer = ByteBuffer.allocate(CONTROL_PACKET_SIZE);
+	
+	/*		
 	protected final byte MSG_BUILD_TUNNEL = 0xb;
 	protected final byte MSG_DESTROY_TUNNEL = 0xd;
 
+	protected Config config = null;
 	protected final int MAX_DATA_PACKET_SIZE = 65536/2;
-	protected int tunnelId;
+	protected int tunnelId = 0;
 	protected DatagramSocket nextHopDataOutgoing = null;
 	protected DatagramSocket lastHopDataOutgoing = null;	
 	protected byte[] nextHopAddress = null;
@@ -32,28 +43,13 @@ public abstract class OnionBaseSocket
 	protected short lastHopPort = 0;
 	protected DataInputStream dis;
 	protected DataOutputStream dos;
+	protected byte[] destHostkey;
+	abstract void authenticate() throws IOException;
 
-	abstract void initiateOnionConnection(DataInputStream in, DataOutputStream out, byte hostkey[], Config config)
-			throws IOException;
-
-	private OnionBaseSocket(DataInputStream in, DataOutputStream out, byte hostkey[], Config config) throws IOException
-	{
-		dis = in;
-		dos = out;
-		initiateOnionConnection(in, out, hostkey, config);
+	protected OnionBaseSocket(Config c) {
+		config = c;
 	}
-
-	public OnionBaseSocket(SocketChannel sock, byte hostkey[], Config config) throws IOException
-	{
-		this(new DataInputStream(Channels.newInputStream(sock)), new DataOutputStream(Channels.newOutputStream(sock)), hostkey, config);
-	}
-
-	public OnionBaseSocket(OnionBaseSocket sock, byte hostkey[], Config config) throws IOException
-	{
-		this(sock.getDataInputStream(), sock.getDataOutputStream(), hostkey, config);
-	}
-
-	
+*/	
 	/**
 	 * Processes the next UDP data message or forwards it,
 	 * if there is a next hop. Since a node can have more
@@ -63,6 +59,7 @@ public abstract class OnionBaseSocket
 	 * @param dis
 	 * @throws IOException 
 	 */
+	/*
 	void processNextDataMessage(DatagramPacket incomingPacket) throws IOException
 	{
 		DatagramSocket forwardTarget = null;
@@ -87,6 +84,6 @@ public abstract class OnionBaseSocket
 		}
 
 	}
-	
+*/
 	
 }
