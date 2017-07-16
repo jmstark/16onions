@@ -1,5 +1,6 @@
 package com.voidphone.onion;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -20,7 +21,11 @@ public abstract class OnionBaseSocket
 
 	public final static int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
 	public final static int VERSION = 1;
+	protected final byte MSG_BUILD_TUNNEL = 0xb;
+	protected final byte MSG_DESTROY_TUNNEL = 0xd;
 	protected final int CONTROL_PACKET_SIZE = 8192;
+	protected short[] authSessionIds;
+	protected Config config;
 	
 	
 	// buffer is used to construct packets before encrypting/decrypting 
@@ -28,9 +33,74 @@ public abstract class OnionBaseSocket
 	// Using it makes sure that always same-sized packets are sent and received.
 	protected ByteBuffer buffer = ByteBuffer.allocate(CONTROL_PACKET_SIZE);
 	
+	
+	/**
+	 * Encrypts payload with the given number of layers, 0 layers = no encryption.
+	 * 
+	 * @param numLayers
+	 * @return encrypted payload (or plaintext if numLayers == 0)
+	 * @throws Exception 
+	 */
+	protected byte[] encrypt(byte[] payload, int numLayers) throws Exception
+	{
+		if(numLayers < 0)
+			throw new Exception("Negative number of layers");
+		
+		if(numLayers == 0)
+			return payload;
+
+		// Make a byte array containing the sessionIds in reverse order,
+		// so that each hop can "peel off" one layer
+		DataOutputStream sessionIds = new DataOutputStream(new ByteArrayOutputStream());
+		for(int i=0; i < numLayers; i++)
+		{
+			sessionIds.writeShort(authSessionIds[numLayers - i - 1]);
+		}
+		sessionIds.flush();
+		
+		//TODO: send the data to OnionAuth API and get encrypted data back.
+		//Needed:
+		//the byte[] or short[] inside sessionIds; payload
+
+		return null;
+	}
+	
+	/**
+	 * Decrypts payload with the given number of layers, 0 layers = no decryption.
+	 * 
+	 * @param encryptedPayload
+	 * @param numLayers number of encryption layers to remove.
+	 * @return the decrypted payload.
+	 * @throws Exception
+	 */
+	protected byte[] decrypt(byte[] encryptedPayload, int numLayers) throws Exception
+	{
+		if(numLayers < 0)
+			throw new Exception("Negative number of layers");
+		
+		if(numLayers == 0)
+			return encryptedPayload;
+
+		// Make a byte array containing the sessionIds in reverse order,
+		// because they were encrypted in that order and onionAuth expects
+		// them like that
+		DataOutputStream sessionIds = new DataOutputStream(new ByteArrayOutputStream());
+		for(int i=0; i < numLayers; i++)
+		{
+			sessionIds.writeShort(authSessionIds[numLayers - i - 1]);
+		}
+		sessionIds.flush();
+		
+		//TODO: send the data to OnionAuth API and get decrypted data back.
+		//Needed:
+		//the byte[] or short[] inside sessionIds; payload
+
+		return null;
+			
+	}
+	
 	/*		
-	protected final byte MSG_BUILD_TUNNEL = 0xb;
-	protected final byte MSG_DESTROY_TUNNEL = 0xd;
+
 
 	protected Config config = null;
 	protected final int MAX_DATA_PACKET_SIZE = 65536/2;
