@@ -116,6 +116,6 @@ public class Config {
 	}
 	
 	public byte[] getHostkey() {
-		return null;
+		return hostkey;
 	}
 }
