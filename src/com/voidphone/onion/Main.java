@@ -16,7 +16,7 @@ import java.util.Set;
 
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionAPISocket;
-import com.voidphone.api.RPSAPISocket.RPSPEER;
+import com.voidphone.api.rps.RPSAPISocket.RPSPEER;
 import com.voidphone.general.General;
 
 public class Main {

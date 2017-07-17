@@ -7,7 +7,7 @@ import java.net.InetAddress;
 import java.nio.channels.SocketChannel;
 
 import com.voidphone.api.Config;
-import com.voidphone.api.OnionAuthAPISocket;
+import com.voidphone.api.auth.OnionAuthAPISocket;
 
 /**
  * When the main application wants to connect to a new node, it establishes a

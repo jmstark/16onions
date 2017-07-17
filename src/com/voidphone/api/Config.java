@@ -5,6 +5,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import org.ini4j.Wini;
+
+import com.voidphone.api.auth.OnionAuthAPISocket;
+import com.voidphone.api.rps.RPSAPISocket;
 import com.voidphone.general.General;
 public class Config {
 	// Socket to the Onion Auth module API
