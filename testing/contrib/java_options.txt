@@ -1,2 +1,0 @@
--Djava.util.logging.config.file=logging.properties
--Xdebug -Xrunjdwp:transport=dt_socket,address=4001,server=y
