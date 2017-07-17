@@ -10,7 +10,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-
+import com.voidphone.api.APISocket;
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionAuthAPISocket;
 import com.voidphone.api.RPSAPISocket;
@@ -177,9 +177,21 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		return hs1.getSession();
 	}
 	
-	public void destroy()
+	public void destroy() throws Exception
 	{
-		// TODO
+		ByteBuffer buffer = ByteBuffer.allocate(2);
+		buffer.putShort(APISocket.MSG_TYPE_ONION_TUNNEL_DESTROY);
+		byte[] plainMsg =  buffer.array();
+		
+		//send the message iteratively to all hops,
+		//starting at the farthest one
+		for(int i=authSessionIds.length; i>0; i--)
+		{
+			byte[] encryptedMsg = encrypt(plainMsg, i);	
+			dos.writeShort(encryptedMsg.length);
+			dos.write(encryptedMsg);
+			dos.flush();
+		}
 	}
 
 }

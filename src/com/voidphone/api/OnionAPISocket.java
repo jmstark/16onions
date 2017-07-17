@@ -30,7 +30,7 @@ public class OnionAPISocket implements Main.Attachable {
 	
 	/**
 	 * This function should be called shortly before a new round begins.
-	 * It builds a second backup tunnel with the same end destination.
+	 * It builds a second backup tunnel with the same end destination and external ID.
 	 * 
 	 * @throws Exception
 	 */
@@ -42,8 +42,9 @@ public class OnionAPISocket implements Main.Attachable {
 	/**
 	 * This function should be called at the beginning of a new round.
 	 * We switch over to the new tunnel and destroy the old one.
+	 * @throws Exception 
 	 */
-	public void switchToNextTunnel()
+	public void switchToNextTunnel() throws Exception
 	{
 		OnionConnectingSocket oldTunnel = currentTunnel;
 		currentTunnel = nextTunnel;
@@ -71,6 +72,7 @@ public class OnionAPISocket implements Main.Attachable {
 				short msgType = dis.readShort();
 				switch (msgType) {
 				case APISocket.MSG_TYPE_ONION_TUNNEL_BUILD:
+					// extract all the data of the target node
 					// skip reserved 2 bytes
 					dis.readShort();
 					int targetPort = dis.readShort();
@@ -83,15 +85,34 @@ public class OnionAPISocket implements Main.Attachable {
 								"API message or target DER-hostkey too short");
 					byte[] targetHostkey = new byte[hostkeyLength];
 					dis.readFully(targetHostkey);
+					
+					//build the tunnel
 					tunnelDestination = new InetSocketAddress(InetAddress.getByAddress(targetIpAddress), targetPort);
 					currentTunnel = new OnionConnectingSocket(tunnelDestination, targetHostkey, config);
+					
+					// reply ONION TUNNEL READY
+					dos.writeShort(8 + targetHostkey.length);
+					dos.writeShort(APISocket.MSG_TYPE_ONION_TUNNEL_READY);
+					dos.writeInt(currentTunnel.externalID);
+					dos.write(targetHostkey);
+					dos.flush();
+					
 					break;
 				case APISocket.MSG_TYPE_ONION_TUNNEL_DESTROY:
 					int tunnelId = dis.readInt();
-					// TODO: call function with the now unpacked arguments.
+					
+					//destroy main and backup tunnel
+					if(currentTunnel.externalID != tunnelId)
+						throw new Exception("Tunnel ID doesn't match. "
+								+ "Should our API support more than one traffic tunnel at the same time? ");
 					currentTunnel.destroy();
 					if(nextTunnel != null)
+					{
+						if(nextTunnel.externalID != tunnelId)
+							throw new Exception("Tunnel ID doesn't match. "
+								+ "Should our API support more than one traffic tunnel at the same time? ");
 						nextTunnel.destroy();
+					}
 					
 					tunnelDestination = null;
 					currentTunnel = null;
