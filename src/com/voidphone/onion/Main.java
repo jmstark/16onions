@@ -43,7 +43,7 @@ public class Main {
 							.getOnionPort()));
 
 			// for API requests
-			OnionAPISocket oas = new OnionAPISocket(onionAPISocket);
+			OnionAPISocket oas = new OnionAPISocket(onionAPISocket, config);
 			onionAPISocket.configureBlocking(false);
 			onionAPISocket.register(selector, SelectionKey.OP_READ, oas);
 

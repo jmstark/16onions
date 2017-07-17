@@ -29,19 +29,24 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	protected InetSocketAddress destAddr;
 	protected DataInputStream dis;
 	protected DataOutputStream dos;
+	public final int externalID;
 	protected byte[] destHostkey;
 
 	
 	/**
+	 * Constructor
 	 * 
 	 * @param destAddr the address of the target node (i.e. the last hop)
 	 * @param destHostkey the hostkey of the target node
 	 * @param config configuration
 	 * @param hopCount the number of intermediate hops (excluding our node and the target node)
+	 * @param externalID Other modules use this ID to refer to this tunnel (backup tunnels with the 
+	 * same end destination may get the same ID)
 	 * @throws Exception 
 	 */
-	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config, int hopCount) throws Exception
+	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config, int hopCount, int externalID) throws Exception
 	{
+		this.externalID = externalID;
 		this.config = config;
 		this.destAddr = destAddr;
 		this.destHostkey = destHostkey;
@@ -53,7 +58,11 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		{
 			hops[i] = config.getRPSAPISocket().RPSQUERY();
 		}
-		hops[hopCount] = new OnionPeer(destAddr, destHostkey);
+		//If end node is unspecified, use another random node
+		if(destAddr == null || destHostkey == null)
+			hops[hopCount] = config.getRPSAPISocket().RPSQUERY();
+		else
+			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
 		
 		// Connect to first hop - all other connections are forwarded over this hop
 		Socket nextHopSocket = new Socket(hops[0].getAddress().getAddress(),hops[0].getAddress().getPort());
@@ -86,7 +95,37 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		}
 	}
 
+	/**
+	 * 
+	 * 
+	 * @param destAddr the address of the target node (i.e. the last hop)
+	 * @param destHostkey the hostkey of the target node
+	 * @param config configuration
+	 * @param hopCount the number of intermediate hops (excluding our node and the target node)
+	 * @throws Exception 
+	 */
+	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception
+	{
+		this(destAddr,destHostkey,config,config.getHopCount(),new Double(Math.random()).hashCode());
+		
+	}
 
+	
+	/**
+	 * 
+	 * 
+	 * @param destAddr the address of the target node (i.e. the last hop)
+	 * @param destHostkey the hostkey of the target node
+	 * @param config configuration
+	 * @param hopCount the number of intermediate hops (excluding our node and the target node)
+	 * @throws Exception 
+	 */
+	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config, int externalID) throws Exception
+	{
+		this(destAddr,destHostkey,config,config.getHopCount(),externalID);
+		
+	}
+	
 	/**
 	 * Authenticates via OnionAuth. Encrypts with numLayers (0 = no encryption).
 	 * 
@@ -95,7 +134,7 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	 * @return sessionID
 	 * @throws Exception
 	 */
-	short authenticate(byte[] hopHostkey, int numLayers) throws Exception
+	public short authenticate(byte[] hopHostkey, int numLayers) throws Exception
 	{
 
 		OnionAuthAPISocket.AUTHSESSIONHS1 hs1;
@@ -136,6 +175,11 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS2(new OnionAuthAPISocket.AUTHSESSIONINCOMINGHS2(hs1.getSession(), hs2payload));
 		
 		return hs1.getSession();
+	}
+	
+	public void destroy()
+	{
+		// TODO
 	}
 
 }

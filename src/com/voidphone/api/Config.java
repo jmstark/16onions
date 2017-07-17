@@ -23,6 +23,7 @@ public class Config {
 	private String onionAddress;
 	private short onionPort;
 	private String hostkeyPath;
+	private int hopCount;
 	
 	byte[] hostkey;
 	
@@ -49,6 +50,8 @@ public class Config {
 		{
 			Wini configFile = new Wini(new File(configFilePath));
 			hostkeyPath = configFile.get("?", "HOSTKEY", String.class);
+			
+			hopCount = configFile.get("ONION", "hopcount", Integer.class).intValue();
 			// api_address contains address and port, separated by a colon (':')
 			String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
 			int colonPos = apiAddressAndPort.lastIndexOf(':');
@@ -117,5 +120,9 @@ public class Config {
 	
 	public byte[] getHostkey() {
 		return hostkey;
+	}
+	
+	public int getHopCount() {
+		return hopCount;
 	}
 }

@@ -1,18 +1,54 @@
 package com.voidphone.api;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 
 import com.voidphone.onion.Main;
+import com.voidphone.onion.OnionConnectingSocket;
 
 public class OnionAPISocket implements Main.Attachable {
-	DataInputStream dis;
+	protected DataInputStream dis;
+	protected DataOutputStream dos;
+	protected Config config;
+	protected OnionConnectingSocket currentTunnel;
+	protected OnionConnectingSocket nextTunnel;
+	protected InetSocketAddress tunnelDestination;
+	protected byte[] destinationHostkey;
 	public static final int ipAddressLength = 4;
+	
 
-	public OnionAPISocket(SocketChannel sock) {
+	public OnionAPISocket(SocketChannel sock, Config config) {
 		dis = new DataInputStream(Channels.newInputStream(sock));
+		dos = new DataOutputStream(Channels.newOutputStream(sock));
+		this.config = config;
+	}
+	
+	/**
+	 * This function should be called shortly before a new round begins.
+	 * It builds a second backup tunnel with the same end destination.
+	 * 
+	 * @throws Exception
+	 */
+	public void prepareNextTunnel() throws Exception
+	{
+		nextTunnel = new OnionConnectingSocket(tunnelDestination, destinationHostkey, config, currentTunnel.externalID);
+	}
+	
+	/**
+	 * This function should be called at the beginning of a new round.
+	 * We switch over to the new tunnel and destroy the old one.
+	 */
+	public void switchToNextTunnel()
+	{
+		OnionConnectingSocket oldTunnel = currentTunnel;
+		currentTunnel = nextTunnel;
+		oldTunnel.destroy();
+		nextTunnel = null;
 	}
 
 	/**
@@ -20,12 +56,13 @@ public class OnionAPISocket implements Main.Attachable {
 	 * them and calls the appropriate methods, and sends answers (if
 	 * applicable). Needs to process ONION_TUNNEL_BUILD, ONION_TUNNEL_DESTROY,
 	 * ONION_TUNNEL_DATA, ONION_COVER
+	 * @throws Exception 
 	 * 
 	 * @throws IOException
 	 */
-	public boolean handle() {
+	public boolean handle(){
 		try {
-			while (true) {
+
 				short msgLength = dis.readShort();
 				if (msgLength < 8) {
 					throw new IOException("API message too short: " + msgLength
@@ -45,14 +82,20 @@ public class OnionAPISocket implements Main.Attachable {
 						throw new IOException(
 								"API message or target DER-hostkey too short");
 					byte[] targetHostkey = new byte[hostkeyLength];
-					dis.readFully(targetHostkey, 0, targetHostkey.length);
-					// TODO: call function with the now unpacked arguments.
-					// e.g.
-					// onionTunnelBuild(targetIpAddress,targetPort,targetHostkey);
+					dis.readFully(targetHostkey);
+					tunnelDestination = new InetSocketAddress(InetAddress.getByAddress(targetIpAddress), targetPort);
+					currentTunnel = new OnionConnectingSocket(tunnelDestination, targetHostkey, config);
 					break;
 				case APISocket.MSG_TYPE_ONION_TUNNEL_DESTROY:
 					int tunnelId = dis.readInt();
 					// TODO: call function with the now unpacked arguments.
+					currentTunnel.destroy();
+					if(nextTunnel != null)
+						nextTunnel.destroy();
+					
+					tunnelDestination = null;
+					currentTunnel = null;
+					nextTunnel = null;
 					break;
 				case APISocket.MSG_TYPE_ONION_TUNNEL_DATA:
 					tunnelId = dis.readInt();
@@ -71,8 +114,8 @@ public class OnionAPISocket implements Main.Attachable {
 					break;
 				}
 
-			}
-		} catch (IOException e) {
+
+		} catch (Exception e) {
 			System.out.println("API connection lost: " + e.getMessage());
 		}
 		return false;
