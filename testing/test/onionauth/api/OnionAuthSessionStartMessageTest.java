@@ -22,16 +22,11 @@ import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Random;
-import static onionauth.api.OnionAuthSessionHS1Test.sessionID;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import static org.junit.Assert.*;
-import protocol.Message;
+import org.junit.Test;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
+import util.MyRandom;
 import util.SecurityHelper;
 
 /**
@@ -43,16 +38,19 @@ public class OnionAuthSessionStartMessageTest {
             Protocol.MAX_MESSAGE_SIZE * 2);
     static final KeyPair keyPair = util.SecurityHelper.generateRSAKeyPair(2048);
     static final byte[] publicKeyEnc;
+    static final long requestID;
 
     static {
+        Random rand = new Random();
         publicKeyEnc = SecurityHelper.encodeRSAPublicKey(keyPair.getPublic());
+        requestID = MyRandom.randUInt();
     }
     private OnionAuthSessionStartMessage message;
 
     public OnionAuthSessionStartMessageTest() throws
             MessageSizeExceededException {
-        message = new OnionAuthSessionStartMessage((RSAPublicKey) keyPair.
-                getPublic());
+        message = new OnionAuthSessionStartMessage(requestID,
+                (RSAPublicKey) keyPair.getPublic());
     }
 
     /**
@@ -68,14 +66,24 @@ public class OnionAuthSessionStartMessageTest {
     }
 
     /**
-     * Test of getPKey method, of class OnionAuthSessionStartMessage.
+     * Test of getPkey method, of class OnionAuthSessionStartMessage.
      */
     @Test
     public void testGetPKey() {
         System.out.println("getPKey");
         RSAPublicKey expResult = (RSAPublicKey) keyPair.getPublic();
-        RSAPublicKey result = message.getPKey();
+        RSAPublicKey result = message.getPkey();
         assertEquals(expResult, result);
+    }
+
+    /**
+     * Test for getRequestID method
+     */
+    @Test
+    public void testGetRequestID() {
+        System.out.println("getRequestID");
+        long ID = message.getRequestID();
+        assertEquals(ID, requestID);
     }
 
     /**
@@ -101,5 +109,4 @@ public class OnionAuthSessionStartMessageTest {
                 parse(buffer);
         assertEquals(message, result);
     }
-
 }

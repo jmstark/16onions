@@ -12,7 +12,7 @@ import protocol.Protocol.MessageType;
  *
  * @author troll
  */
-public abstract class Message {
+public abstract class MessageXXX {
 
     protected int size;
     public static final long UINT32_MAX = (1L << 32) - 1;
@@ -22,7 +22,7 @@ public abstract class Message {
     private boolean headerAdded;
     private MessageType type;
 
-    protected Message() {
+    protected MessageXXX() {
         this.size = 0;
         this.headerAdded = false;
     }
@@ -42,10 +42,10 @@ public abstract class Message {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof Message)) {
+        if (!(obj instanceof MessageXXX)) {
             return false;
         }
-        Message otherMsg = (Message) obj;
+        MessageXXX otherMsg = (MessageXXX) obj;
         if (otherMsg.getSize() != size) {
             return false;
         }

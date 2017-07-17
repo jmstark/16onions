@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,28 +14,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.voidphone.api.rps;
+package util;
 
-import java.nio.ByteBuffer;
-import protocol.Protocol;
+import lombok.Getter;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class RpsQueryMessage extends RpsApiMessage {
-
-    public RpsQueryMessage() {
-        this.addHeader(Protocol.MessageType.API_RPS_QUERY);
-    }
-
-    @Override
-    public void send(ByteBuffer out) {
-        super.send(out);
-    }
+public abstract class ExitStatus {
+    /**
+     * Status code for normal exit
+     */
+    public static final int OK = 0;
 
     /**
-     * This message does not have any specific body; hence there is no parser
-     * method
+     * Exiting due to an error while reading configuration
      */
+    public static final int CONF_ERROR = -1;
+
+    /**
+     * Exiting due to a test failure
+     */
+    public static final int TEST_FAILURE = 1;
 }

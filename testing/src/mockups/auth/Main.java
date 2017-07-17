@@ -49,7 +49,10 @@ public class Main extends Program {
         try {
             config = new OnionAuthConfiguration(filename);
         } catch (IOException ex) {
-            throw new RuntimeException("Unable to read config file");
+            LOGGER.log(Level.SEVERE, "Unable to read config file: {0}", ex.
+                    getLocalizedMessage());
+            Runtime.getRuntime().exit(util.ExitStatus.CONF_ERROR);
+            return;
         }
         apiAddress = config.getAPIAddress();
     }

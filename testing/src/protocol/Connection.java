@@ -117,7 +117,7 @@ public final class Connection {
             boolean waiting;
 
             if (result <= 0) {
-                logger.warning("Failed to read");
+                logger.finest("Connection closed for reading");
                 disconnect();
                 return;
             }

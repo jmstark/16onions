@@ -26,7 +26,7 @@ import protocol.MessageSizeExceededException;
  */
 public class PartialSessionHS1Impl extends AbstractPartialSessionImpl {
 
-    public PartialSessionHS1Impl(long id, byte[] payload, Connection connection) {
+    public PartialSessionHS1Impl(int id, byte[] payload, Connection connection) {
         super(id, payload, connection);
     }
 
@@ -41,7 +41,8 @@ public class PartialSessionHS1Impl extends AbstractPartialSessionImpl {
     public Session completeSession(byte[] diffiePayload) throws
             MessageSizeExceededException {
         OnionAuthSessionIncomingHS2 message;
-        message = new OnionAuthSessionIncomingHS2(id, diffiePayload);
+        message = new OnionAuthSessionIncomingHS2(id, RequestID.get(),
+                diffiePayload);
         connection.sendMsg(message);
         return this;
     }

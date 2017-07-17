@@ -25,6 +25,7 @@ import java.util.concurrent.Future;
 import auth.api.OnionAuthDecrypt;
 import auth.api.OnionAuthEncrypt;
 import protocol.Connection;
+import protocol.Message;
 import protocol.MessageSizeExceededException;
 
 public class TunnelImpl implements Tunnel {
@@ -32,7 +33,7 @@ public class TunnelImpl implements Tunnel {
     private final LinkedList<Session> sessions;
     private final Session main;
     private final Connection connection;
-    private static final Map<Integer, FutureImpl> requestMap = new HashMap(3000);
+    private static final Map<Long, FutureImpl> requestMap = new HashMap(3000);
     private static int counter = 0;
 
     public TunnelImpl(Session session, Connection connection) {
@@ -41,10 +42,11 @@ public class TunnelImpl implements Tunnel {
         this.connection = connection;
     }
 
-    public static FutureImpl getFuture(int id) throws NoSuchElementException {
-        FutureImpl future = requestMap.remove(id);
+    public static FutureImpl getFuture(long requestID) throws
+            NoSuchElementException {
+        FutureImpl future = requestMap.remove(requestID);
         if (null == future) {
-            throw new NoSuchElementException(Integer.toString(id));
+            throw new NoSuchElementException(Long.toString(requestID));
         }
         return future;
     }
@@ -59,9 +61,9 @@ public class TunnelImpl implements Tunnel {
         return this.sessions.remove(session);
     }
 
-    private long[] getSessionIDs() {
+    private int[] getSessionIDs() {
         sessions.addFirst(main);
-        long[] ids = new long[sessions.size()];
+        int[] ids = new int[sessions.size()];
         int index = 0;
         for (Session session : sessions) {
             ids[index++] = session.getID();
@@ -75,10 +77,10 @@ public class TunnelImpl implements Tunnel {
             CompletionHandler<byte[], ? extends Object> handler) throws
             MessageSizeExceededException {
         OnionAuthEncrypt request;
-        int requestID;
+        long requestID;
 
-        requestID = counter++;
-        long[] ids = getSessionIDs();
+        requestID = RequestID.get();
+        int[] ids = getSessionIDs();
         request = new OnionAuthEncrypt(requestID, ids, payload);
         FutureImpl future = new FutureImpl(handler, null);
         this.requestMap.put(requestID, future);
@@ -92,10 +94,10 @@ public class TunnelImpl implements Tunnel {
             MessageSizeExceededException {
 
         OnionAuthDecrypt request;
-        int requestID;
-        long[] ids;
+        long requestID;
+        int[] ids;
 
-        requestID = counter++;
+        requestID = RequestID.get();
         ids = getSessionIDs();
         request = new OnionAuthDecrypt(requestID, ids, payload);
         FutureImpl future = new FutureImpl(handler, null);

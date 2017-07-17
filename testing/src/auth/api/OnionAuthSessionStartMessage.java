@@ -19,7 +19,9 @@ package auth.api;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Arrays;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -29,10 +31,12 @@ import util.SecurityHelper;
  *
  * @author totakura
  */
+@EqualsAndHashCode(callSuper = true, exclude = "pkey")
 public class OnionAuthSessionStartMessage extends OnionAuthApiMessage {
 
-    private final byte[] keyEnc;
-    private final RSAPublicKey pkey;
+    @Getter private final byte[] keyEnc;
+    @Getter private final RSAPublicKey pkey;
+    @Getter private final long requestID;
 
     /**
      * Return new OnionAuthSessionStartMessage.
@@ -40,8 +44,12 @@ public class OnionAuthSessionStartMessage extends OnionAuthApiMessage {
      * @param pkey the public key
      * @throws protocol.MessageSizeExceededException
      */
-    public OnionAuthSessionStartMessage(RSAPublicKey pkey)
+    public OnionAuthSessionStartMessage(long requestID, RSAPublicKey pkey)
             throws MessageSizeExceededException {
+        assert (requestID <= Message.UINT32_MAX);
+        this.size += 4; //for reserved 32 bits
+        this.requestID = requestID;
+        this.size += 4;
         this.pkey = pkey;
         this.keyEnc = SecurityHelper.encodeRSAPublicKey(pkey);
         this.addHeader(Protocol.MessageType.API_AUTH_SESSION_START);
@@ -51,43 +59,12 @@ public class OnionAuthSessionStartMessage extends OnionAuthApiMessage {
         this.size += this.keyEnc.length;
     }
 
-    public byte[] getKeyEnc() {
-        return keyEnc;
-    }
-
-    public RSAPublicKey getPKey() {
-        return pkey;
-    }
-
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
+        super.sendEmptyBytes(out, 4); //reserved bits
+        out.putInt((int) requestID);
         out.put(keyEnc);
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 19 * hash + Arrays.hashCode(this.keyEnc);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final OnionAuthSessionStartMessage other = (OnionAuthSessionStartMessage) obj;
-        if (!Arrays.equals(this.keyEnc, other.keyEnc)) {
-            return false;
-        }
-        return true;
     }
 
     public static OnionAuthSessionStartMessage parse(ByteBuffer buf)
@@ -95,7 +72,10 @@ public class OnionAuthSessionStartMessage extends OnionAuthApiMessage {
         byte[] enc;
         OnionAuthSessionStartMessage message;
         RSAPublicKey pkey;
+        long requestID;
 
+        buf.position(buf.position() + 4); //skip remaining
+        requestID = Message.unsignedLongFromInt(buf.getInt());
         enc = new byte[buf.remaining()];
         buf.get(enc);
         try {
@@ -104,7 +84,7 @@ public class OnionAuthSessionStartMessage extends OnionAuthApiMessage {
             throw new MessageParserException("Invalid key");
         }
         try {
-            message = new OnionAuthSessionStartMessage(pkey);
+            message = new OnionAuthSessionStartMessage(requestID, pkey);
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException("Size exceeded");
         }

@@ -62,7 +62,10 @@ public class Main extends Program {
         try {
             config = new OnionAuthTesterConfiguration(filename);
         } catch (IOException ex) {
-            throw new RuntimeException("Unable to read config file");
+            LOGGER.log(Level.SEVERE, "Unable to read config file: {0}", ex.
+                    getLocalizedMessage());
+            Runtime.getRuntime().exit(util.ExitStatus.CONF_ERROR);
+            return;
         }
         apiAddress1 = config.getAPIAddress();
         apiAddress2 = config.getAddress("api_address2");

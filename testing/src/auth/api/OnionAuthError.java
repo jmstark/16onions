@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,36 +28,33 @@ import protocol.Protocol;
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
 @EqualsAndHashCode(callSuper = true)
-public class OnionAuthClose extends OnionAuthApiMessage {
+public class OnionAuthError extends OnionAuthApiMessage {
+    @Getter private long requestID;
 
-    @Getter private int sessionID;
-
-    public OnionAuthClose(int sessionID) {
-        super.addHeader(Protocol.MessageType.API_AUTH_SESSION_CLOSE);
-        assert (sessionID <= Message.UINT16_MAX);
-        this.sessionID = sessionID;
-        this.size += 4; //2 bytes reserved; 2 for sessionID
+    public OnionAuthError(long requestID) {
+        assert (requestID <= Message.UINT32_MAX);
+        super.addHeader(Protocol.MessageType.API_AUTH_ERROR);
+        this.size += 4; // 4 bytes for reserved
+        this.requestID = requestID;
+        this.size += 4; // 4 bytes for requestID
     }
 
+    @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        super.sendEmptyBytes(out, 2); //reserved
-        out.putShort((short) sessionID);
+        super.sendEmptyBytes(out, 4);
+        out.putInt((int) requestID);
     }
 
-    public static OnionAuthClose parse(ByteBuffer buf) throws
+    public static OnionAuthError parse(ByteBuffer buf) throws
             MessageParserException {
-        int sessionID;
-        int remaining;
+        long requestID;
 
-        remaining = buf.remaining();
-
-        if ((remaining < 4) || (remaining > 4)) {
-            throw new MessageParserException("unable to parse message");
+        if (buf.remaining() != 8) {
+            throw new MessageParserException("Unknown format");
         }
-        buf.getShort();//reserved
-        sessionID = protocol.Message.unsignedIntFromShort(buf.getShort());
-        OnionAuthClose message = new OnionAuthClose(sessionID);
-        return message;
+        buf.getInt(); //read out 4 bytes for reserved
+        requestID = Message.unsignedLongFromInt(buf.getInt());
+        return new OnionAuthError(requestID);
     }
 }

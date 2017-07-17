@@ -17,7 +17,9 @@
 package auth.api;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -26,15 +28,21 @@ import protocol.Protocol;
  *
  * @author totakura
  */
+@EqualsAndHashCode(callSuper = true)
 public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
 
-    protected long id;
-    protected byte[] payload;
+    @Getter protected int sessionID;
+    @Getter protected byte[] payload;
+    @Getter protected long requestID;
 
-    public OnionAuthSessionHS1(long id, byte[] payload) throws MessageSizeExceededException {
-        assert (id <= ((1L << 32) - 1));
+    public OnionAuthSessionHS1(int sessionID, long requestID, byte[] payload) throws MessageSizeExceededException {
+        assert (sessionID <= Message.UINT16_MAX);
+        assert (requestID <= Message.UINT32_MAX);
         this.addHeader(Protocol.MessageType.API_AUTH_SESSION_HS1);
-        this.id = id;
+        this.size += 2;// for reserved
+        this.sessionID = sessionID;
+        this.size += 2;
+        this.requestID = requestID;
         this.size += 4;
         if ((this.size + payload.length) > Protocol.MAX_MESSAGE_SIZE) {
             throw new MessageSizeExceededException();
@@ -43,18 +51,12 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
         this.size += payload.length;
     }
 
-    public long getId() {
-        return id;
-    }
-
-    public byte[] getPayload() {
-        return payload;
-    }
-
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        out.putInt((int) this.id);
+        super.sendEmptyBytes(out, 2);//reserved
+        out.putShort((short) this.sessionID);
+        out.putInt((int) requestID);
         out.put(this.payload);
     }
 
@@ -62,47 +64,22 @@ public class OnionAuthSessionHS1 extends OnionAuthApiMessage {
             throws MessageParserException {
         OnionAuthSessionHS1 message;
         byte[] payload;
+        long requestID;
+        int sessionID;
 
         if (buf.remaining() <= 4) {
             throw new MessageParserException("Missing payload");
         }
-        long id = protocol.Message.unsignedLongFromInt(buf.getInt());
+        buf.getShort(); //read out reserved part
+        sessionID = Message.unsignedIntFromShort(buf.getShort());
+        requestID = Message.unsignedLongFromInt(buf.getInt());
         payload = new byte[buf.remaining()];
         buf.get(payload);
         try {
-            message = new OnionAuthSessionHS1(id, payload);
+            message = new OnionAuthSessionHS1(sessionID, requestID, payload);
         } catch (MessageSizeExceededException ex) {
-            throw new MessageParserException("invalid message encoding");
+            throw new MessageParserException("Invalid message encoding");
         }
         return message;
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 5;
-        hash = 89 * hash + (int) (this.id ^ (this.id >>> 32));
-        hash = 89 * hash + Arrays.hashCode(this.payload);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final OnionAuthSessionHS1 other = (OnionAuthSessionHS1) obj;
-        if (this.id != other.id) {
-            return false;
-        }
-        if (!Arrays.equals(this.payload, other.payload)) {
-            return false;
-        }
-        return true;
     }
 }

@@ -19,14 +19,8 @@ package onionauth.api;
 import auth.api.OnionAuthEncryptResp;
 import java.nio.ByteBuffer;
 import java.util.Random;
-import static onionauth.api.OnionAuthEncryptTest.payload;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import protocol.Message;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
 
@@ -39,18 +33,18 @@ public class OnionAuthEncryptRespTest {
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
     static final byte[] payload;
-    static final int requestId;
+    static final long requestID;
 
     static {
         Random rand = new Random();
         payload = new byte[rand.nextInt(32000)];
         rand.nextBytes(payload);
-        requestId = rand.nextInt((Short.MAX_VALUE * 2) + 2);
+        requestID = util.MyRandom.randUInt();
     }
     private final OnionAuthEncryptResp message;
 
     public OnionAuthEncryptRespTest() throws MessageSizeExceededException {
-        message = new OnionAuthEncryptResp(requestId, payload);
+        message = new OnionAuthEncryptResp(requestID, payload);
     }
 
     /**
@@ -59,8 +53,8 @@ public class OnionAuthEncryptRespTest {
     @Test
     public void testGetId() {
         System.out.println("getId");
-        int expResult = requestId;
-        int result = message.getId();
+        long expResult = requestID;
+        long result = message.getRequestID();
         assertEquals(expResult, result);
     }
 

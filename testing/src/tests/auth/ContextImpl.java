@@ -16,6 +16,12 @@
  */
 package tests.auth;
 
+import auth.api.OnionAuthDecryptResp;
+import auth.api.OnionAuthEncryptResp;
+import auth.api.OnionAuthSessionHS1;
+import auth.api.OnionAuthSessionHS2;
+import auth.api.OnionAuthSessionIncomingHS1;
+import auth.api.OnionAuthSessionStartMessage;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -26,14 +32,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import auth.api.OnionAuthClose;
-import auth.api.OnionAuthDecryptResp;
-import auth.api.OnionAuthEncryptResp;
-import auth.api.OnionAuthSessionHS1;
-import auth.api.OnionAuthSessionHS2;
-import auth.api.OnionAuthSessionIncomingHS1;
-import auth.api.OnionAuthSessionIncomingHS2;
-import auth.api.OnionAuthSessionStartMessage;
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
@@ -74,7 +72,7 @@ class ContextImpl implements Context {
             CompletionHandler<PartialSession, Void> handler) {
         OnionAuthSessionStartMessage message;
         try {
-            message = new OnionAuthSessionStartMessage(key);
+            message = new OnionAuthSessionStartMessage(RequestID.get(), key);
         } catch (MessageSizeExceededException ex) {
             throw new RuntimeException("Public key too big");
         }
@@ -90,7 +88,8 @@ class ContextImpl implements Context {
             CompletionHandler<PartialSession, Void> handler) throws
             MessageSizeExceededException {
         OnionAuthSessionIncomingHS1 message;
-        message = new OnionAuthSessionIncomingHS1(key, diffiePayload);
+        message = new OnionAuthSessionIncomingHS1(RequestID.get(), key,
+                diffiePayload);
         connection.sendMsg(message);
         /**
          * we assume that SESSION_START and START_SESSION_HS1 are progressed
@@ -149,7 +148,7 @@ class ContextImpl implements Context {
                     }
                          logger.log(Level.FINER, "Parsed AUTH SESSION HS1");
                     if (null != message) {
-                        session = new PartialSessionHS1Impl(message.getId(),
+                        session = new PartialSessionHS1Impl(message.getSessionID(),
                                 message.getPayload(), connection);
                         logger.log(Level.FINEST, "Created IncompleteSession");
                         future.trigger(session, null);
@@ -171,7 +170,8 @@ class ContextImpl implements Context {
                          PartialSession session;
                          message = OnionAuthSessionHS2.parse(buf);
                          logger.log(Level.FINER, "Parsed AUTH SESSION HS2");
-                         session = new PartialSessionHS2Impl(message.getId(),
+                         session = new PartialSessionHS2Impl(message.
+                                 getSessionID(),
                                  message.getPayload(), connection);
                          logger.log(Level.FINEST, "Created ReceiverSession");
                          future.trigger(session, null);
@@ -189,7 +189,8 @@ class ContextImpl implements Context {
                                     "Received AUTH LAYER ENCRYPT RESP message");
                             FutureImpl future;
                             try {
-                                future = TunnelImpl.getFuture(message.getId());
+                                future = TunnelImpl.getFuture(message.
+                                        getRequestID());
                             } catch (NoSuchElementException ex) {
                                 logger.warning(
                                         "Received encrypt response for an unknown ID");
@@ -205,7 +206,8 @@ class ContextImpl implements Context {
                                     "Received AUTH LAYER DECRYPT RESP message");
                             FutureImpl future;
                             try {
-                                future = TunnelImpl.getFuture(message.getId());
+                                future = TunnelImpl.getFuture(message.
+                                        getRequestID());
                             } catch (NoSuchElementException ex) {
                                 logger.warning(
                                         "Received encrypt response for an unknown ID");

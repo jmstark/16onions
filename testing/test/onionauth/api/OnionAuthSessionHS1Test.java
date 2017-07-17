@@ -20,11 +20,6 @@ import auth.api.OnionAuthSessionHS1;
 import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.util.Random;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import protocol.Message;
@@ -41,29 +36,43 @@ public class OnionAuthSessionHS1Test {
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
     static final KeyPair keyPair = util.SecurityHelper.generateRSAKeyPair(2048);
-    static final long sessionID;
+    static final int sessionID;
+    static final long requestID;
     static final byte[] publicKeyEnc;
 
     static {
         Random rand = new Random();
-        sessionID = Message.unsignedLongFromInt(rand.nextInt());
+
+        sessionID = rand.nextInt(Message.UINT16_MAX + 1);
+        requestID = util.MyRandom.randUInt();
         publicKeyEnc = SecurityHelper.encodeRSAPublicKey(keyPair.getPublic());
     }
 
     private final OnionAuthSessionHS1 message;
 
     public OnionAuthSessionHS1Test() throws MessageSizeExceededException {
-        message = new OnionAuthSessionHS1(sessionID, publicKeyEnc);
+        message = new OnionAuthSessionHS1(sessionID, requestID, publicKeyEnc);
     }
 
     /**
-     * Test of getId method, of class OnionAuthSessionHS1.
+     * Test of getRequestID method, of class OnionAuthSessionHS1.
      */
     @Test
-    public void testGetId() {
-        System.out.println("getId");
-        long expResult = sessionID;
-        long result = message.getId();
+    public void testGetSessionID() {
+        System.out.println("getSessionID");
+        int expResult = sessionID;
+        int result = message.getSessionID();
+        assertEquals(expResult, result);
+    }
+
+    /**
+     * Test of getRequestID method, of class OnionAuthSessionHS1.
+     */
+    @Test
+    public void testGetRequestID() {
+        System.out.println("getRequestID");
+        long expResult = requestID;
+        long result = message.getRequestID();
         assertEquals(expResult, result);
     }
 

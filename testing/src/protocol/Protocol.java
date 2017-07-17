@@ -53,6 +53,7 @@ public class Protocol {
         API_AUTH_LAYER_ENCRYPT_RESP(607),
         API_AUTH_LAYER_DECRYPT_RESP(608),
         API_AUTH_SESSION_CLOSE(609),
+        API_AUTH_ERROR(610),
         //Gossip P2P Messages
         GOSSIP_HELLO(9500),
         GOSSIP_NEIGHBORS(9501),

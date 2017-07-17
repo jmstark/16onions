@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,14 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.voidphone.api.rps;
-
-import protocol.Message;
+package tests.auth;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class RpsApiMessage extends Message {
+class RequestID {
+
+    private static long ID = 0;
+
+    /**
+     * @return a globally unique requestID
+     */
+    static long get() {
+        return ID++;
+    }
 
 }

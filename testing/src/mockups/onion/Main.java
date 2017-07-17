@@ -22,6 +22,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.security.InvalidKeyException;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import mockups.onion.api.OnionApiServer;
 import mockups.onion.p2p.OnionP2pServer;
@@ -60,8 +61,10 @@ public class Main extends Program {
             config = new OnionConfigurationImpl(filename);
             rpsConfig = new RpsConfigurationImpl(filename);
         } catch (IOException ex) {
-            throw new RuntimeException("Unable to read config file: " + ex.
-                    getMessage());
+            LOGGER.log(Level.SEVERE, "Unable to read config file: {0}", ex.
+                    getLocalizedMessage());
+            Runtime.getRuntime().exit(util.ExitStatus.CONF_ERROR);
+            return;
         }
         rpsAddress = rpsConfig.getAPIAddress();
     }

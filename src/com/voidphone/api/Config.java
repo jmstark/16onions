@@ -4,16 +4,18 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+
 import org.ini4j.Wini;
 
-import com.voidphone.api.auth.OnionAuthAPISocket;
-import com.voidphone.api.rps.RPSAPISocket;
 import com.voidphone.general.General;
+
+import util.PEMParser;
 public class Config {
 	// Socket to the Onion Auth module API
-	private OnionAuthAPISocket onionAuthAPISocket;
+	private OnionAuthApiSocket onionAuthAPISocket;
 	// Socket to the RPS module API
-	private RPSAPISocket rpsAPISocket;
+	private RpsApiSocket rpsAPISocket;
 	// addr + port of the Onion module API
 	private String onionAPIAddress;
 	private short onionAPIPort;
@@ -22,6 +24,9 @@ public class Config {
 	private String onionAddress;
 	private short onionPort;
 	private String hostkeyPath;
+	private int hopCount;
+	
+	byte[] hostkey;
 	
 	
 	public Config(String configFilePath)
@@ -46,6 +51,8 @@ public class Config {
 		{
 			Wini configFile = new Wini(new File(configFilePath));
 			hostkeyPath = configFile.get("?", "HOSTKEY", String.class);
+			
+			hopCount = configFile.get("ONION", "hopcount", Integer.class).intValue();
 			// api_address contains address and port, separated by a colon (':')
 			String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
 			int colonPos = apiAddressAndPort.lastIndexOf(':');
@@ -65,16 +72,26 @@ public class Config {
 			colonPos = rpsAddressAndPort.lastIndexOf(':');
 			rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
 			rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
-}
+			
+	        File file = new File(hostkeyPath);
+	        hostkey = PEMParser.getPublicKeyFromPEM(file).getEncoded();
+
+			
+		}
 		catch (IOException e)
 		{
 			General.fatal("FATAL: Could not read config file!");
 			System.exit(1);
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			General.fatal("FATAL: Invalid key!");
+			System.exit(1);
+			e.printStackTrace();
 		}
 		// ugly dummy try catch
 		try {
-			onionAuthAPISocket = new OnionAuthAPISocket(new InetSocketAddress(authAPIAddress, authAPIPort));
-			rpsAPISocket = new RPSAPISocket(new InetSocketAddress(rpsAPIAddress, rpsAPIPort));
+			onionAuthAPISocket = new OnionAuthApiSocket(new InetSocketAddress(authAPIAddress, authAPIPort));
+			rpsAPISocket = new RpsApiSocket(new InetSocketAddress(rpsAPIAddress, rpsAPIPort));
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -86,11 +103,11 @@ public class Config {
 				+ "; \nconnecting to RPS API on " + rpsAPIAddress + ":" + rpsAPIPort);
 	}
 	
-	public OnionAuthAPISocket getOnionAuthAPISocket() {
+	public OnionAuthApiSocket getOnionAuthAPISocket() {
 		return onionAuthAPISocket;
 	}
 	
-	public RPSAPISocket getRPSAPISocket() {
+	public RpsApiSocket getRPSAPISocket() {
 		return rpsAPISocket;
 	}
 	
@@ -103,6 +120,10 @@ public class Config {
 	}
 	
 	public byte[] getHostkey() {
-		return null;
+		return hostkey;
+	}
+	
+	public int getHopCount() {
+		return hopCount;
 	}
 }

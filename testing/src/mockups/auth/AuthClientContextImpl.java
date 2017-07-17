@@ -16,14 +16,6 @@
  */
 package mockups.auth;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.crypto.ShortBufferException;
 import auth.api.OnionAuthClose;
 import auth.api.OnionAuthDecrypt;
 import auth.api.OnionAuthDecryptResp;
@@ -33,6 +25,15 @@ import auth.api.OnionAuthSessionHS1;
 import auth.api.OnionAuthSessionHS2;
 import auth.api.OnionAuthSessionIncomingHS1;
 import auth.api.OnionAuthSessionIncomingHS2;
+import auth.api.OnionAuthSessionStartMessage;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.ShortBufferException;
 import protocol.Connection;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
@@ -105,11 +106,15 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
         switch (type) {
             case API_AUTH_SESSION_START: {
                 logger.info("Received SESSION_START");
+                OnionAuthSessionStartMessage request;
+                request = OnionAuthSessionStartMessage.parse(buf);
                 PartialSession session = newPartialSession();
                 OnionAuthSessionHS1 message;
                 try {
-                    message = new OnionAuthSessionHS1(session.getID(), session.
-                            getOurKeyHalf().getBytes());
+                    message = new OnionAuthSessionHS1(
+                            session.getID(),
+                            request.getRequestID(),
+                            session.getOurKeyHalf().getBytes());
                 } catch (MessageSizeExceededException ex) {
                     throw new RuntimeException("This is a bug; please report");
                 }
@@ -129,7 +134,9 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                 otherKey = new KeyImpl(request.getPayload());
                 session = createSession(otherKey);
                 try {
-                    reply = new OnionAuthSessionHS2(session.getID(),
+                    reply = new OnionAuthSessionHS2(
+                            session.getID(),
+                            request.getRequestID(),
                             session.getOurKeyHalf().getBytes());
                 } catch (MessageSizeExceededException ex) {
                     throw new RuntimeException("This is a bug; please report");
@@ -147,7 +154,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
 
                 logger.info("Received SESSION_INCOMING_HS2");
                 request = OnionAuthSessionIncomingHS2.parse(buf);
-                id = (int) request.getId();
+                id = request.getSessionID();
                 partial = findPartialSession(id);
                 if (null == partial) {
                     throw new ProtocolException(
@@ -178,7 +185,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                     data = session.encrypt(data);
                 }
                 try {
-                    reply = new OnionAuthEncryptResp((int) request.getId(),
+                    reply = new OnionAuthEncryptResp(request.getRequestID(),
                             data);
                 } catch (MessageSizeExceededException ex) {
                     logger.log(Level.SEVERE,
@@ -209,7 +216,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                     }
                 }
                 try {
-                    reply = new OnionAuthDecryptResp(request.getId(), data);
+                    reply = new OnionAuthDecryptResp(request.getRequestID(), data);
                 } catch (MessageSizeExceededException ex) {
                     // shouldn't happen as decryption should reduce the payload size
                     throw new RuntimeException(
@@ -250,7 +257,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
 
     private Session[] extractSessions(OnionAuthEncrypt request) throws
             ProtocolException {
-        long[] ids = request.getSessions();
+        int[] ids = request.getSessions();
         Session[] sessions = new Session[ids.length];
         for (int index = 0; index < sessions.length; index++) {
             Session session = findSession((int) ids[index]);

@@ -30,6 +30,7 @@ import protocol.Connection;
 import protocol.DisconnectHandler;
 
 /**
+ * Class to initiate P2P connection to other peers.
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
@@ -75,11 +76,13 @@ public final class Client {
 
         @Override
         public void failed(Throwable arg0, Void arg1) {
-            LOGGER.log(Level.SEVERE, "Connection to peer {0} failed", peer);
+            LOGGER.log(Level.INFO, "Connection to peer {0} failed", peer);
             try {
                 channel.close();
             } catch (IOException ex) {
                 LOGGER.log(Level.SEVERE, null, ex);
+            } finally {//Remove this peer if we fail to connect to it.
+                cache.removePeer(peer);
             }
         }
     }
@@ -93,8 +96,10 @@ public final class Client {
 
         @Override
         protected void handleDisconnect(PeerContext context) {
+            Peer peer = context.getPeer();
+            LOGGER.log(Level.INFO, "Peer {0} disconnected", peer);
             context.shutdown();
-            cache.removePeer(context.getPeer());
+            cache.removePeer(peer);
         }
     }
 }

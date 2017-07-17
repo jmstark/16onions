@@ -18,6 +18,8 @@ package auth.api;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import protocol.Message;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -30,15 +32,18 @@ import protocol.Protocol;
  *
  * @author totakura
  */
+@EqualsAndHashCode(callSuper = true)
 public class OnionAuthEncryptResp extends OnionAuthApiMessage {
 
-    private final int id;
-    private final byte[] payload;
+    @Getter private final long requestID;
+    @Getter private final byte[] payload;
 
-    public OnionAuthEncryptResp(int id, byte[] payload) throws MessageSizeExceededException {
+    public OnionAuthEncryptResp(long requestID, byte[] payload)
+            throws MessageSizeExceededException {
         this.addHeader(Protocol.MessageType.API_AUTH_LAYER_ENCRYPT_RESP);
-        this.id = id;
-        this.size += 4; //2 id + 2 reserved
+        this.size += 4; //reserved
+        this.requestID = requestID;
+        this.size += 4; //4 bytes for requestID
         this.payload = payload;
         this.size += payload.length;
         if (this.size > Protocol.MAX_MESSAGE_SIZE) {
@@ -46,31 +51,11 @@ public class OnionAuthEncryptResp extends OnionAuthApiMessage {
         }
     }
 
-    /**
-     * Get the response ID.
-     *
-     * The response ID matches a previous request.
-     *
-     * @return the response ID
-     */
-    public int getId() {
-        return id;
-    }
-
-    /**
-     * Get the encrypted payload.
-     *
-     * @return the encrypted payload
-     */
-    public byte[] getPayload() {
-        return payload;
-    }
-
     @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        out.putShort((short) this.id);
-        this.sendEmptyBytes(out, 2); //reserved
+        super.sendEmptyBytes(out, 4); //reserved
+        out.putInt((int) this.requestID);
         out.put(payload);
     }
 
@@ -83,51 +68,22 @@ public class OnionAuthEncryptResp extends OnionAuthApiMessage {
      */
     public static OnionAuthEncryptResp parse(ByteBuffer buf)
             throws MessageParserException {
-        int id;
+        long requestID;
         byte[] payload;
 
         if (buf.remaining() <= 4) {
             throw new MessageParserException("Message size is too small");
         }
-        id = Message.unsignedIntFromShort(buf.getShort());
-        buf.getShort(); //2 reserved
+        buf.getInt();
+        requestID = Message.unsignedLongFromInt(buf.getInt());
         payload = new byte[buf.remaining()];
         buf.get(payload);
         OnionAuthEncryptResp message;
         try {
-            message = new OnionAuthEncryptResp(id, payload);
+            message = new OnionAuthEncryptResp(requestID, payload);
         } catch (MessageSizeExceededException ex) {
             throw new MessageParserException();
         }
         return message;
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 31 * hash + this.id;
-        hash = 31 * hash + Arrays.hashCode(this.payload);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final OnionAuthEncryptResp other = (OnionAuthEncryptResp) obj;
-        if (this.id != other.id) {
-            return false;
-        }
-        if (!Arrays.equals(this.payload, other.payload)) {
-            return false;
-        }
-        return true;
     }
 }

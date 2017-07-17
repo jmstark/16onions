@@ -24,24 +24,24 @@ import protocol.Connection;
  */
 public class SessionImpl implements Session {
 
-    protected final long id;
+    protected final int id;
     protected final Connection connection;
 
-    public SessionImpl(long id, Connection connection) {
+    public SessionImpl(int id, Connection connection) {
         super();
         this.id = id;
         this.connection = connection;
     }
 
     @Override
-    public long getID() {
+    public int getID() {
         return this.id;
     }
 
     @Override
     public void close() {
         OnionAuthClose message;
-        message = new OnionAuthClose((int) id);
+        message = new OnionAuthClose(id);
         connection.sendMsg(message);
     }
 }

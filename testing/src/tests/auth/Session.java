@@ -28,7 +28,7 @@ public interface Session {
      *
      * @return the ID
      */
-    public long getID();
+    public int getID();
 
     /**
      * Close this session
