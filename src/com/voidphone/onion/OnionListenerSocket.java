@@ -8,7 +8,6 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.channels.SocketChannel;
 
-import com.voidphone.api.OnionAuthApiSocket.AUTHSESSIONINCOMINGHS1;
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionAuthApiSocket;
 import com.voidphone.general.General;

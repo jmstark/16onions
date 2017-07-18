@@ -10,17 +10,9 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-import com.voidphone.api.APISocket;
+import com.voidphone.api.ApiSocket;
 import com.voidphone.api.Config;
-<<<<<<< HEAD
-import com.voidphone.api.auth.OnionAuthAPISocket;
-=======
-import com.voidphone.api.OnionAuthAPISocket;
-import com.voidphone.api.RPSAPISocket;
-import com.voidphone.api.RPSAPISocket.OnionPeer;
 
-import auth.api.*;
->>>>>>> b398acd80ea31a99a4c5d644bb998a8e2979c740
 
 /**
  * When the main application wants to build a tunnel to some node, it creates an

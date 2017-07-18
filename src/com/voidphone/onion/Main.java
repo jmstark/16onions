@@ -16,12 +16,6 @@ import java.util.Set;
 
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionAPISocket;
-<<<<<<< HEAD
-import com.voidphone.api.rps.RPSAPISocket.RPSPEER;
-=======
-import com.voidphone.api.OnionAuthAPISocket.AUTHSESSIONHS1;
-import com.voidphone.api.RPSAPISocket.OnionPeer;
->>>>>>> b398acd80ea31a99a4c5d644bb998a8e2979c740
 import com.voidphone.general.General;
 
 public class Main {
