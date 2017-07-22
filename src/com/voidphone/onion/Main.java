@@ -18,7 +18,10 @@ import com.voidphone.api.Config;
 import com.voidphone.api.OnionAPISocket;
 import com.voidphone.general.General;
 
+import lombok.Getter;
+
 public class Main {
+	private static @Getter Selector selector;
 	private static Config config;
 
 	/**
@@ -26,7 +29,7 @@ public class Main {
 	 */
 	private static void run() {
 		try {
-			Selector selector = Selector.open();
+			selector = Selector.open();
 			General.info("Waiting for API connection on "
 					+ config.getOnionAPIPort() + ".....");
 			SocketChannel onionAPISocket = ServerSocketChannel

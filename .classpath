@@ -9,5 +9,6 @@
 	<classpathentry kind="lib" path="testing/libs/ini4j-0.5.4.jar"/>
 	<classpathentry kind="lib" path="testing/libs/junit-4.12.jar"/>
 	<classpathentry kind="lib" path="testing/libs/bcprov-jdk15on-155.jar"/>
+	<classpathentry kind="lib" path="testing/libs/lombok-1.16.16.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

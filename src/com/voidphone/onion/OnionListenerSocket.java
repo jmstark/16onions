@@ -11,6 +11,10 @@ import java.nio.channels.SocketChannel;
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionAuthApiSocket;
 import com.voidphone.general.General;
+import com.voidphone.general.Util;
+
+import auth.api.OnionAuthSessionHS2;
+import auth.api.OnionAuthSessionIncomingHS1;
 
 /**
  * Main application runs a TCP server socket. There, when it receives a new
@@ -31,8 +35,6 @@ public class OnionListenerSocket extends OnionBaseSocket implements Main.Attacha
 		this.config = config;
 		previousHopDis = new DataInputStream(previousHopSocket.getInputStream());
 		previousHopDos = new DataOutputStream(previousHopSocket.getOutputStream());
-		authSessionIds = new short[1];
-		authSessionIds[0] = authenticate();
 	}
 
 	/**
@@ -67,9 +69,9 @@ public class OnionListenerSocket extends OnionBaseSocket implements Main.Attacha
 	 * 
 	 * @throws IOException
 	 */
-	short authenticate() throws IOException
+	short authenticate() throws Exception
 	{
-		OnionAuthApiSocket.AUTHSESSIONHS2 hs2;
+		OnionAuthSessionHS2 hs2;
 		
 		buffer.clear();
 		
@@ -89,14 +91,16 @@ public class OnionListenerSocket extends OnionBaseSocket implements Main.Attacha
 		buffer.clear();
 		
 		// get hs2 from onionAuth and send it back to remote peer
-		hs2 = config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS1(new AUTHSESSIONINCOMINGHS1(previousHopHostkey, hs1Payload));
+		hs2 = config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS1(
+				new OnionAuthSessionIncomingHS1(
+						apiRequestCounter++, Util.getHostkeyObject(previousHopHostkey), hs1Payload));
 		buffer.putShort((short)hs2.getPayload().length);
 		buffer.put(hs2.getPayload());
 		previousHopDos.write(buffer.array());
 		
 		buffer.clear();
 		
-		return hs2.getSession();
+		return (short) hs2.getSessionID();
 	}
 
 	/**
@@ -166,19 +170,24 @@ public class OnionListenerSocket extends OnionBaseSocket implements Main.Attacha
 		}		
 	}	
 	
-
-	
 	@Override
 	public boolean handle() {
 		try {
-			System.out.println(previousHopDis.read());
-			System.out.println(previousHopDis.read());
-			System.out.println(previousHopDis.read());
-		} catch (IOException e) {
+
+			if (authSessionIds == null) {
+				// not yet authenticated ->
+				// the incoming data must be the handshake
+				authSessionIds = new short[1];
+				authSessionIds[0] = authenticate();
+			} else {
+				processNextControlMessage();
+			}
+			return true;
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		System.exit(1);
 		return false;
 	}
-	
+
 }

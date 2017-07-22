@@ -21,6 +21,15 @@ public class OnionAPISocket implements Main.Attachable {
 	protected byte[] destinationHostkey;
 	public static final int ipAddressLength = 4;
 	
+	
+	public static final short MSG_TYPE_ONION_TUNNEL_BUILD = 560;
+	public static final short MSG_TYPE_ONION_TUNNEL_READY = 561;
+	public static final short MSG_TYPE_ONION_TUNNEL_INCOMING = 562;
+	public static final short MSG_TYPE_ONION_TUNNEL_DESTROY = 563;
+	public static final short MSG_TYPE_ONION_TUNNEL_DATA = 564;
+	public static final short MSG_TYPE_ONION_ERROR = 565;
+	public static final short MSG_TYPE_ONION_COVER = 566;
+	
 
 	public OnionAPISocket(SocketChannel sock, Config config) {
 		dis = new DataInputStream(Channels.newInputStream(sock));
@@ -71,7 +80,7 @@ public class OnionAPISocket implements Main.Attachable {
 				}
 				short msgType = dis.readShort();
 				switch (msgType) {
-				case ApiSocket.MSG_TYPE_ONION_TUNNEL_BUILD:
+				case MSG_TYPE_ONION_TUNNEL_BUILD:
 					// extract all the data of the target node
 					// skip reserved 2 bytes
 					dis.readShort();
@@ -92,13 +101,13 @@ public class OnionAPISocket implements Main.Attachable {
 					
 					// reply ONION TUNNEL READY
 					dos.writeShort(8 + targetHostkey.length);
-					dos.writeShort(ApiSocket.MSG_TYPE_ONION_TUNNEL_READY);
+					dos.writeShort(MSG_TYPE_ONION_TUNNEL_READY);
 					dos.writeInt(currentTunnel.externalID);
 					dos.write(targetHostkey);
 					dos.flush();
 					
 					break;
-				case ApiSocket.MSG_TYPE_ONION_TUNNEL_DESTROY:
+				case MSG_TYPE_ONION_TUNNEL_DESTROY:
 					int tunnelId = dis.readInt();
 					
 					//destroy main and backup tunnel
@@ -118,7 +127,7 @@ public class OnionAPISocket implements Main.Attachable {
 					currentTunnel = null;
 					nextTunnel = null;
 					break;
-				case ApiSocket.MSG_TYPE_ONION_TUNNEL_DATA:
+				case MSG_TYPE_ONION_TUNNEL_DATA:
 					tunnelId = dis.readInt();
 					int dataLength = msgLength - 8;
 					if (dataLength <= 0)
@@ -127,7 +136,7 @@ public class OnionAPISocket implements Main.Attachable {
 					dis.readFully(data, 0, dataLength);
 					// TODO: call function with the now unpacked arguments.
 					break;
-				case ApiSocket.MSG_TYPE_ONION_COVER:
+				case MSG_TYPE_ONION_COVER:
 					short coverSize = dis.readShort();
 					// skip reserved 2 bytes
 					dis.readShort();

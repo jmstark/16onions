@@ -9,9 +9,24 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.security.KeyFactory;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+
+import org.bouncycastle.asn1.x509.RSAPublicKeyStructure;
 
 import com.voidphone.api.ApiSocket;
 import com.voidphone.api.Config;
+import com.voidphone.api.OnionAPISocket;
+import com.voidphone.api.OnionAuthApiSocket;
+import com.voidphone.api.OnionPeer;
+import com.voidphone.general.Util;
+
+import auth.api.OnionAuthSessionHS1;
+import auth.api.OnionAuthSessionIncomingHS2;
+import auth.api.OnionAuthSessionStartMessage;
+import rps.api.RpsPeerMessage;
+import sun.security.rsa.RSAPublicKeyImpl;
 
 
 /**
@@ -27,6 +42,11 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	protected DataOutputStream dos;
 	public final int externalID;
 	protected byte[] destHostkey;
+	protected static int idCounter = 1; 
+	
+	protected Socket nextHopSocket;
+	protected SocketChannel nextHopSocketChannel;
+	protected SocketChannel tcpSocketChannel;
 
 	
 	/**
@@ -37,7 +57,9 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	 * @param config configuration
 	 * @param hopCount the number of intermediate hops (excluding our node and the target node)
 	 * @param externalID Other modules use this ID to refer to this tunnel (backup tunnels with the 
-	 * same end destination may get the same ID)
+	 * same end destination must get the same ID, therefore this input parameter)
+	 * If building a backup tunnel, use this constructor with the same ID as the existing main tunnel,
+	 * otherwise use the second constructor which assigns a new ID.
 	 * @throws Exception 
 	 */
 	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config, int hopCount, int externalID) throws Exception
@@ -52,19 +74,19 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		OnionPeer[] hops = new OnionPeer[hopCount + 1];
 		for(int i = 0; i < hopCount; i++)
 		{
-			hops[i] = config.getRPSAPISocket().RPSQUERY();
+			hops[i] = new OnionPeer(config.getRPSAPISocket().RPSQUERY());
 		}
 		//If end node is unspecified, use another random node
 		if(destAddr == null || destHostkey == null)
-			hops[hopCount] = config.getRPSAPISocket().RPSQUERY();
+			hops[hopCount] = new OnionPeer(config.getRPSAPISocket().RPSQUERY());
 		else
 			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
 		
 		// Connect to first hop - all other connections are forwarded over this hop
-		Socket nextHopSocket = new Socket(hops[0].getAddress().getAddress(),hops[0].getAddress().getPort());
+		nextHopSocket = new Socket(hops[0].address.getAddress(),hops[0].address.getPort());
 		dis = new DataInputStream(nextHopSocket.getInputStream());
 		dos = new DataOutputStream(nextHopSocket.getOutputStream());
-		authSessionIds[0] = authenticate(hops[0].getHostkey(), 0);
+		authSessionIds[0] = authenticate(hops[0].hostkey, 0);
 
 		
 		//Establish forwardings (if any)
@@ -77,17 +99,17 @@ public class OnionConnectingSocket extends OnionBaseSocket
 			//First, send the actual request along with the target address. Encrypted.
 			buffer.clear();
 			buffer.putShort(MSG_BUILD_TUNNEL);
-			byte[] rawAddress = hops[i].getAddress().getAddress().getAddress();
+			byte[] rawAddress = hops[i].address.getAddress().getAddress();
 			buffer.put((byte)rawAddress.length);
 			buffer.put(rawAddress);
-			buffer.putShort((short)hops[i].getAddress().getPort());
+			buffer.putShort((short)hops[i].address.getPort());
 			byte[] encryptedPayload = encrypt(buffer.array(),i);
 			dos.writeShort(encryptedPayload.length);
 			dos.write(encryptedPayload);
 			dos.flush();
 			
 			//Now, we are indirectly connected to the target node. Authenticate to that node.
-			authSessionIds[i] = authenticate(hops[i].getHostkey(), i);
+			authSessionIds[i] = authenticate(hops[i].hostkey, i);
 		}
 	}
 
@@ -102,8 +124,7 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	 */
 	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception
 	{
-		this(destAddr,destHostkey,config,config.getHopCount(),new Double(Math.random()).hashCode());
-		
+		this(destAddr,destHostkey,config,config.getHopCount(),idCounter++);
 	}
 
 	
@@ -133,7 +154,7 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	public short authenticate(byte[] hopHostkey, int numLayers) throws Exception
 	{
 
-		OnionAuthAPISocket.AUTHSESSIONHS1 hs1;
+		OnionAuthSessionHS1 hs1;
 		
 		buffer.clear();
 				
@@ -144,8 +165,10 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		buffer.putShort((short)config.getHostkey().length);
 		buffer.put(config.getHostkey());
 		
+
 		// get hs1 from onionAuth and send it to remote peer
-		hs1 = config.getOnionAuthAPISocket().AUTHSESSIONSTART(new OnionAuthAPISocket.AUTHSESSIONSTART(hopHostkey));
+		hs1 = config.getOnionAuthAPISocket().
+				AUTHSESSIONSTART(new OnionAuthSessionStartMessage(apiRequestCounter++,Util.getHostkeyObject(hopHostkey)));
 		buffer.putShort((short)hs1.getPayload().length);
 		buffer.put(hs1.getPayload());
 		
@@ -168,15 +191,16 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		
 		buffer.clear();
 		
-		config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS2(new OnionAuthAPISocket.AUTHSESSIONINCOMINGHS2(hs1.getSession(), hs2payload));
+		config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS2
+		(new OnionAuthSessionIncomingHS2(hs1.getSessionID(), apiRequestCounter++, hs2payload));
 		
-		return hs1.getSession();
+		return (short) hs1.getSessionID();
 	}
 	
 	public void destroy() throws Exception
 	{
 		ByteBuffer buffer = ByteBuffer.allocate(2);
-		buffer.putShort(APISocket.MSG_TYPE_ONION_TUNNEL_DESTROY);
+		buffer.putShort(OnionAPISocket.MSG_TYPE_ONION_TUNNEL_DESTROY);
 		byte[] plainMsg =  buffer.array();
 		
 		//send the message iteratively to all hops,
@@ -188,6 +212,11 @@ public class OnionConnectingSocket extends OnionBaseSocket
 			dos.write(encryptedMsg);
 			dos.flush();
 		}
+	}
+	
+	public void registerChannel()
+	{
+		//tcpSocketChannel = new Socket()
 	}
 
 }

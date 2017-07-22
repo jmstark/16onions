@@ -27,6 +27,8 @@ public abstract class OnionBaseSocket
 	protected short[] authSessionIds;
 	protected Config config;
 	
+	protected static long apiRequestCounter = 1;
+	
 	
 	// buffer is used to construct packets before encrypting/decrypting 
 	// and sending/receiving them via dos or dis.

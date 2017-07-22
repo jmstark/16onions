@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.InvalidKeyException;
+import java.security.interfaces.RSAPublicKey;
 
 import org.ini4j.Wini;
 
@@ -26,7 +27,7 @@ public class Config {
 	private String hostkeyPath;
 	private int hopCount;
 	
-	byte[] hostkey;
+	RSAPublicKey hostkey;
 	
 	
 	public Config(String configFilePath)
@@ -74,7 +75,7 @@ public class Config {
 			rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
 			
 	        File file = new File(hostkeyPath);
-	        hostkey = PEMParser.getPublicKeyFromPEM(file).getEncoded();
+	        hostkey = PEMParser.getPublicKeyFromPEM(file);
 
 			
 		}
@@ -120,6 +121,10 @@ public class Config {
 	}
 	
 	public byte[] getHostkey() {
+		return hostkey.getEncoded();
+	}
+	
+	public RSAPublicKey getHostkeyObject() {
 		return hostkey;
 	}
 	
