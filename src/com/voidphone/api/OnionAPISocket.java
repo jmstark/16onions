@@ -57,6 +57,8 @@ public class OnionAPISocket implements Main.Attachable {
 	{
 		OnionConnectingSocket oldTunnel = currentTunnel;
 		currentTunnel = nextTunnel;
+		//register
+		currentTunnel.registerChannel(Main.getSelector());
 		oldTunnel.destroy();
 		nextTunnel = null;
 	}
@@ -98,6 +100,9 @@ public class OnionAPISocket implements Main.Attachable {
 					//build the tunnel
 					tunnelDestination = new InetSocketAddress(InetAddress.getByAddress(targetIpAddress), targetPort);
 					currentTunnel = new OnionConnectingSocket(tunnelDestination, targetHostkey, config);
+					
+					//register
+					currentTunnel.registerChannel(Main.getSelector());
 					
 					// reply ONION TUNNEL READY
 					dos.writeShort(8 + targetHostkey.length);

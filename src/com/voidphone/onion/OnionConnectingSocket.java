@@ -8,6 +8,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
@@ -46,7 +49,6 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	
 	protected Socket nextHopSocket;
 	protected SocketChannel nextHopSocketChannel;
-	protected SocketChannel tcpSocketChannel;
 
 	
 	/**
@@ -83,7 +85,8 @@ public class OnionConnectingSocket extends OnionBaseSocket
 			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
 		
 		// Connect to first hop - all other connections are forwarded over this hop
-		nextHopSocket = new Socket(hops[0].address.getAddress(),hops[0].address.getPort());
+		nextHopSocketChannel = SocketChannel.open(hops[0].address);
+		nextHopSocket = nextHopSocketChannel.socket();
 		dis = new DataInputStream(nextHopSocket.getInputStream());
 		dos = new DataOutputStream(nextHopSocket.getOutputStream());
 		authSessionIds[0] = authenticate(hops[0].hostkey, 0);
@@ -199,6 +202,7 @@ public class OnionConnectingSocket extends OnionBaseSocket
 	
 	public void destroy() throws Exception
 	{
+		unregisterChannel();
 		ByteBuffer buffer = ByteBuffer.allocate(2);
 		buffer.putShort(OnionAPISocket.MSG_TYPE_ONION_TUNNEL_DESTROY);
 		byte[] plainMsg =  buffer.array();
@@ -214,9 +218,14 @@ public class OnionConnectingSocket extends OnionBaseSocket
 		}
 	}
 	
-	public void registerChannel()
+	public void registerChannel(Selector selector) throws Exception
 	{
-		//tcpSocketChannel = new Socket()
+		nextHopSocketChannel.register(selector, SelectionKey.OP_READ);
+	}
+	
+	public void unregisterChannel() throws Exception
+	{
+		nextHopSocketChannel.close();
 	}
 
 }
