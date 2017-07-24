@@ -1,21 +1,15 @@
 package com.voidphone.onion;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketOption;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
-import java.util.Set;
 
 import com.voidphone.api.Config;
-import com.voidphone.api.OnionAPISocket;
+import com.voidphone.api.OnionApiSocket;
 import com.voidphone.general.General;
 
 import lombok.Getter;
@@ -30,21 +24,16 @@ public class Main {
 	private static void run() {
 		try {
 			selector = Selector.open();
-			General.info("Waiting for API connection on "
-					+ config.getOnionAPIPort() + ".....");
-			SocketChannel onionAPISocket = ServerSocketChannel
-					.open()
-					.bind(new InetSocketAddress("127.0.0.1", config
-							.getOnionAPIPort())).accept();
+			General.info("Waiting for API connection on " + config.getOnionAPIPort() + ".....");
+			SocketChannel onionAPISocket = ServerSocketChannel.open()
+					.bind(new InetSocketAddress("127.0.0.1", config.getOnionAPIPort())).accept();
 			General.debug("API connection successful");
-			General.info("Waiting for Onion connections on "
-					+ config.getOnionPort() + ".....");
+			General.info("Waiting for Onion connections on " + config.getOnionPort() + ".....");
 			ServerSocketChannel onionServerSocket = ServerSocketChannel.open()
-					.bind(new InetSocketAddress("127.0.0.1", config
-							.getOnionPort()));
+					.bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
 
 			// for API requests
-			OnionAPISocket oas = new OnionAPISocket(onionAPISocket, config);
+			OnionApiSocket oas = new OnionApiSocket(onionAPISocket, config);
 			onionAPISocket.configureBlocking(false);
 			onionAPISocket.register(selector, SelectionKey.OP_READ, oas);
 
@@ -54,8 +43,7 @@ public class Main {
 
 			// wait for any socket getting ready
 			while (selector.select() != 0) {
-				Iterator<SelectionKey> iterator = selector.selectedKeys()
-						.iterator();
+				Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
 				while (iterator.hasNext()) {
 					SelectionKey key = iterator.next();
 					if (key.isAcceptable()) {
@@ -64,14 +52,11 @@ public class Main {
 						SocketChannel onionSocket = onionServerSocket.accept();
 						General.debug("Onion connection successful");
 						// create a new OnionListenerSocket ...
-						OnionListenerSocket ols = new OnionListenerSocket(
-								onionSocket.socket(), config);
-						General.debug("Got connection from "
-								+ onionSocket.getRemoteAddress());
+						OnionListenerSocket ols = new OnionListenerSocket(onionSocket.socket(), config);
+						General.debug("Got connection from " + onionSocket.getRemoteAddress());
 						onionSocket.configureBlocking(false);
 						// ... and add it to the selector
-						onionSocket.register(selector, SelectionKey.OP_READ,
-								ols);
+						onionSocket.register(selector, SelectionKey.OP_READ, ols);
 					} else if (key.isReadable()) {
 						// an OnionListenerSocket or the OnionAPISocket received
 						// data
@@ -85,8 +70,7 @@ public class Main {
 						if (!((Attachable) key.attachment()).handle()) {
 							// the connection is still alive
 							key.channel().configureBlocking(false);
-							key.channel().register(selector,
-									SelectionKey.OP_READ, key.attachment());
+							key.channel().register(selector, SelectionKey.OP_READ, key.attachment());
 						}
 					} else {
 						General.fatal("Selector returns unknown key!");
