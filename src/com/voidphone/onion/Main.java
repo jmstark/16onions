@@ -12,10 +12,11 @@ import com.voidphone.api.Config;
 import com.voidphone.api.OnionApiSocket;
 import com.voidphone.general.General;
 
-import lombok.Getter;
+import protocol.MessageParserException;
+import protocol.ProtocolException;
 
 public class Main {
-	private static @Getter Selector selector;
+	private static Selector selector;
 	private static Config config;
 
 	/**
@@ -24,18 +25,18 @@ public class Main {
 	private static void run() {
 		try {
 			selector = Selector.open();
-			General.info("Waiting for API connection on " + config.getOnionAPIPort() + ".....");
-			SocketChannel onionAPISocket = ServerSocketChannel.open()
-					.bind(new InetSocketAddress("127.0.0.1", config.getOnionAPIPort())).accept();
+			General.info("Waiting for API connection on " + config.getOnionApiPort() + ".....");
+			SocketChannel onionApiSocket = ServerSocketChannel.open()
+					.bind(new InetSocketAddress("127.0.0.1", config.getOnionApiPort())).accept();
 			General.debug("API connection successful");
 			General.info("Waiting for Onion connections on " + config.getOnionPort() + ".....");
 			ServerSocketChannel onionServerSocket = ServerSocketChannel.open()
 					.bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
 
 			// for API requests
-			OnionApiSocket oas = new OnionApiSocket(onionAPISocket, config);
-			onionAPISocket.configureBlocking(false);
-			onionAPISocket.register(selector, SelectionKey.OP_READ, oas);
+			OnionApiSocket oas = new OnionApiSocket(onionApiSocket);
+			onionApiSocket.configureBlocking(false);
+			onionApiSocket.register(selector, SelectionKey.OP_READ, oas);
 
 			// for incoming Onion connections
 			onionServerSocket.configureBlocking(false);
@@ -66,8 +67,8 @@ public class Main {
 						selector.selectNow();
 						key.channel().configureBlocking(true);
 						// handle the received data
-						// TODO: handle IOExcpetion thrown by handle()
-						if (!((Attachable) key.attachment()).handle()) {
+						boolean again = ((Attachable) key.attachment()).handle();
+						if (!again) {
 							// the connection is still alive
 							key.channel().configureBlocking(false);
 							key.channel().register(selector, SelectionKey.OP_READ, key.attachment());
@@ -78,7 +79,7 @@ public class Main {
 				}
 				selector.selectedKeys().clear();
 			}
-		} catch (Exception e) {
+		} catch (IOException | MessageParserException | ProtocolException e) {
 			General.fatalException(e);
 		}
 	}
@@ -106,6 +107,6 @@ public class Main {
 	}
 
 	public static interface Attachable {
-		public boolean handle() throws IOException;
+		public boolean handle() throws IOException, MessageParserException, ProtocolException;
 	}
 }

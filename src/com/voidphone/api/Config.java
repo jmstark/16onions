@@ -1,9 +1,8 @@
 package com.voidphone.api;
+
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
 
@@ -12,6 +11,7 @@ import org.ini4j.Wini;
 import com.voidphone.general.General;
 
 import util.PEMParser;
+
 public class Config {
 	// Socket to the Onion Auth module API
 	private OnionAuthApiSocket onionAuthAPISocket;
@@ -20,39 +20,35 @@ public class Config {
 	// addr + port of the Onion module API
 	private String onionAPIAddress;
 	private short onionAPIPort;
-	
+
 	// addr + port of the Onion P2P
 	private String onionAddress;
 	private short onionPort;
 	private String hostkeyPath;
 	private int hopCount;
-	
+
 	RSAPublicKey hostkey;
-	
-	
-	public Config(String configFilePath)
-	{
+
+	public Config(String configFilePath) {
 		readConfigValues(configFilePath);
 	}
-	
+
 	/**
 	 * Reads values from config file into variables
 	 * 
 	 * @param configFilePath
 	 *            Path to the config file in INI format
 	 */
-	private void readConfigValues(String configFilePath)
-	{
+	private void readConfigValues(String configFilePath) {
 		String authAPIAddress = null;
 		short authAPIPort = 0;
 		String rpsAPIAddress = null;
 		short rpsAPIPort = 0;
-		
-		try
-		{
+
+		try {
 			Wini configFile = new Wini(new File(configFilePath));
 			hostkeyPath = configFile.get("?", "HOSTKEY", String.class);
-			
+
 			hopCount = configFile.get("ONION", "hopcount", Integer.class).intValue();
 			// api_address contains address and port, separated by a colon (':')
 			String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
@@ -62,25 +58,22 @@ public class Config {
 			// Onion hostname and port are separate config lines
 			onionAddress = configFile.get("ONION", "P2P_HOSTNAME", String.class);
 			onionPort = (short) configFile.get("ONION", "P2P_PORT", Integer.class).intValue();
-			
-			//OnionAuth
+
+			// OnionAuth
 			String authAddressAndPort = configFile.get("AUTH", "api_address", String.class);
 			colonPos = authAddressAndPort.lastIndexOf(':');
 			authAPIAddress = apiAddressAndPort.substring(0, colonPos);
 			authAPIPort = (short) Integer.parseInt(authAddressAndPort.substring(colonPos + 1));
-			//RPS
+			// RPS
 			String rpsAddressAndPort = configFile.get("RPS", "api_address", String.class);
 			colonPos = rpsAddressAndPort.lastIndexOf(':');
 			rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
 			rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
-			
-	        File file = new File(hostkeyPath);
-	        hostkey = PEMParser.getPublicKeyFromPEM(file);
 
-			
-		}
-		catch (IOException e)
-		{
+			File file = new File(hostkeyPath);
+			hostkey = PEMParser.getPublicKeyFromPEM(file);
+
+		} catch (IOException e) {
 			General.fatal("FATAL: Could not read config file!");
 			System.exit(1);
 			e.printStackTrace();
@@ -93,41 +86,41 @@ public class Config {
 		try {
 			onionAuthAPISocket = new OnionAuthApiSocket(new InetSocketAddress(authAPIAddress, authAPIPort));
 			rpsAPISocket = new RpsApiSocket(new InetSocketAddress(rpsAPIAddress, rpsAPIPort));
-			
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		General.debug("Hostkey: " + hostkeyPath + "; \nAPI will listen on " + onionAPIAddress + ", Port " 
-				+ onionAPIPort + "; \nOnion P2P will listen on " + onionAddress + ", Port " + onionPort + ". \n" 
-				+ "connecting to AUTH API on " + authAPIAddress + ":" + authAPIPort 
-				+ "; \nconnecting to RPS API on " + rpsAPIAddress + ":" + rpsAPIPort);
+		General.debug("Hostkey: " + hostkeyPath + "; \nAPI will listen on " + onionAPIAddress + ", Port " + onionAPIPort
+				+ "; \nOnion P2P will listen on " + onionAddress + ", Port " + onionPort + ". \n"
+				+ "connecting to AUTH API on " + authAPIAddress + ":" + authAPIPort + "; \nconnecting to RPS API on "
+				+ rpsAPIAddress + ":" + rpsAPIPort);
 	}
-	
+
 	public OnionAuthApiSocket getOnionAuthAPISocket() {
 		return onionAuthAPISocket;
 	}
-	
+
 	public RpsApiSocket getRPSAPISocket() {
 		return rpsAPISocket;
 	}
-	
-	public int getOnionAPIPort() {
+
+	public int getOnionApiPort() {
 		return onionAPIPort;
 	}
-	
+
 	public int getOnionPort() {
 		return onionPort;
 	}
-	
+
 	public byte[] getHostkey() {
 		return hostkey.getEncoded();
 	}
-	
+
 	public RSAPublicKey getHostkeyObject() {
 		return hostkey;
 	}
-	
+
 	public int getHopCount() {
 		return hopCount;
 	}
