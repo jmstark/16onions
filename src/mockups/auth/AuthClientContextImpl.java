@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.ShortBufferException;
 import protocol.Connection;
 import protocol.MessageHandler;
@@ -181,12 +182,20 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                 // do layer encryption
                 // Note: data size increases with every layer as we add IV
                 byte[] data = request.getPayload();
+                byte[] cipher = null;
                 for (Session session : sessions) {
-                    data = session.encrypt(data);
+                    try {
+                        if (null == cipher) {
+                            cipher = session.encrypt(false, data);
+                        }
+                        cipher = session.encrypt(true, cipher);
+                    } catch (IllegalBlockSizeException ex) {
+                        throw new RuntimeException();
+                    }
                 }
                 try {
                     reply = new OnionAuthEncryptResp(request.getRequestID(),
-                            data);
+                            cipher);
                 } catch (MessageSizeExceededException ex) {
                     logger.log(Level.SEVERE,
                             "Encryption resulted in bigger message");
@@ -206,15 +215,25 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                 logger.log(Level.INFO, "Received LAYER_DECRYPT with {0} layers",
                         sessions.size());
                 byte[] data = request.getPayload();
+                EncryptDecryptBlock block = null;
                 //reverse the sessions as we decrypt with the last session first
                 Collections.reverse(sessions);
                 for (Session session : sessions) {
                     try {
-                        data = session.decrypt(data);
+                        block = session.decrypt(data);
                     } catch (ShortBufferException ex) {
                         logger.log(Level.SEVERE, "Decryption failed", ex);
+                    } catch (IllegalBlockSizeException ex) {
+                        throw new ProtocolException("Illegal block size");
                     }
+                    if (block.isCipher()) {
+                        data = block.getPayload();
+                    } else
+                        break;
                 }
+                if (block.isCipher())
+                    throw new ProtocolException(
+                            "Layer decryption did not give result in plaintext");
                 try {
                     reply = new OnionAuthDecryptResp(request.getRequestID(), data);
                 } catch (MessageSizeExceededException ex) {

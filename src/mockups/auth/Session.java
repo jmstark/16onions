@@ -16,6 +16,7 @@
  */
 package mockups.auth;
 
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.ShortBufferException;
 
 /**
@@ -24,7 +25,22 @@ import javax.crypto.ShortBufferException;
  */
 public interface Session extends PartialSession {
 
-    byte[] encrypt(byte[] data);
+    int getMaxBlockSize();
 
-    byte[] decrypt(byte[] data) throws ShortBufferException;
+    /**
+     * Encrypt given block of bytes
+     *
+     * @param data the data to encrypt
+     * @param isCipher is the data an encryption of a previous plaintext?
+     * @return encrypted block of bytes
+     * @throws IllegalBlockSizeException if the size of data is greater than the
+     * maximum block size accepted. This is unrelated to the underlying crypto
+     * block size. Use getMaxBlockSize() to know the implemented maximum block
+     * size.
+     */
+    byte[] encrypt(boolean isCipher, byte[] data)
+            throws IllegalBlockSizeException;
+
+    EncryptDecryptBlock decrypt(byte[] data)
+            throws IllegalBlockSizeException, ShortBufferException;
 }
