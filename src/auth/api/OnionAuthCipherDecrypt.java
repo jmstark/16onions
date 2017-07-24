@@ -22,6 +22,8 @@
 package auth.api;
 
 import java.nio.ByteBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.EqualsAndHashCode;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
@@ -38,10 +40,19 @@ public class OnionAuthCipherDecrypt extends OnionAuthCipherEncrypt {
 
     public static OnionAuthCipherDecrypt parse(ByteBuffer buf)
             throws MessageParserException {
-        OnionAuthCipherDecrypt message;
+        OnionAuthCipherDecrypt message = null;
 
-        message = (OnionAuthCipherDecrypt) OnionAuthCipherEncrypt.parse(buf);
-        message.changeMessageType(Protocol.MessageType.API_AUTH_CIPHER_DECRYPT);
+        OnionAuthCipherEncrypt base = OnionAuthCipherEncrypt.parse(buf);
+        try {
+            message = new OnionAuthCipherDecrypt(base.getRequestID(),
+                    base.getSessionID(), base.getPayload());
+        } catch (MessageSizeExceededException ex) {
+            Logger.getLogger(OnionAuthCipherDecrypt.class.getName()).
+                    log(Level.SEVERE,
+                            "This should not happen; please report this as bug",
+                            ex);
+            assert (false);
+        }
         return message;
     }
 }
