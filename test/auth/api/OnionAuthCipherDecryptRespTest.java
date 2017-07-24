@@ -14,17 +14,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package onionauth.api;
+package auth.api;
 
-import auth.api.OnionAuthCipherEncrypt;
+import auth.api.OnionAuthCipherDecrypt;
+import auth.api.OnionAuthCipherDecryptResp;
 import java.nio.ByteBuffer;
-import java.util.Random;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import static auth.api.OnionAuthCipherDecryptTest.requestID;
+import static auth.api.OnionAuthCipherEncryptTest.isCipher;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import protocol.Message;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -34,29 +33,25 @@ import util.MyRandom;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class OnionAuthCipherEncryptTest {
-
-    static final  ByteBuffer buffer = ByteBuffer.allocate(
+public class OnionAuthCipherDecryptRespTest {
+    static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
     static final byte[] payload;
-    static final int sessionID;
     static final long requestID;
     static final boolean isCipher;
 
     static {
-        sessionID = MyRandom.randInt(0, Message.UINT16_MAX);
         requestID = MyRandom.randUInt();
         isCipher = MyRandom.randInt(0, 1) == 0;
         payload = MyRandom.randBytes(MyRandom.randInt(6400,
                 Protocol.MAX_MESSAGE_SIZE - 50));
-    }
-    private final OnionAuthCipherEncrypt message;
 
-    public OnionAuthCipherEncryptTest() throws MessageSizeExceededException {
-        message = new OnionAuthCipherEncrypt(isCipher, requestID, sessionID,
-                payload);
     }
+    private final OnionAuthCipherDecryptResp message;
 
+    public OnionAuthCipherDecryptRespTest() throws MessageSizeExceededException {
+        message = new OnionAuthCipherDecryptResp(isCipher, requestID, payload);
+    }
 
     /**
      * Test of send method, of class OnionAuthCipherEncrypt.
@@ -70,56 +65,39 @@ public class OnionAuthCipherEncryptTest {
     }
 
     /**
-     * Test of parse method, of class OnionAuthCipherEncrypt.
+     * Test of parse method, of class OnionAuthCipherDecrypt.
      */
     @Test
     public void testParse() throws Exception {
         System.out.println("parse");
+        OnionAuthCipherDecryptResp expResult = message;
         buffer.clear();
         message.send(buffer);
         buffer.flip();
         buffer.position(4);
-        OnionAuthCipherEncrypt result = OnionAuthCipherEncrypt.parse(buffer);
-        assertEquals(message, result);
+        OnionAuthCipherDecryptResp result
+                = OnionAuthCipherDecryptResp.parse(buffer);
+        assertEquals(expResult, result);
     }
 
     /**
-     * Test of isCipher method, of class OnionAuthCipherEncrypt.
+     * Test of equals method, of class OnionAuthCipherDecrypt.
      */
+    @Test
+    public void testPayload() {
+        System.out.println("testPayload");
+        assertEquals(message.getPayload(), payload);
+    }
+
+    @Test
+    public void testRequestID() {
+        System.out.println("testRequestID");
+        assertEquals(message.getRequestID(), requestID);
+    }
+
     @Test
     public void testIsCipher() {
-        System.out.println("isCipher");
-        boolean result = message.isCipher();
-        assertEquals(isCipher, result);
-    }
-
-    /**
-     * Test of getRequestID method, of class OnionAuthCipherEncrypt.
-     */
-    @Test
-    public void testGetRequestID() {
-        System.out.println("getRequestID");
-        long result = message.getRequestID();
-        assertEquals(requestID, result);
-    }
-
-    /**
-     * Test of getSessionID method, of class OnionAuthCipherEncrypt.
-     */
-    @Test
-    public void testGetSessionID() {
-        System.out.println("getSessionID");
-        int result = message.getSessionID();
-        assertEquals(sessionID, result);
-    }
-
-    /**
-     * Test of getPayload method, of class OnionAuthCipherEncrypt.
-     */
-    @Test
-    public void testGetPayload() {
-        System.out.println("getPayload");
-        byte[] result = message.getPayload();
-        assertArrayEquals(payload, result);
+        System.out.println("testIsCipher");
+        assertEquals(message.isCipher(), isCipher);
     }
 }

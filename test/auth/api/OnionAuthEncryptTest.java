@@ -14,94 +14,93 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package onionauth.api;
+package auth.api;
 
-import auth.api.OnionAuthSessionHS1;
+import auth.api.OnionAuthEncrypt;
 import java.nio.ByteBuffer;
-import java.security.KeyPair;
 import java.util.Random;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import protocol.Message;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
-import util.SecurityHelper;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class OnionAuthSessionHS1Test {
-
+public class OnionAuthEncryptTest {
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
-    static final KeyPair keyPair = util.SecurityHelper.generateRSAKeyPair(2048);
-    static final int sessionID;
+    static final byte[] payload;
+    static final int[] sessions;
     static final long requestID;
-    static final byte[] publicKeyEnc;
 
     static {
         Random rand = new Random();
-
-        sessionID = rand.nextInt(Message.UINT16_MAX + 1);
+        payload = new byte[rand.nextInt(32000)];
+        rand.nextBytes(payload);
+        sessions = new int[rand.nextInt(100)];
+        for (int index = 0; index < sessions.length; index++) {
+            sessions[index] = rand.nextInt(Message.UINT16_MAX + 1);
+        }
         requestID = util.MyRandom.randUInt();
-        publicKeyEnc = SecurityHelper.encodeRSAPublicKey(keyPair.getPublic());
     }
+    private final OnionAuthEncrypt message;
 
-    private final OnionAuthSessionHS1 message;
-
-    public OnionAuthSessionHS1Test() throws MessageSizeExceededException {
-        message = new OnionAuthSessionHS1(sessionID, requestID, publicKeyEnc);
-    }
-
-    /**
-     * Test of getRequestID method, of class OnionAuthSessionHS1.
-     */
-    @Test
-    public void testGetSessionID() {
-        System.out.println("getSessionID");
-        int expResult = sessionID;
-        int result = message.getSessionID();
-        assertEquals(expResult, result);
+    public OnionAuthEncryptTest() throws MessageSizeExceededException {
+        message = new OnionAuthEncrypt(requestID, sessions, payload);
     }
 
     /**
-     * Test of getRequestID method, of class OnionAuthSessionHS1.
+     * Test of getId method, of class OnionAuthEncrypt.
      */
     @Test
-    public void testGetRequestID() {
-        System.out.println("getRequestID");
+    public void testGetId() {
+        System.out.println("getId");
         long expResult = requestID;
         long result = message.getRequestID();
         assertEquals(expResult, result);
     }
 
     /**
-     * Test of getPayload method, of class OnionAuthSessionHS1.
+     * Test of getSessions method, of class OnionAuthEncrypt.
+     */
+    @Test
+    public void testGetSessions() {
+        System.out.println("getSessions");
+        int[] expResult = sessions;
+        int[] result = message.getSessions();
+        assertArrayEquals(expResult, result);
+    }
+
+    /**
+     * Test of getPayload method, of class OnionAuthEncrypt.
      */
     @Test
     public void testGetPayload() {
         System.out.println("getPayload");
-        byte[] expResult = SecurityHelper.
-                encodeRSAPublicKey(keyPair.getPublic());
+        byte[] expResult = payload;
         byte[] result = message.getPayload();
         assertArrayEquals(expResult, result);
     }
 
     /**
-     * Test of send method, of class OnionAuthSessionHS1.
+     * Test of send method, of class OnionAuthEncrypt.
      */
     @Test
     public void testSend() {
         System.out.println("send");
-        ByteBuffer out = buffer;
-        out.clear();
-        message.send(out);
-        assertTrue(buffer.remaining() < buffer.capacity());
+        buffer.clear();
+        message.send(buffer);
     }
 
     /**
-     * Test of parse method, of class OnionAuthSessionHS1.
+     * Test of parse method, of class OnionAuthEncrypt.
      */
     @Test
     public void testParse() throws Exception {
@@ -109,8 +108,8 @@ public class OnionAuthSessionHS1Test {
         testSend();
         buffer.flip();
         buffer.position(4);
-        OnionAuthSessionHS1 expResult = message;
-        OnionAuthSessionHS1 result = OnionAuthSessionHS1.parse(buffer);
+        OnionAuthEncrypt expResult = message;
+        OnionAuthEncrypt result = OnionAuthEncrypt.parse(buffer);
         assertEquals(expResult, result);
     }
 

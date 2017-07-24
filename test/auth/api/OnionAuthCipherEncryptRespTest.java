@@ -1,4 +1,4 @@
-package onionauth.api;
+package auth.api;
 
 /*
  * Copyright (C) 2017 totakura

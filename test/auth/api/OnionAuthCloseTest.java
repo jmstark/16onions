@@ -14,12 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package onionauth.api;
+package auth.api;
 
 import auth.api.OnionAuthClose;
 import java.nio.ByteBuffer;
 import java.util.Random;
-import static onionauth.api.OnionAuthEncryptTest.payload;
+import static auth.api.OnionAuthEncryptTest.payload;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
