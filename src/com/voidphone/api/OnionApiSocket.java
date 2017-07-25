@@ -44,7 +44,7 @@ public class OnionApiSocket extends ApiSocket implements Main.Attachable {
 
 
 	public OnionApiSocket(SocketChannel sock, Config config) throws IOException {
-		super(sock);
+		super(sock, config.getAPITimeout());
 		handler = new OnionMessageHandler(null);
 	}
 

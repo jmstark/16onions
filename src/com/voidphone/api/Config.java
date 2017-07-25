@@ -13,6 +13,8 @@ import com.voidphone.general.General;
 import util.PEMParser;
 
 public class Config {
+	// Timeout for API connections
+	private int apiTimeout;
 	// Socket to the Onion Auth module API
 	private OnionAuthApiSocket onionAuthAPISocket;
 	// Socket to the RPS module API
@@ -97,6 +99,10 @@ public class Config {
 				+ rpsAPIAddress + ":" + rpsAPIPort);
 	}
 
+	public int getAPITimeout() {
+		return apiTimeout;
+	}
+	
 	public OnionAuthApiSocket getOnionAuthAPISocket() {
 		return onionAuthAPISocket;
 	}
