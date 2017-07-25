@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
+import com.voidphone.general.General;
+
 import protocol.MessageHandler;
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
@@ -35,8 +37,10 @@ public class RpsApiSocket extends ApiSocket {
 		new RpsQueryMessage().send(writeBuffer);
 		writeBuffer.flip();
 		channel.write(writeBuffer);
-		channel.read(readBuffer);
+		General.info("Sent RPS-Query ...");
+		super.read(readBuffer);
 		handler.parseMessage(readBuffer);
+		General.info("Received RPS-Peer ...");
 		return (RpsPeerMessage)handler.getMessage();
 	}
 
