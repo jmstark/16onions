@@ -8,33 +8,51 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 
+import com.sun.xml.internal.bind.v2.model.core.MapPropertyInfo;
 import com.voidphone.api.Config;
 
 /**
  * Base class for OnionConnectingSocket and OnionListenerSocket
  * 
  */
-public abstract class OnionBaseSocket
+public abstract class OnionBaseSocket implements Main.Attachable
 {
 
 	public final static int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
 	public final static int VERSION = 1;
 	protected final byte MSG_BUILD_TUNNEL = 0xb;
-	protected final byte MSG_DESTROY_TUNNEL = 0xd;
+	protected final byte MSG_DESTROY_TUNNEL = 0xe;
+	public final static byte MSG_DATA = 0xd;
+	protected final byte MSG_COVER = 0xc;
 	protected final int CONTROL_PACKET_SIZE = 8192;
+	protected final int DATA_PACKET_SIZE = 65536 / 2;
 	protected short[] authSessionIds;
 	protected Config config;
+	public final int externalID;
+	protected static int idCounter = 1;
+
 	
 	protected static long apiRequestCounter = 1;
 	
 	
-	// buffer is used to construct packets before encrypting/decrypting 
+	// buffers are used to construct packets before encrypting/decrypting 
 	// and sending/receiving them via dos or dis.
-	// Using it makes sure that always same-sized packets are sent and received.
-	protected ByteBuffer buffer = ByteBuffer.allocate(CONTROL_PACKET_SIZE);
+	// Using them makes sure that always same-sized packets are sent and received.
+	protected ByteBuffer ctlDataBuf = ByteBuffer.allocate(CONTROL_PACKET_SIZE);
+	protected ByteBuffer voipDataBuf = ByteBuffer.allocate(DATA_PACKET_SIZE);
 	
+	public OnionBaseSocket()
+	{
+		this(idCounter++);
+	}
+	
+	public OnionBaseSocket(int tunnelID)
+	{
+		externalID = tunnelID;
+	}
 	
 	/**
 	 * Encrypts payload with the given number of layers, 0 layers = no encryption.
@@ -101,61 +119,28 @@ public abstract class OnionBaseSocket
 			
 	}
 	
-	/*		
-
-
-	protected Config config = null;
-	protected final int MAX_DATA_PACKET_SIZE = 65536/2;
-	protected int tunnelId = 0;
-	protected DatagramSocket nextHopDataOutgoing = null;
-	protected DatagramSocket lastHopDataOutgoing = null;	
-	protected byte[] nextHopAddress = null;
-	protected short nextHopPort = 0;
-	protected byte[] lastHopAddress = null;
-	protected short lastHopPort = 0;
-	protected DataInputStream dis;
-	protected DataOutputStream dos;
-	protected byte[] destHostkey;
-	abstract void authenticate() throws IOException;
-
-	protected OnionBaseSocket(Config c) {
-		config = c;
-	}
-*/	
-	/**
-	 * Processes the next UDP data message or forwards it,
-	 * if there is a next hop. Since a node can have more
-	 * than one tunnel through it, a dispatcher receives
-	 * all incoming UDP packets, extracts the tunnel ID
-	 * and then calls this method of the according instance.
-	 * @param dis
-	 * @throws IOException 
-	 */
-	/*
-	void processNextDataMessage(DatagramPacket incomingPacket) throws IOException
+	protected abstract byte[] encrypt(byte[] payload) throws Exception;
+	
+	protected abstract byte[] decrypt(byte[] payload) throws Exception;
+	
+	protected byte[] decryptAndUnpackNextUdpMessage(DatagramChannel src) throws Exception
 	{
-		DatagramSocket forwardTarget = null;
-		if(incomingPacket.getAddress().getAddress().equals(lastHopAddress) && incomingPacket.getPort() == lastHopPort)
-		{
-			forwardTarget = nextHopDataOutgoing;
-		}
-		else if(incomingPacket.getAddress().getAddress().equals(nextHopAddress) && incomingPacket.getPort() == nextHopPort)
-		{
-			forwardTarget = lastHopDataOutgoing;
-		}
-		
-		if(forwardTarget == null)
-		{
-			//no forwarding, this packet is for us
-			//TODO: forward data to API
-		}
-		else
-		{
-			//forward data to next node
-			forwardTarget.send(incomingPacket);
-		}
-
+		voipDataBuf.clear();
+		src.receive(voipDataBuf);
+		short size = voipDataBuf.getShort();
+		byte[] encryptedData = new byte[size];
+		voipDataBuf.get(encryptedData);
+		byte[] decryptedData = decrypt(encryptedData);
+		return decryptedData;
 	}
-*/
+	
+	protected void encryptAndPackAndSendUdpMessage(byte[] payload, DatagramChannel dst) throws Exception
+	{
+		byte[] encryptedData = encrypt(payload);
+		voipDataBuf.clear();
+		voipDataBuf.putShort((short) encryptedData.length);
+		voipDataBuf.put(encryptedData);
+		dst.write(voipDataBuf);
+	}
 	
 }

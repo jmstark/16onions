@@ -1,12 +1,14 @@
 package com.voidphone.onion;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -23,12 +25,19 @@ import lombok.Getter;
 public class Main {
 	private static @Getter Selector selector;
 	private static Config config;
+	private static @Getter OnionAPISocket oas;
 
 	/**
 	 * Runs the Onion module.
 	 */
 	private static void run() {
 		try {
+			//socket for all incoming UDP packets, 
+			//for OnionConnectingSocket as well as OnionListenerSocket
+			DatagramChannel udpChannel = 
+					DatagramChannel.open().bind(new InetSocketAddress("127.0.0.1",config.getOnionPort()));
+
+			
 			selector = Selector.open();
 			General.info("Waiting for API connection on "
 					+ config.getOnionAPIPort() + ".....");
@@ -44,7 +53,7 @@ public class Main {
 							.getOnionPort()));
 
 			// for API requests
-			OnionAPISocket oas = new OnionAPISocket(onionAPISocket, config);
+			oas = new OnionAPISocket(onionAPISocket, config);
 			onionAPISocket.configureBlocking(false);
 			onionAPISocket.register(selector, SelectionKey.OP_READ, oas);
 
@@ -122,6 +131,6 @@ public class Main {
 	}
 
 	public static interface Attachable {
-		public boolean handle() throws IOException;
+		public boolean handle() throws Exception;
 	}
 }

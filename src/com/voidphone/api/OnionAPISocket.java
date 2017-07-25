@@ -5,11 +5,15 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
 
 import com.voidphone.onion.Main;
+import com.voidphone.onion.OnionBaseSocket;
 import com.voidphone.onion.OnionConnectingSocket;
+
+import lombok.Getter;
 
 public class OnionAPISocket implements Main.Attachable {
 	protected DataInputStream dis;
@@ -63,6 +67,34 @@ public class OnionAPISocket implements Main.Attachable {
 		nextTunnel = null;
 	}
 
+	/**
+	 * Forwards incoming tunnel data to the user interface
+	 * @throws IOException 
+	 * 
+	 */
+	public void forwardIncomingDataToUI(byte[] decryptedData, int tunnelID) throws Exception
+	{
+		ByteBuffer payloadBuffer = ByteBuffer.wrap(decryptedData);
+		if(payloadBuffer.get() == OnionBaseSocket.MSG_DATA)
+		{
+			//extract payload according to size
+			short size = payloadBuffer.getShort();
+			byte[] sendToAPI = new byte[size];
+			payloadBuffer.get(sendToAPI);
+			
+			//repack it according to API specs
+			size += 8;
+			payloadBuffer = ByteBuffer.allocate(size);
+			payloadBuffer.putShort(size);
+			payloadBuffer.putShort(OnionAPISocket.MSG_TYPE_ONION_TUNNEL_DATA);
+			payloadBuffer.putInt(tunnelID);
+			payloadBuffer.put(sendToAPI);
+			dos.write(payloadBuffer.array());
+		}
+		
+		//else, ignore it (cover traffic)
+	}
+	
 	/**
 	 * Listens for incoming TCP API connection, accepts API requests, unpacks
 	 * them and calls the appropriate methods, and sends answers (if
