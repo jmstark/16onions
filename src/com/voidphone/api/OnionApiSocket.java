@@ -41,14 +41,7 @@ public class OnionApiSocket extends ApiSocket implements Main.Attachable {
 	protected byte[] destinationHostkey;
 	public static final int ipAddressLength = 4;
 	
-	
-	public static final short MSG_TYPE_ONION_TUNNEL_BUILD = 560;
-	public static final short MSG_TYPE_ONION_TUNNEL_READY = 561;
-	public static final short MSG_TYPE_ONION_TUNNEL_INCOMING = 562;
-	public static final short MSG_TYPE_ONION_TUNNEL_DESTROY = 563;
-	public static final short MSG_TYPE_ONION_TUNNEL_DATA = 564;
-	public static final short MSG_TYPE_ONION_ERROR = 565;
-	public static final short MSG_TYPE_ONION_COVER = 566;
+
 
 	public OnionApiSocket(SocketChannel sock, Config config) throws IOException {
 		super(sock);
@@ -77,9 +70,9 @@ public class OnionApiSocket extends ApiSocket implements Main.Attachable {
 		return new OnionErrorMessage(requestType, tunnelID);
 	}
 
-	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(long tunnelID, byte hostkey[]) {
+	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(long tunnelID, byte data[]) {
 		try {
-			return new OnionTunnelIncomingMessage(tunnelID, hostkey);
+			return new OnionTunnelIncomingMessage(tunnelID, data);
 		} catch (MessageSizeExceededException e) {
 			General.fatalException(e);
 			return null;
@@ -122,33 +115,6 @@ public class OnionApiSocket extends ApiSocket implements Main.Attachable {
 		nextTunnel = null;
 	}
 
-	/**
-	 * Forwards incoming tunnel data to the user interface
-	 * @throws IOException 
-	 * 
-	 */
-	public void forwardIncomingDataToUI(byte[] decryptedData, int tunnelID) throws Exception
-	{
-		ByteBuffer payloadBuffer = ByteBuffer.wrap(decryptedData);
-		if(payloadBuffer.get() == OnionBaseSocket.MSG_DATA)
-		{
-			//extract payload according to size
-			short size = payloadBuffer.getShort();
-			byte[] sendToAPI = new byte[size];
-			payloadBuffer.get(sendToAPI);
-			
-			//repack it according to API specs
-			size += 8;
-			payloadBuffer = ByteBuffer.allocate(size);
-			payloadBuffer.putShort(size);
-			payloadBuffer.putShort(OnionApiSocket.MSG_TYPE_ONION_TUNNEL_DATA);
-			payloadBuffer.putInt(tunnelID);
-			payloadBuffer.put(sendToAPI);
-			dos.write(payloadBuffer.array());
-		}
-		
-		//else, ignore it (cover traffic)
-	}
 	
 	/**
 	 * Listens for incoming TCP API connection, accepts API requests, unpacks them
@@ -165,16 +131,57 @@ public class OnionApiSocket extends ApiSocket implements Main.Attachable {
 		handler.parseMessage(readBuffer);
 		OnionApiMessage message = handler.getMessage();
 		if (message instanceof OnionCoverMessage) {
-			// TODO: do something
+			try {
+				currentTunnel.sendCoverData(((OnionCoverMessage)message).getSize());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		} else if (message instanceof OnionTunnelBuildMessage) {
-			// TODO: do something
-			
-			
-			
+			try {
+				OnionTunnelBuildMessage otbMsg = (OnionTunnelBuildMessage) message;
+				// build the tunnel
+				tunnelDestination = otbMsg.getAddress();
+				RSAPublicKey key = otbMsg.getKey();
+				currentTunnel = new OnionConnectingSocket(tunnelDestination,
+						Util.getHostkeyBytes(otbMsg.getKey()), config);
+
+				// register
+				currentTunnel.registerChannel(Main.getSelector());
+
+				// reply
+				ONIONTUNNELREADY(newOnionTunnelReadyMessage(currentTunnel.externalID, Util.getHostkeyBytes(key)));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}			
 		} else if (message instanceof OnionTunnelDataMessage) {
-			// TODO: do something
+			try {
+				currentTunnel.sendRealData(((OnionTunnelDataMessage)message).getData());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		} else if (message instanceof OnionTunnelDestroyMessage) {
-			// TODO: do something
+			
+			int tunnelId = (int) ((OnionTunnelDestroyMessage) message).getId();
+			
+			//destroy main and backup tunnel
+			if(currentTunnel.externalID == tunnelId)
+			{
+				try {
+					currentTunnel.destroy();
+					nextTunnel.destroy();
+					tunnelDestination = null;
+					currentTunnel = null;
+					nextTunnel = null;
+				}
+				catch(Exception e)
+				{
+					//This could be normal, see TODO
+					e.printStackTrace();
+				}
+			}
+			// TODO: check for destruction request of OnionListenerSocket
 		}
 		return true;
 	}
@@ -195,48 +202,13 @@ public class OnionApiSocket extends ApiSocket implements Main.Attachable {
 				return;
 			case API_ONION_TUNNEL_BUILD:
 				message = OnionTunnelBuildMessage.parse(buf);
-				try {
-
-					// build the tunnel
-					tunnelDestination = ((OnionTunnelBuildMessage) message).getAddress();
-					RSAPublicKey key = ((OnionTunnelBuildMessage) message).getKey();
-					currentTunnel = new OnionConnectingSocket(tunnelDestination,
-							Util.getHostkeyBytes(((OnionTunnelBuildMessage) message).getKey()), config);
-
-					// register
-					currentTunnel.registerChannel(Main.getSelector());
-
-					// reply ONION TUNNEL READY
-					new OnionTunnelReadyMessage(currentTunnel.externalID, Util.getHostkeyBytes(key));
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
 				return;
 			case API_ONION_TUNNEL_DATA:
 				message = OnionTunnelDataMessage.parse(buf);
 				return;
 			case API_ONION_TUNNEL_DESTROY:
 				message = OnionTunnelDestroyMessage.parse(buf);
-				
-				int tunnelId = (int) ((OnionTunnelDestroyMessage) message).getId();
-				
-				//destroy main and backup tunnel
-				if(currentTunnel.externalID == tunnelId)
-				{
-					try {
-						currentTunnel.destroy();
-						nextTunnel.destroy();
-						tunnelDestination = null;
-						currentTunnel = null;
-						nextTunnel = null;
-					}
-					catch(Exception e)
-					{
-						//This could be normal, see TODO
-						e.printStackTrace();
-					}
-				}
-				// TODO: check for destruction request of OnionListenerSocket
+				return;
 			default:
 				throw new ProtocolException("Unexpected message received");
 			}

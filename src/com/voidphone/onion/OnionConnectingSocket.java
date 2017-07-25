@@ -20,6 +20,7 @@ import com.voidphone.general.Util;
 import auth.api.OnionAuthSessionHS1;
 import auth.api.OnionAuthSessionIncomingHS2;
 import auth.api.OnionAuthSessionStartMessage;
+import onion.api.OnionTunnelIncomingMessage;
 
 
 /**
@@ -173,7 +174,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	/**
 	 * Decrypts payload of end hop.
 	 * 
-<<<<<<< HEAD
 	 * @return Decrypted payload
 	 * @throws Exception
 	 */
@@ -256,7 +256,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		sendData(true,data);
 	}
 	
-	public void sendCoverData(short size) throws Exception
+	public void sendCoverData(int size) throws Exception
 	{
 		byte[] rndData = new byte[size];
 		new Random().nextBytes(rndData);
@@ -266,10 +266,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 
 	public void destroy() throws Exception {
 		unregisterChannel();
-		ByteBuffer buffer = ByteBuffer.allocate(2);
-		buffer.putShort(OnionApiSocket.MSG_TYPE_ONION_TUNNEL_DESTROY);
-		byte[] plainMsg = buffer.array();
-
+		
+		byte[] plainMsg = {MSG_DESTROY_TUNNEL};
 		// send the message iteratively to all hops,
 		// starting at the farthest one
 		for (int i = authSessionIds.length; i > 0; i--) {
@@ -306,7 +304,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			byte[] payload = decryptAndUnpackNextUdpMessage(nextHopDatagramChannel);
 			
 			// check if data is valid (non-cover), if so, send it to CM via API
-			Main.getOas().forwardIncomingDataToUI(payload, externalID);
+			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, payload));
 			
 			return false;
 		}

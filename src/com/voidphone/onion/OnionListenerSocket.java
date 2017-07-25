@@ -201,7 +201,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 
 			if (nextHopUdp == null) {
 				// check if data is valid (non-cover), if so, send it to CM via API
-				Main.getOas().forwardIncomingDataToUI(payload, externalID);
+				Main.getOas().newOnionTunnelIncomingMessage(externalID, payload);
 			}
 
 			else {
