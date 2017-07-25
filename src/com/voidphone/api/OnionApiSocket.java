@@ -141,7 +141,7 @@ public class OnionApiSocket extends ApiSocket implements Main.Attachable {
 			size += 8;
 			payloadBuffer = ByteBuffer.allocate(size);
 			payloadBuffer.putShort(size);
-			payloadBuffer.putShort(OnionAPISocket.MSG_TYPE_ONION_TUNNEL_DATA);
+			payloadBuffer.putShort(OnionApiSocket.MSG_TYPE_ONION_TUNNEL_DATA);
 			payloadBuffer.putInt(tunnelID);
 			payloadBuffer.put(sendToAPI);
 			dos.write(payloadBuffer.array());
