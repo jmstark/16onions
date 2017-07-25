@@ -14,23 +14,26 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
-import java.util.Set;
-
-import com.voidphone.api.Config;
-import com.voidphone.api.OnionAPISocket;
-import com.voidphone.general.General;
 
 import lombok.Getter;
+
+import com.voidphone.api.Config;
+import com.voidphone.api.OnionApiSocket;
+import com.voidphone.general.General;
+
+import protocol.MessageParserException;
+import protocol.ProtocolException;
 
 public class Main {
 	private static @Getter Selector selector;
 	private static Config config;
-	private static @Getter OnionAPISocket oas;
+	private static @Getter OnionApiSocket oas;
 
 	/**
 	 * Runs the Onion module.
+	 * @throws Exception 
 	 */
-	private static void run() {
+	private static void run() throws Exception {
 		try {
 			//socket for all incoming UDP packets, 
 			//for OnionConnectingSocket as well as OnionListenerSocket
@@ -39,23 +42,18 @@ public class Main {
 
 			
 			selector = Selector.open();
-			General.info("Waiting for API connection on "
-					+ config.getOnionAPIPort() + ".....");
-			SocketChannel onionAPISocket = ServerSocketChannel
-					.open()
-					.bind(new InetSocketAddress("127.0.0.1", config
-							.getOnionAPIPort())).accept();
+			General.info("Waiting for API connection on " + config.getOnionApiPort() + ".....");
+			SocketChannel onionApiSocket = ServerSocketChannel.open()
+					.bind(new InetSocketAddress("127.0.0.1", config.getOnionApiPort())).accept();
 			General.debug("API connection successful");
-			General.info("Waiting for Onion connections on "
-					+ config.getOnionPort() + ".....");
+			General.info("Waiting for Onion connections on " + config.getOnionPort() + ".....");
 			ServerSocketChannel onionServerSocket = ServerSocketChannel.open()
-					.bind(new InetSocketAddress("127.0.0.1", config
-							.getOnionPort()));
+					.bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
 
 			// for API requests
-			oas = new OnionAPISocket(onionAPISocket, config);
-			onionAPISocket.configureBlocking(false);
-			onionAPISocket.register(selector, SelectionKey.OP_READ, oas);
+			oas = new OnionApiSocket(onionApiSocket, config);
+			onionApiSocket.configureBlocking(false);
+			onionApiSocket.register(selector, SelectionKey.OP_READ, oas);
 
 			// for incoming Onion connections
 			onionServerSocket.configureBlocking(false);
@@ -63,8 +61,7 @@ public class Main {
 
 			// wait for any socket getting ready
 			while (selector.select() != 0) {
-				Iterator<SelectionKey> iterator = selector.selectedKeys()
-						.iterator();
+				Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
 				while (iterator.hasNext()) {
 					SelectionKey key = iterator.next();
 					if (key.isAcceptable()) {
@@ -73,14 +70,11 @@ public class Main {
 						SocketChannel onionSocket = onionServerSocket.accept();
 						General.debug("Onion connection successful");
 						// create a new OnionListenerSocket ...
-						OnionListenerSocket ols = new OnionListenerSocket(
-								onionSocket.socket(), config);
-						General.debug("Got connection from "
-								+ onionSocket.getRemoteAddress());
+						OnionListenerSocket ols = new OnionListenerSocket(onionSocket.socket(), config);
+						General.debug("Got connection from " + onionSocket.getRemoteAddress());
 						onionSocket.configureBlocking(false);
 						// ... and add it to the selector
-						onionSocket.register(selector, SelectionKey.OP_READ,
-								ols);
+						onionSocket.register(selector, SelectionKey.OP_READ, ols);
 					} else if (key.isReadable()) {
 						// an OnionListenerSocket or the OnionAPISocket received
 						// data
@@ -90,12 +84,11 @@ public class Main {
 						selector.selectNow();
 						key.channel().configureBlocking(true);
 						// handle the received data
-						// TODO: handle IOExcpetion thrown by handle()
-						if (!((Attachable) key.attachment()).handle()) {
+						boolean again = ((Attachable) key.attachment()).handle();
+						if (!again) {
 							// the connection is still alive
 							key.channel().configureBlocking(false);
-							key.channel().register(selector,
-									SelectionKey.OP_READ, key.attachment());
+							key.channel().register(selector, SelectionKey.OP_READ, key.attachment());
 						}
 					} else {
 						General.fatal("Selector returns unknown key!");
@@ -103,7 +96,7 @@ public class Main {
 				}
 				selector.selectedKeys().clear();
 			}
-		} catch (Exception e) {
+		} catch (IOException | MessageParserException | ProtocolException e) {
 			General.fatalException(e);
 		}
 	}
@@ -122,7 +115,7 @@ public class Main {
 	 * 
 	 * @throws IOException
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		General.initDebugging();
 
 		parseArgs(args);
@@ -131,6 +124,6 @@ public class Main {
 	}
 
 	public static interface Attachable {
-		public boolean handle() throws Exception;
+		public boolean handle() throws Exception, IOException, MessageParserException, ProtocolException;
 	}
 }

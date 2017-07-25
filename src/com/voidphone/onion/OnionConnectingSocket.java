@@ -13,13 +13,14 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Random;
 import com.voidphone.api.Config;
-import com.voidphone.api.OnionAPISocket;
+import com.voidphone.api.OnionApiSocket;
 import com.voidphone.api.OnionAuthApiSocket;
 import com.voidphone.api.OnionPeer;
 import com.voidphone.general.Util;
 import auth.api.OnionAuthSessionHS1;
 import auth.api.OnionAuthSessionIncomingHS2;
 import auth.api.OnionAuthSessionStartMessage;
+
 
 /**
  * When the main application wants to build a tunnel to some node, it creates an
@@ -32,9 +33,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	protected DataInputStream dis;
 	protected DataOutputStream dos;
 	protected byte[] destHostkey;
-
 	protected UdpHandler udpHandler;
 	protected InetSocketAddress nextHopAddress;
+	protected static int idCounter = 1;
+
 	protected Socket nextHopSocket;
 	protected DatagramChannel nextHopDatagramChannel;
 	protected SocketChannel nextHopSocketChannel;
@@ -102,9 +104,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			ctlDataBuf.put(rawAddress);
 			ctlDataBuf.putShort((short) hops[i].address.getPort());
 			byte[] encryptedPayload = encrypt(ctlDataBuf.array(), i);
+
 			dos.writeShort(encryptedPayload.length);
 			dos.write(encryptedPayload);
 			dos.flush();
+
 
 			// Now, we are indirectly connected to the target node. 
 			// Authenticate to that node.
@@ -133,6 +137,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception {
 		this(destAddr, destHostkey, config, config.getHopCount(), idCounter++);
 	}
+
 
 	/**
 	 * 
@@ -168,6 +173,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	/**
 	 * Decrypts payload of end hop.
 	 * 
+<<<<<<< HEAD
 	 * @return Decrypted payload
 	 * @throws Exception
 	 */
@@ -175,6 +181,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		return super.decrypt(payload, authSessionIds.length);
 	}
 	
+
 
 	/**
 	 * Authenticates via OnionAuth. Encrypts with numLayers (0 = no encryption).
@@ -226,6 +233,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 
 		return (short) hs1.getSessionID();
 	}
+
 	
 	/**
 	 * Sends data through the tunnel, be it real VOIP or cover traffic.
@@ -255,10 +263,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		sendData(false, rndData);
 	}
 
+
 	public void destroy() throws Exception {
 		unregisterChannel();
 		ByteBuffer buffer = ByteBuffer.allocate(2);
-		buffer.putShort(OnionAPISocket.MSG_TYPE_ONION_TUNNEL_DESTROY);
+		buffer.putShort(OnionApiSocket.MSG_TYPE_ONION_TUNNEL_DESTROY);
 		byte[] plainMsg = buffer.array();
 
 		// send the message iteratively to all hops,
