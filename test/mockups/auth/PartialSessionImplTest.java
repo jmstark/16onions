@@ -111,6 +111,7 @@ public class PartialSessionImplTest {
             IllegalBlockSizeException {
         byte[] expected;
         int count = 0;
+        System.out.println("testSingleEncryptDecrypt");
         do {
             expected = new byte[random.nextInt(maxBlockSize)];
             random.nextBytes(expected);
@@ -162,10 +163,12 @@ public class PartialSessionImplTest {
         return block.getPayload();
     }
 
+    @Test
     public void testLayerEncryptDecrypt() throws ShortBufferException,
             IllegalBlockSizeException {
         byte[] data;
         int count = 0;
+        System.out.println("testLayerEncryptDecrypt");
         do {
             data = new byte[random.nextInt(maxBlockSize)];
             random.nextBytes(data);

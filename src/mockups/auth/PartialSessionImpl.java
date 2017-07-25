@@ -17,6 +17,7 @@
 package mockups.auth;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -78,9 +79,25 @@ public class PartialSessionImpl implements PartialSession {
             Session {
 
         private static final String CIPHER_TRANSFORMATION = "AES/CBC/NoPadding";
-        private static final short magic = (short) 34884;
-        private static final int maxBlockSize = 20 * 1024;
+        private static final IvParameterSpec magicIVSpec;
+        private static final Cipher ivCipher;
+        private static final short MAGIC = (short) 34884;
+        private static final int MAX_BLOCK_SIZE = 20 * 1024;
         protected final SecretKeySpec spec;
+
+        static {
+            byte[] iv = "1234567890ABCDEF".getBytes(Charset.forName("US-ASCII"));
+            magicIVSpec = new IvParameterSpec(iv);
+            String IV_TRANSFORMATION = "AES/ECB/NoPadding";
+            try {
+                ivCipher = Cipher.getInstance(IV_TRANSFORMATION);
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
+                Logger.getLogger(PartialSessionImpl.class.getName()).
+                        log(Level.SEVERE, null, ex);
+                throw new RuntimeException();
+            }
+
+        }
 
         private SessionImpl(PartialSessionImpl partial, Key otherKey) {
             super(partial);
@@ -109,10 +126,39 @@ public class PartialSessionImpl implements PartialSession {
 
         @Override
         public int getMaxBlockSize() {
-            // max size - iv size - magic - size
-            return maxBlockSize - KEY_SIZE - 2 - 2;
+            // max size - iv size - MAGIC - size
+            return MAX_BLOCK_SIZE - KEY_SIZE - 2 - 2;
         }
 
+        private byte[] encryptIV(byte[] iv) throws IllegalBlockSizeException {
+            try {
+                ivCipher.init(Cipher.ENCRYPT_MODE, spec);
+            } catch (InvalidKeyException ex) {
+                throw new RuntimeException(ex); // this should not happen
+            }
+            byte[] output = null;
+            try {
+                output = ivCipher.doFinal(iv);
+            } catch (BadPaddingException ex) {
+                throw new RuntimeException(ex); //this should not happen
+            }
+            return output;
+        }
+
+        private byte[] decryptIV(byte[] iv) throws IllegalBlockSizeException {
+            try {
+                ivCipher.init(Cipher.DECRYPT_MODE, spec);
+            } catch (InvalidKeyException ex) {
+                throw new RuntimeException(ex); // this should not happen
+            }
+            byte[] output = null;
+            try {
+                output = ivCipher.doFinal(iv);
+            } catch (BadPaddingException ex) {
+                throw new RuntimeException(ex); //this should not happen
+            }
+            return output;
+        }
         @Override
         public byte[] encrypt(boolean isCipher, byte[] data) throws
                 IllegalBlockSizeException {
@@ -122,25 +168,26 @@ public class PartialSessionImpl implements PartialSession {
             Cipher cipher;
 
             if (isCipher) {
-                if (data.length != maxBlockSize) {
+                if (data.length != MAX_BLOCK_SIZE) {
                     throw new IllegalBlockSizeException();
                 }
                 iv = Arrays.copyOf(data, KEY_SIZE);
                 block = Arrays.copyOfRange(data, KEY_SIZE, data.length);
             } else {
-                if (maxBlockSize < data.length + KEY_SIZE + 2 + 2) {
+                if (MAX_BLOCK_SIZE < data.length + KEY_SIZE + 2 + 2) {
                     throw new IllegalBlockSizeException();
                 }
                 iv = new byte[KEY_SIZE];
                 random.nextBytes(iv);
-                ByteBuffer buf = ByteBuffer.allocate(maxBlockSize - iv.length);
+                ByteBuffer buf = ByteBuffer.allocate(MAX_BLOCK_SIZE - iv.length);
                 assert (buf.hasArray());
-                buf.putShort(magic);
+                buf.putShort(MAGIC);
                 buf.putShort((short) data.length);
                 buf.put(data);
                 buf.flip(); //not strictly needed, but to keep up with practise
                 block = buf.array();
             }
+            iv = encryptIV(iv);
             ivSpec = new IvParameterSpec(iv);
 
             try {
@@ -153,23 +200,23 @@ public class PartialSessionImpl implements PartialSession {
             } catch (InvalidKeyException | InvalidAlgorithmParameterException ex) {
                 throw new RuntimeException(); // this should not happen
             }
-            //first encrypt the IV in ECB mode
-            ArrayList output = new ArrayList(maxBlockSize);
 
             //then use the resulting IV to encrypt data
-
-            output = Arrays.copyOf(iv, maxBlockSize);
+            byte[] enc = null;
             try {
-                cipher.doFinal(block, 0, block.length, output, iv.length);
-            } catch (ShortBufferException
-                    | BadPaddingException
+                enc = cipher.doFinal(block);
+            } catch (BadPaddingException
                     | IllegalBlockSizeException ex) {
                 //ShortBufferException: we made sure that the buffer is long enough
                 //IllegalBlockSizeException: our block is always *1024 bytes
                 //BadPaddingException: we are not decrypting here
                 throw new RuntimeException();
             }
-            return output;
+            ByteBuffer out = ByteBuffer.allocate(MAX_BLOCK_SIZE);
+            out.put(iv);
+            out.put(enc);
+            out.flip();
+            return out.array();
         }
 
         @Override
@@ -180,7 +227,7 @@ public class PartialSessionImpl implements PartialSession {
             byte[] output;
             IvParameterSpec ivSpec;
 
-            if (data.length != maxBlockSize) {
+            if (data.length != MAX_BLOCK_SIZE) {
                 throw new ShortBufferException();
             }
             //extract IV and initialize it
@@ -203,27 +250,35 @@ public class PartialSessionImpl implements PartialSession {
                 //cipher spec takes care of padding
                 throw new RuntimeException();
             }
+            try {
+                iv = decryptIV(iv);
+            } catch (IllegalBlockSizeException ex) {
+                throw new RuntimeException(ex); //should not happen
+            }
             ByteBuffer outBuffer;
-            outBuffer = ByteBuffer.wrap(output);
-            outBuffer.position(KEY_SIZE); //skip IV
-            if (magic != outBuffer.getShort()) {
-                return new EncryptDecryptBlock(true, output);
+            outBuffer = ByteBuffer.allocate(MAX_BLOCK_SIZE);
+            outBuffer.put(iv);
+            outBuffer.put(output);
+            outBuffer.flip();
+            outBuffer.position(KEY_SIZE);
+            outBuffer.mark();
+            if (MAGIC != outBuffer.getShort()) {
+                return new EncryptDecryptBlock(true, outBuffer.array());
             }
             short size;
-            int headerSize = maxBlockSize - getMaxBlockSize();
             size = outBuffer.getShort();
             if (getMaxBlockSize() < size) {
-                return new EncryptDecryptBlock(true, output);
+                return new EncryptDecryptBlock(true, outBuffer.array());
             }
-            byte[] zeros = Arrays.copyOf(output, headerSize + size);
-            for (byte b : zeros) {
-                if ((byte) 0 != b) {
-                    return new EncryptDecryptBlock(true, output);
+            outBuffer.position(outBuffer.position() + size);
+            //check if the remaining data is zeros or not
+            while (outBuffer.hasRemaining()) {
+                if (outBuffer.get() != 0) {
+                    return new EncryptDecryptBlock(true, outBuffer.array());
                 }
             }
             return new EncryptDecryptBlock(false,
-                    Arrays.copyOfRange(output, headerSize, headerSize + size));
+                    Arrays.copyOfRange(output, 4, size + 4));
         }
-
     }
 }
