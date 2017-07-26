@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import javax.naming.SizeLimitExceededException;
+
 import com.voidphone.general.General;
 
 import protocol.MessageParserException;
@@ -51,7 +53,10 @@ public class RpsApiSocket extends ApiSocket {
 	 * 
 	 * @return the RpsQueryMessage
 	 */
-	public RpsQueryMessage newRpsQueryMessage() {
+	public RpsQueryMessage newRpsQueryMessage(int id) {
+		if (id != 0) {
+			throw new IllegalArgumentException("Illegal ID!");
+		}
 		return new RpsQueryMessage();
 	}
 
@@ -92,6 +97,33 @@ public class RpsApiSocket extends ApiSocket {
 			return;
 		default:
 			throw new ProtocolException("Unexpected message received");
+		}
+	}
+
+	/**
+	 * Does nothing.
+	 * 
+	 * @return 0
+	 * @throws SizeLimitExceededException
+	 *             never
+	 */
+	@Override
+	public int register() throws SizeLimitExceededException {
+		return 0;
+	}
+
+	/**
+	 * Does nothing.
+	 * 
+	 * @param id
+	 *            irrelevant
+	 * @throws IllegalArgumentException
+	 *             if id != 0
+	 */
+	@Override
+	public void unregister(int id) throws IllegalArgumentException {
+		if (id != 0) {
+			throw new IllegalArgumentException("Illegal ID!");
 		}
 	}
 }

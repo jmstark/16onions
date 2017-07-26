@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
+import javax.naming.SizeLimitExceededException;
+
 import com.voidphone.general.General;
 
 import protocol.Connection;
@@ -79,4 +81,8 @@ public abstract class ApiSocket {
 
 	protected abstract void receive(ByteBuffer buffer, MessageType type)
 			throws MessageParserException, ProtocolException;
+	
+	public abstract int register() throws SizeLimitExceededException;
+	
+	public abstract void unregister(int id) throws IllegalArgumentException;
 }
