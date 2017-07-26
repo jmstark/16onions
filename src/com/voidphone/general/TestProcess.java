@@ -18,7 +18,7 @@ public class TestProcess {
 	
 	public TestProcess(Class<? extends Object> main, Map<String,String> properties, String classpath[], String args[]) throws IOException {
 		int i = 0;
-		String cmd[] = new String[args.length + 5];
+		String cmd[] = new String[args.length + properties.size() + 4];
 		cmd[i++] = "java";
 		for (Entry<String,String> property : properties.entrySet()) {
 			cmd[i++] = "-D" + property.getKey() + "=" + property.getValue();
@@ -31,7 +31,6 @@ public class TestProcess {
 		cmd[i++] = cp;
 		cmd[i++] = main.getName();
 		System.arraycopy(args, 0, cmd, i, args.length);
-		System.out.println(Arrays.toString(cmd));
 		process = new ProcessBuilder(Arrays.asList(cmd)).start();
 		new TestFramework.RedirectThread(process.getErrorStream(), System.err).start();
 	}
@@ -43,16 +42,6 @@ public class TestProcess {
 			return null;
 		}
 	}
-
-	// public BufferedReader getErr() {
-	// return new BufferedReader(new InputStreamReader(
-	// process.getErrorStream()));
-	// }
-
-	// public BufferedWriter getIn() {
-	// return new BufferedWriter(new OutputStreamWriter(
-	// process.getOutputStream()));
-	// }
 
 	public void terminate() throws InterruptedException {
 		process.destroy();
