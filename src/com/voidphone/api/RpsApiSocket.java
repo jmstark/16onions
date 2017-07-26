@@ -3,68 +3,56 @@ package com.voidphone.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import com.voidphone.general.General;
 
-import protocol.MessageHandler;
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
 import protocol.ProtocolException;
-import rps.api.RpsApiMessage;
 import rps.api.RpsPeerMessage;
 import rps.api.RpsQueryMessage;
 
 public class RpsApiSocket extends ApiSocket {
-	private RpsMessageHandler handler;
+	private final LinkedBlockingQueue<RpsPeerMessage> peerQueue;
 
 	public RpsApiSocket(InetSocketAddress addr) throws IOException {
 		super(addr);
-		handler = new RpsMessageHandler(null);
+		peerQueue = new LinkedBlockingQueue<RpsPeerMessage>(32);
+	}
+
+	private void fillPeerQueue() {
+		if (peerQueue.remainingCapacity() == 0 || connection == null) {
+			return;
+		}
+		connection.sendMsg(new RpsQueryMessage());
+		General.info("Sent RPSQUERY message");
 	}
 
 	/**
 	 * Sends a RPS QUERY message to the RPS module, waits for the answer and parses
 	 * it.
 	 * 
-	 * @return a random peer, represented by a RPSPEER-object
-	 * @throws IOException
-	 *             if an I/O error occurs
-	 * @throws MessageParserException
-	 * @throws ProtocolException
-	 *             if a wrong message is received
+	 * @return the RpsPeerMessage
+	 * @throws InterruptedException
+	 *             if the queue is interrupted
 	 */
-	public RpsPeerMessage RPSQUERY() throws IOException, MessageParserException, ProtocolException {
-		new RpsQueryMessage().send(writeBuffer);
-		writeBuffer.flip();
-		channel.write(writeBuffer);
-		General.info("Sent RPS-Query ...");
-		super.read(readBuffer);
-		handler.parseMessage(readBuffer);
-		General.info("Received RPS-Peer ...");
-		return (RpsPeerMessage)handler.getMessage();
+	public RpsPeerMessage RPSQUERY() throws InterruptedException {
+		fillPeerQueue();
+		return peerQueue.poll(1, TimeUnit.SECONDS);
 	}
 
-	private class RpsMessageHandler extends MessageHandler<Void> {
-		private RpsApiMessage message;
-
-		private RpsMessageHandler(Void closure) {
-			super(closure);
-		}
-
-		@Override
-		public void parseMessage(ByteBuffer buf, MessageType type, Void closure)
-				throws MessageParserException, ProtocolException {
-			switch (type) {
-			case API_RPS_PEER:
-				message = RpsPeerMessage.parse(buf);
-				return;
-			default:
-				throw new ProtocolException("Unexpected message received");
-			}
-		}
-
-		public RpsApiMessage getMessage() {
-			return message;
+	@Override
+	protected void receive(ByteBuffer buffer, MessageType type) throws MessageParserException, ProtocolException {
+		switch (type) {
+		case API_RPS_PEER:
+			General.info("Received RPSPEER message");
+			fillPeerQueue();
+			peerQueue.offer(RpsPeerMessage.parse(buffer));
+			return;
+		default:
+			throw new ProtocolException("Unexpected message received");
 		}
 	}
 }

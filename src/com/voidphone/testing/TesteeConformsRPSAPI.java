@@ -1,16 +1,17 @@
 package com.voidphone.testing;
 
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.util.HashMap;
 
 import com.voidphone.api.RpsApiSocket;
 import com.voidphone.general.TestProcess;
 
+import rps.api.RpsPeerMessage;
+
 public class TesteeConformsRPSAPI {
 	public static void main(String args[]) throws Exception {
 		HashMap<String, String> properties = new HashMap<String, String>();
-		properties.put("keystore.config.file", System.getProperty("user.dir") + "/../.keystore");
+		properties.put("keystore.config.file", "\"" + System.getProperty("user.dir") + "/../.keystore\"");
 		String classpath[] = new String[] { System.getProperty("user.dir") + "/testing/libs/commons-cli-1.3.1.jar",
 				System.getProperty("user.dir") + "/testing/libs/ini4j-0.5.4.jar", "junit-4.12.jar",
 				System.getProperty("user.dir") + "/testing/libs/bcprov-jdk15on-155.jar" };
@@ -23,13 +24,15 @@ public class TesteeConformsRPSAPI {
 		TestProcess gossip1 = new TestProcess(gossip.Main.class, properties, classpath, peer1);
 		TestProcess rps1 = new TestProcess(mockups.rps.Main.class, properties, classpath, peer1);
 		System.out.println("Launched peer 1");
-		Thread.sleep(60000);
-		try {
-			RpsApiSocket test = new RpsApiSocket(new InetSocketAddress("127.0.0.1", 11101));
-			System.out.println("Launched test");
-			System.out.println(test.RPSQUERY().getAddress());
-		} catch (SocketTimeoutException e) {
-			System.out.println("API request timed out!");
+		Thread.sleep(20000);
+		RpsApiSocket test = new RpsApiSocket(new InetSocketAddress("127.0.0.1", 11101));
+		System.out.println("Launched test");
+		for (int i = 0; i < 10; i++) {
+			RpsPeerMessage rpm = test.RPSQUERY();
+			if (rpm != null) {
+				System.out.println(rpm.getAddress());
+			}
+			Thread.sleep(5000);
 		}
 		// TestProcess test = new TestProcess(tests.rps.Main.class, properties,
 		// classpath, peer0);

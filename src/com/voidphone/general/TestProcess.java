@@ -31,6 +31,7 @@ public class TestProcess {
 		cmd[i++] = cp;
 		cmd[i++] = main.getName();
 		System.arraycopy(args, 0, cmd, i, args.length);
+		System.out.println(Arrays.toString(cmd));
 		process = new ProcessBuilder(Arrays.asList(cmd)).start();
 		new TestFramework.RedirectThread(process.getErrorStream(), System.err).start();
 	}

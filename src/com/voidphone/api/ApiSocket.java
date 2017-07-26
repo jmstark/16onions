@@ -2,37 +2,39 @@ package com.voidphone.api;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 
+import com.voidphone.general.General;
+
+import protocol.Connection;
+import protocol.DisconnectHandler;
+import protocol.MessageHandler;
+import protocol.MessageParserException;
 import protocol.Protocol;
+import protocol.Protocol.MessageType;
+import protocol.ProtocolException;
 
 /**
  * This class implements basic methods to simplify the API access. It provides
  * especially a read function
  */
 public abstract class ApiSocket {
-	protected final SocketChannel channel;
+	protected AsynchronousSocketChannel channel;
+	protected Connection connection;
 	protected final ByteBuffer readBuffer;
 	protected final ByteBuffer writeBuffer;
-	private final int timeout;
 
 	/**
-	 * Creates a new API socket based on a SocketChannel.
+	 * Initializes the buffers.
 	 * 
 	 * @param channel
-	 *            the SocketChannel
-	 * @param timeout
-	 *            timeout for read actions on the API-socket
+	 *            the AsynchronousSocketChannel
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public ApiSocket(SocketChannel channel, int timeout) throws IOException {
-		this.channel = channel;
-		this.timeout = timeout;
+	private ApiSocket() throws IOException {
 		readBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
 		writeBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
 	}
@@ -43,56 +45,38 @@ public abstract class ApiSocket {
 	 * 
 	 * @param addr
 	 *            the IP-address and port number
-	 * @param timeout
-	 *            timeout for read actions on the API-socket
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public ApiSocket(InetSocketAddress addr, int timeout) throws IOException {
-		this(SocketChannel.open(addr), timeout);
+	public ApiSocket(final InetSocketAddress addr) throws IOException {
+		this();
+		channel = AsynchronousSocketChannel.open();
+		channel.connect(addr, channel, new CompletionHandler<Void, AsynchronousSocketChannel>() {
+			@Override
+			public void completed(Void none, AsynchronousSocketChannel channel) {
+				connection = new Connection(channel, new DisconnectHandler<Void>(null) {
+					@Override
+					protected void handleDisconnect(Void none) {
+						General.fatal("Disconnect from API (" + addr + ")!");
+					}
+				});
+				connection.receive(new MessageHandler<Void>(null) {
+					@Override
+					public void parseMessage(ByteBuffer buf, MessageType type, Void none)
+							throws MessageParserException, ProtocolException {
+						receive(buf, type);
+					}
+				});
+				General.info("Connected to API (" + addr + ")");
+			}
+
+			@Override
+			public void failed(Throwable exception, AsynchronousSocketChannel channel) {
+				General.fatal("Cannot connect to API (" + addr + ")!");
+			}
+		});
 	}
 
-	/**
-	 * Reads from API connection.
-	 * 
-	 * @param buffer
-	 *            buffer for incoming data
-	 * @throws IOException
-	 *             if there is an I/O-error
-	 */
-	protected void read(ByteBuffer buffer) throws IOException {
-		Selector selector = Selector.open();
-		channel.configureBlocking(false);
-		channel.register(selector, SelectionKey.OP_READ);
-		if (selector.select(timeout) == 0) {
-			throw new SocketTimeoutException("API request timed out!");
-		}
-		SelectionKey key = selector.selectedKeys().iterator().next();
-		key.cancel();
-		selector.selectNow();
-		key.channel().configureBlocking(true);
-		channel.read(buffer);
-	}
-
-	/**
-	 * Writes to API connection.
-	 * 
-	 * @param buffer
-	 *            buffer for incoming data
-	 * @throws IOException
-	 *             if there is an I/O-error
-	 */
-	protected void write(ByteBuffer buffer) throws IOException {
-		Selector selector = Selector.open();
-		channel.configureBlocking(false);
-		channel.register(selector, SelectionKey.OP_WRITE);
-		if (selector.select(timeout) == 0) {
-			throw new SocketTimeoutException("API request timed out!");
-		}
-		SelectionKey key = selector.selectedKeys().iterator().next();
-		key.cancel();
-		selector.selectNow();
-		key.channel().configureBlocking(true);
-		channel.write(buffer);
-	}
+	protected abstract void receive(ByteBuffer buffer, MessageType type)
+			throws MessageParserException, ProtocolException;
 }
