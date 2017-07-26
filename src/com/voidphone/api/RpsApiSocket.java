@@ -51,6 +51,8 @@ public class RpsApiSocket extends ApiSocket {
 	/**
 	 * Returns a RpsQueryMessage.
 	 * 
+	 * @param id
+	 *            the ID
 	 * @return the RpsQueryMessage
 	 */
 	public RpsQueryMessage newRpsQueryMessage(int id) {
@@ -116,7 +118,7 @@ public class RpsApiSocket extends ApiSocket {
 	 * Does nothing.
 	 * 
 	 * @param id
-	 *            irrelevant
+	 *            must be 0
 	 * @throws IllegalArgumentException
 	 *             if id != 0
 	 */

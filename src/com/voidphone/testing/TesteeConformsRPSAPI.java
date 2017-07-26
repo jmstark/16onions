@@ -28,8 +28,9 @@ public class TesteeConformsRPSAPI {
 		Thread.sleep(60000);
 		RpsApiSocket uut = new RpsApiSocket(new InetSocketAddress("127.0.0.1", 31101));
 		General.info("Launched test");
+		int id = uut.register();
 		for (int i = 0; i < 24; i++) {
-			RpsPeerMessage rpm = uut.RPSQUERY(uut.newRpsQueryMessage());
+			RpsPeerMessage rpm = uut.RPSQUERY(uut.newRpsQueryMessage(id));
 			if (rpm == null) {
 				General.info("No peer!");
 			} else {
@@ -37,6 +38,7 @@ public class TesteeConformsRPSAPI {
 			}
 			Thread.sleep(5000);
 		}
+		uut.unregister(id);
 
 		rps1.terminate();
 		rps0.terminate();

@@ -22,7 +22,7 @@ import protocol.Protocol.MessageType;
 import protocol.ProtocolException;
 
 public class OnionAuthApiSocket extends ApiSocket {
-	private HashMap<Short, LinkedBlockingQueue<OnionAuthApiMessage>> map;
+	private final HashMap<Short, LinkedBlockingQueue<OnionAuthApiMessage>> map;
 	private final Random random;
 
 	public OnionAuthApiSocket(InetSocketAddress addr) throws IOException {
@@ -30,13 +30,13 @@ public class OnionAuthApiSocket extends ApiSocket {
 		random = new Random();
 		map = new HashMap<Short, LinkedBlockingQueue<OnionAuthApiMessage>>();
 	}
-	
+
 	public OnionAuthSessionStartMessage newOnionAuthSessionStartMessage() {
-		
+
 	}
-	
+
 	public OnionAuthSessionIncomingHS1 newOnionAuthSessionIncomingHS1() {
-		
+
 	}
 
 	/**
@@ -144,31 +144,36 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * Registers a new logical connection to the OnionAuth module.
 	 * 
 	 * @return ID of the new connection
-	 * @throws SizeLimitExceededException if too many connections are registered
+	 * @throws SizeLimitExceededException
+	 *             if too many connections are registered
 	 */
 	@Override
 	public int register() throws SizeLimitExceededException {
+		short id;
+
 		if (map.size() >= Short.MAX_VALUE) {
 			throw new SizeLimitExceededException("Too many connections registered!");
 		}
-		short id = (short)random.nextInt();
-		while (map.containsKey(id)) {
-			id = (short)random.nextInt();
-		}
+		do {
+			id = (short) random.nextInt();
+		} while (map.containsKey(id));
 		map.put(id, new LinkedBlockingQueue<OnionAuthApiMessage>(1));
-		return (int)id;
+		return (int) id;
 	}
 
 	/**
 	 * Unregisters a logical connection.
 	 * 
-	 * @param id ID of the connection
-	 * @throws IllegalArgumentException if the ID was not registered
+	 * @param id
+	 *            ID of the connection
+	 * @throws IllegalArgumentException
+	 *             if the ID was not registered
 	 */
 	@Override
 	public void unregister(int id) throws IllegalArgumentException {
-		if (map.remove((short)id) == null) {
+		if (!map.containsKey((short) id)) {
 			throw new IllegalArgumentException("Illegal ID!");
 		}
+		map.remove((short) id);
 	}
 }

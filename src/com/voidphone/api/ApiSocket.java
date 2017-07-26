@@ -3,6 +3,7 @@ package com.voidphone.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
@@ -79,10 +80,40 @@ public abstract class ApiSocket {
 		});
 	}
 
+	public ApiSocket(int port) throws IOException {
+		this();
+		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open()
+				.bind(new InetSocketAddress(port));
+		listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+			@Override
+			public void completed(AsynchronousSocketChannel channel, Void none) {
+				connection = new Connection(channel, new DisconnectHandler<Void>(null) {
+					@Override
+					protected void handleDisconnect(Void none) {
+						General.fatal("Disconnect from API!");
+					}
+				});
+				connection.receive(new MessageHandler<Void>(null) {
+					@Override
+					public void parseMessage(ByteBuffer buf, MessageType type, Void none)
+							throws MessageParserException, ProtocolException {
+						receive(buf, type);
+					}
+				});
+				General.info("Connected to API");
+			}
+
+			@Override
+			public void failed(Throwable exception, Void none) {
+				General.fatal("Cannot connect to API!");
+			}
+		});
+	}
+
 	protected abstract void receive(ByteBuffer buffer, MessageType type)
 			throws MessageParserException, ProtocolException;
-	
+
 	public abstract int register() throws SizeLimitExceededException;
-	
+
 	public abstract void unregister(int id) throws IllegalArgumentException;
 }
