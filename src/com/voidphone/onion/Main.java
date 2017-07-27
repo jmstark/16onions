@@ -8,6 +8,9 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -19,6 +22,8 @@ import lombok.Getter;
 
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionApiSocket;
+import com.voidphone.api.OnionAuthApiSocket;
+import com.voidphone.api.RpsApiSocket;
 import com.voidphone.general.General;
 
 import protocol.MessageParserException;
@@ -29,18 +34,63 @@ public class Main {
 	private static Config config;
 	private static @Getter OnionApiSocket oas;
 
+	private static void run2() throws IOException {
+		final DatagramChannel dataChannel;
+		final OnionApiSocket onionApiSocket;
+		final AsynchronousServerSocketChannel onionServerSocket;
+		final Multiplexer multiplexer;
+		final ByteBuffer readBuffer;
+
+		multiplexer = new Multiplexer();
+		General.info("Waiting for API connection on " + config.getOnionApiPort() + ".....");
+		onionApiSocket = new OnionApiSocket(config.getOnionApiPort());
+		General.debug("API connection successful");
+		General.info("Waiting for Onion connections on " + config.getOnionPort() + ".....");
+		onionServerSocket = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(config.getOnionPort()));
+		onionServerSocket.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+			@Override
+			public void completed(AsynchronousSocketChannel channel, Void none) {
+				onionServerSocket.accept(null, this);
+				try {
+					OnionSocket onionSocket = new OnionSocket(multiplexer, channel);
+					// TODO: monitor and delete unused OnionSocket
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+			@Override
+			public void failed(Throwable exception, Void none) {
+				// TODO Auto-generated method stub
+			}
+		});
+		readBuffer = ByteBuffer.allocate(2 * Short.MAX_VALUE);
+		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(1234));
+		while (true) {
+			dataChannel.receive(readBuffer);
+			OnionMessage message = OnionMessage.parse(readBuffer);
+			try {
+				multiplexer.getQueue(message.getId()).offer(message);
+			} catch (IllegalArgumentException e) {
+				// TODO: kill connection
+			}
+			readBuffer.clear();
+		}
+	}
+
 	/**
 	 * Runs the Onion module.
-	 * @throws Exception 
+	 * 
+	 * @throws Exception
 	 */
 	private static void run() throws Exception {
 		try {
-			//socket for all incoming UDP packets, 
-			//for OnionConnectingSocket as well as OnionListenerSocket
-			DatagramChannel udpChannel = 
-					DatagramChannel.open().bind(new InetSocketAddress("127.0.0.1",config.getOnionPort()));
+			// socket for all incoming UDP packets,
+			// for OnionConnectingSocket as well as OnionListenerSocket
+			DatagramChannel udpChannel = DatagramChannel.open()
+					.bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
 
-			
 			selector = Selector.open();
 			General.info("Waiting for API connection on " + config.getOnionApiPort() + ".....");
 			SocketChannel onionApiSocket = ServerSocketChannel.open()
