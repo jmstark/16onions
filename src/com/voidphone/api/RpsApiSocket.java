@@ -6,8 +6,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import javax.naming.SizeLimitExceededException;
-
 import com.voidphone.general.General;
 
 import protocol.MessageParserException;
@@ -106,11 +104,9 @@ public class RpsApiSocket extends ApiSocket {
 	 * Does nothing.
 	 * 
 	 * @return 0
-	 * @throws SizeLimitExceededException
-	 *             never
 	 */
 	@Override
-	public int register() throws SizeLimitExceededException {
+	public int register() {
 		return 0;
 	}
 

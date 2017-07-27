@@ -7,9 +7,8 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Random;
 
-import javax.naming.SizeLimitExceededException;
-
 import com.voidphone.general.General;
+import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.general.Util;
 import com.voidphone.onion.Main;
 import com.voidphone.onion.OnionConnectingSocket;
@@ -87,6 +86,9 @@ public class OnionApiSocket extends ApiSocket {
 	 * @return the OnionTunnelReadyMessage
 	 */
 	public OnionTunnelReadyMessage newOnionTunnelReadyMessage(int id, byte hostkey[]) {
+		if (!map.containsKey(id)) {
+			throw new IllegalArgumentException("Illegal ID!");
+		}
 		try {
 			return new OnionTunnelReadyMessage((long) id, hostkey);
 		} catch (MessageSizeExceededException e) {
@@ -105,6 +107,9 @@ public class OnionApiSocket extends ApiSocket {
 	 * @return the OnionTunnelIncomingMessage
 	 */
 	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(int id, byte hostkey[]) {
+		if (!map.containsKey(id)) {
+			throw new IllegalArgumentException("Illegal ID!");
+		}
 		try {
 			return new OnionTunnelIncomingMessage((long) id, hostkey);
 		} catch (MessageSizeExceededException e) {
@@ -123,6 +128,9 @@ public class OnionApiSocket extends ApiSocket {
 	 * @return the OnionTunnelDataMessage
 	 */
 	public OnionTunnelDataMessage newOnionTunnelDataMessage(int id, byte data[]) {
+		if (!map.containsKey(id)) {
+			throw new IllegalArgumentException("Illegal ID!");
+		}
 		try {
 			return new OnionTunnelDataMessage((long) id, data);
 		} catch (MessageSizeExceededException e) {
@@ -141,6 +149,9 @@ public class OnionApiSocket extends ApiSocket {
 	 * @return the OnionErrorMessage
 	 */
 	public OnionErrorMessage newOnionErrorMessage(int id, Protocol.MessageType requestType) {
+		if (!map.containsKey(id)) {
+			throw new IllegalArgumentException("Illegal ID!");
+		}
 		return new OnionErrorMessage(requestType, (long) id);
 	}
 

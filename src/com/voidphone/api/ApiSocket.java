@@ -7,40 +7,22 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
-import javax.naming.SizeLimitExceededException;
-
 import com.voidphone.general.General;
+import com.voidphone.general.SizeLimitExceededException;
 
 import protocol.Connection;
 import protocol.DisconnectHandler;
 import protocol.MessageHandler;
 import protocol.MessageParserException;
-import protocol.Protocol;
 import protocol.Protocol.MessageType;
 import protocol.ProtocolException;
 
 /**
- * This class implements basic methods to simplify the API access. It provides
- * especially a read function
+ * This class implements basic methods to simplify the API access.
  */
 public abstract class ApiSocket {
 	protected AsynchronousSocketChannel channel;
 	protected Connection connection;
-	protected final ByteBuffer readBuffer;
-	protected final ByteBuffer writeBuffer;
-
-	/**
-	 * Initializes the buffers.
-	 * 
-	 * @param channel
-	 *            the AsynchronousSocketChannel
-	 * @throws IOException
-	 *             if there is an I/O-error
-	 */
-	private ApiSocket() throws IOException {
-		readBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
-		writeBuffer = ByteBuffer.allocate(Protocol.MAX_MESSAGE_SIZE);
-	}
 
 	/**
 	 * Creates a new API socket and connects it to the specified IP address and port
@@ -52,7 +34,6 @@ public abstract class ApiSocket {
 	 *             if there is an I/O-error
 	 */
 	public ApiSocket(final InetSocketAddress addr) throws IOException {
-		this();
 		channel = AsynchronousSocketChannel.open();
 		channel.connect(addr, channel, new CompletionHandler<Void, AsynchronousSocketChannel>() {
 			@Override
@@ -80,8 +61,15 @@ public abstract class ApiSocket {
 		});
 	}
 
+	/**
+	 * Listens for a new API connection.
+	 * 
+	 * @param port
+	 *            the port to listen on
+	 * @throws IOException
+	 *             if there is an I/O-error
+	 */
 	public ApiSocket(int port) throws IOException {
-		this();
 		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open()
 				.bind(new InetSocketAddress(port));
 		listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
@@ -110,10 +98,37 @@ public abstract class ApiSocket {
 		});
 	}
 
+	/**
+	 * Called when a new packet arrives.
+	 * 
+	 * @param buffer
+	 *            contains the packet
+	 * @param type
+	 *            the type of the packet
+	 * @throws MessageParserException
+	 *             if there is an error while parsing the message
+	 * @throws ProtocolException
+	 *             if the message does not match the protocol
+	 */
 	protected abstract void receive(ByteBuffer buffer, MessageType type)
 			throws MessageParserException, ProtocolException;
 
+	/**
+	 * Registers a new logical connection to the API.
+	 * 
+	 * @return ID of the new connection
+	 * @throws SizeLimitExceededException
+	 *             if too many connections are registered
+	 */
 	public abstract int register() throws SizeLimitExceededException;
 
+	/**
+	 * Unregisters a logical connection.
+	 * 
+	 * @param id
+	 *            ID of the connection
+	 * @throws IllegalArgumentException
+	 *             if the ID was not registered
+	 */
 	public abstract void unregister(int id) throws IllegalArgumentException;
 }
