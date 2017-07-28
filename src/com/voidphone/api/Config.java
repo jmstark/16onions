@@ -18,13 +18,17 @@
  */
 package com.voidphone.api;
 
+import static java.lang.Math.max;
+
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
+import org.ini4j.InvalidFileFormatException;
 import org.ini4j.Wini;
 
 import com.voidphone.general.General;
@@ -32,121 +36,77 @@ import com.voidphone.general.General;
 import util.PEMParser;
 
 public class Config {
-	// Timeout for API connections
-	private int apiTimeout;
-	// Socket to the Onion Auth module API
-	private OnionAuthApiSocket onionAuthAPISocket;
-	// Socket to the RPS module API
-	private RpsApiSocket rpsAPISocket;
-	// addr + port of the Onion module API
-	private String onionAPIAddress;
-	private short onionAPIPort;
+	// group for asynchronous channels
+	public final AsynchronousChannelGroup group;
+	// timeout for API connections
+	public final int apiTimeout;
+	// timeout for Onion connections
+	public final int onionTimeout;
+	// size of onion packets
+	public final int onionSize;
+	// address and port of the Onion Auth module API
+	public final String onionAuthAPIAddress;
+	public final short onionAuthAPIPort;
+	// address and port of the RPS module API
+	public final String rpsAPIAddress;
+	public final short rpsAPIPort;
+	// address and port of the Onion module API
+	public final String onionAPIAddress;
+	public final short onionAPIPort;
+	// address and port of the Onion P2P
+	public final String onionAddress;
+	public final short onionPort;
+	// path to hostkey
+	public final String hostkeyPath;
+	// hostkey of this peer
+	public final RSAPublicKey hostkey;
+	// Hop-count
+	public final int hopCount;
 
-	// addr + port of the Onion P2P
-	private String onionAddress;
-	private short onionPort;
-	private String hostkeyPath;
-	private int hopCount;
+	public Config(String configFilePath) throws InvalidFileFormatException, IOException, InvalidKeyException {
+		Wini configFile = new Wini(new File(configFilePath));
 
-	RSAPublicKey hostkey;
+		hostkeyPath = configFile.get("?", "HOSTKEY", String.class);
 
-	public Config(String configFilePath) {
-		readConfigValues(configFilePath);
-	}
+		hopCount = configFile.get("ONION", "hopcount", Integer.class).intValue();
 
-	/**
-	 * Reads values from config file into variables
-	 * 
-	 * @param configFilePath
-	 *            Path to the config file in INI format
-	 */
-	private void readConfigValues(String configFilePath) {
-		String authAPIAddress = null;
-		short authAPIPort = 0;
-		String rpsAPIAddress = null;
-		short rpsAPIPort = 0;
+		apiTimeout = configFile.get("ONION", "api_timeout", Integer.class).intValue();
+		onionTimeout = configFile.get("ONION", "P2P_TIMEOUT", Integer.class).intValue();
 
-		try {
-			Wini configFile = new Wini(new File(configFilePath));
-			hostkeyPath = configFile.get("?", "HOSTKEY", String.class);
+		onionSize = configFile.get("ONION", "P2P_PACKETSIZE", Integer.class).intValue();
 
-			hopCount = configFile.get("ONION", "hopcount", Integer.class).intValue();
-			// api_address contains address and port, separated by a colon (':')
-			String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
-			int colonPos = apiAddressAndPort.lastIndexOf(':');
-			onionAPIAddress = apiAddressAndPort.substring(0, colonPos);
-			onionAPIPort = (short) Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
-			// Onion hostname and port are separate config lines
-			onionAddress = configFile.get("ONION", "P2P_HOSTNAME", String.class);
-			onionPort = (short) configFile.get("ONION", "P2P_PORT", Integer.class).intValue();
+		// api_address contains address and port, separated by a colon (':')
+		String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
+		int colonPos = apiAddressAndPort.lastIndexOf(':');
+		onionAPIAddress = apiAddressAndPort.substring(0, colonPos);
+		onionAPIPort = (short) Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
 
-			// OnionAuth
-			String authAddressAndPort = configFile.get("AUTH", "api_address", String.class);
-			colonPos = authAddressAndPort.lastIndexOf(':');
-			authAPIAddress = apiAddressAndPort.substring(0, colonPos);
-			authAPIPort = (short) Integer.parseInt(authAddressAndPort.substring(colonPos + 1));
-			// RPS
-			String rpsAddressAndPort = configFile.get("RPS", "api_address", String.class);
-			colonPos = rpsAddressAndPort.lastIndexOf(':');
-			rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
-			rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
+		// Onion hostname and port are separate config lines
+		onionAddress = configFile.get("ONION", "P2P_HOSTNAME", String.class);
+		onionPort = (short) configFile.get("ONION", "P2P_PORT", Integer.class).intValue();
 
-			File file = new File(hostkeyPath);
-			hostkey = PEMParser.getPublicKeyFromPEM(file);
+		// OnionAuth
+		String authAddressAndPort = configFile.get("AUTH", "api_address", String.class);
+		colonPos = authAddressAndPort.lastIndexOf(':');
+		onionAuthAPIAddress = apiAddressAndPort.substring(0, colonPos);
+		onionAuthAPIPort = (short) Integer.parseInt(authAddressAndPort.substring(colonPos + 1));
 
-		} catch (IOException e) {
-			General.fatal("FATAL: Could not read config file!");
-			System.exit(1);
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			General.fatal("FATAL: Invalid key!");
-			System.exit(1);
-			e.printStackTrace();
-		}
-		// ugly dummy try catch
-		try {
-			onionAuthAPISocket = new OnionAuthApiSocket(new InetSocketAddress(authAPIAddress, authAPIPort));
-			rpsAPISocket = new RpsApiSocket(new InetSocketAddress(rpsAPIAddress, rpsAPIPort));
+		// RPS
+		String rpsAddressAndPort = configFile.get("RPS", "api_address", String.class);
+		colonPos = rpsAddressAndPort.lastIndexOf(':');
+		rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
+		rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
 
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		File file = new File(hostkeyPath);
+		hostkey = PEMParser.getPublicKeyFromPEM(file);
+
+		int cores = Runtime.getRuntime().availableProcessors();
+		ThreadFactory threadFactory = Executors.defaultThreadFactory();
+		group = AsynchronousChannelGroup.withFixedThreadPool(max(1, cores - 1), threadFactory);
+
 		General.debug("Hostkey: " + hostkeyPath + "; \nAPI will listen on " + onionAPIAddress + ", Port " + onionAPIPort
 				+ "; \nOnion P2P will listen on " + onionAddress + ", Port " + onionPort + ". \n"
-				+ "connecting to AUTH API on " + authAPIAddress + ":" + authAPIPort + "; \nconnecting to RPS API on "
-				+ rpsAPIAddress + ":" + rpsAPIPort);
-	}
-
-	public int getAPITimeout() {
-		return apiTimeout;
-	}
-	
-	public OnionAuthApiSocket getOnionAuthAPISocket() {
-		return onionAuthAPISocket;
-	}
-
-	public RpsApiSocket getRPSAPISocket() {
-		return rpsAPISocket;
-	}
-
-	public int getOnionApiPort() {
-		return onionAPIPort;
-	}
-
-	public int getOnionPort() {
-		return onionPort;
-	}
-
-	public byte[] getHostkey() {
-		return hostkey.getEncoded();
-	}
-
-	public RSAPublicKey getHostkeyObject() {
-		return hostkey;
-	}
-
-	public int getHopCount() {
-		return hopCount;
+				+ "connecting to AUTH API on " + onionAuthAPIAddress + ":" + onionAuthAPIPort
+				+ "; \nconnecting to RPS API on " + rpsAPIAddress + ":" + rpsAPIPort);
 	}
 }

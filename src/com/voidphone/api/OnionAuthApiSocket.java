@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import javax.naming.SizeLimitExceededException;
 
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalIDException;
 
 import auth.api.OnionAuthApiMessage;
 import auth.api.OnionAuthSessionHS1;
@@ -184,13 +185,13 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * 
 	 * @param id
 	 *            ID of the connection
-	 * @throws IllegalArgumentException
-	 *             if the ID was not registered
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
 	@Override
-	public void unregister(int id) throws IllegalArgumentException {
+	public void unregister(int id) throws IllegalIDException {
 		if (!map.containsKey((short) id)) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 		map.remove((short) id);
 	}

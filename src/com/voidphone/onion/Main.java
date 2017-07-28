@@ -34,7 +34,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.security.InvalidKeyException;
 import java.util.Iterator;
+
+import org.ini4j.InvalidFileFormatException;
 
 import lombok.Getter;
 
@@ -51,7 +54,7 @@ import protocol.ProtocolException;
 
 public class Main {
 	private static @Getter Selector selector;
-	private static Config config;
+	private static @Getter Config config;
 	private static @Getter OnionApiSocket oas;
 
 	private static void run2() throws IOException {
@@ -60,23 +63,22 @@ public class Main {
 		final AsynchronousServerSocketChannel onionServerSocket;
 		final Multiplexer multiplexer;
 		final ByteBuffer readBuffer;
-		final int size;
 
-		size = 0x1234; // TODO: create config or intelligent size detection
-		readBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
+		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
 		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(1234));
-		multiplexer = new Multiplexer(dataChannel, size);
-		General.info("Waiting for API connection on " + config.getOnionApiPort() + ".....");
-		onionApiSocket = new OnionApiSocket(config.getOnionApiPort());
+		multiplexer = new Multiplexer(dataChannel, config.onionSize);
+		General.info("Waiting for API connection on " + config.onionAPIPort + ".....");
+		onionApiSocket = new OnionApiSocket(config.onionAPIPort);
 		General.debug("API connection successful");
-		General.info("Waiting for Onion connections on " + config.getOnionPort() + ".....");
-		onionServerSocket = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(config.getOnionPort()));
+		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
+		onionServerSocket = AsynchronousServerSocketChannel.open(config.group)
+				.bind(new InetSocketAddress(config.onionPort));
 		onionServerSocket.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
 			public void completed(AsynchronousSocketChannel channel, Void none) {
 				onionServerSocket.accept(null, this);
 				try {
-					OnionSocket onionSocket = new OnionSocket(multiplexer, channel, size);
+					OnionSocket onionSocket = new OnionSocket(multiplexer, channel);
 					multiplexer.register(((InetSocketAddress) channel.getRemoteAddress()).getAddress(), onionSocket);
 				} catch (IOException e) {
 					General.error("I/O error!");
@@ -92,7 +94,7 @@ public class Main {
 		});
 		while (true) {
 			InetAddress addr = ((InetSocketAddress) dataChannel.receive(readBuffer)).getAddress();
-			OnionMessage message = OnionMessage.parse(size, readBuffer, addr);
+			OnionMessage message = OnionMessage.parse(config.onionSize, readBuffer, addr);
 			try {
 				multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
 			} catch (IllegalAddressException | IllegalIDException e) {
@@ -179,7 +181,18 @@ public class Main {
 			System.out.println("Usage: java Main -c <path_to_config_file>");
 			System.exit(1);
 		}
-		config = new Config(args[1]);
+		try {
+			config = new Config(args[1]);
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidFileFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	/**

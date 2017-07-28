@@ -26,7 +26,9 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
+import com.voidphone.onion.Main;
 
 import protocol.Connection;
 import protocol.DisconnectHandler;
@@ -52,7 +54,7 @@ public abstract class ApiSocket {
 	 *             if there is an I/O-error
 	 */
 	public ApiSocket(final InetSocketAddress addr) throws IOException {
-		channel = AsynchronousSocketChannel.open();
+		channel = AsynchronousSocketChannel.open(Main.getConfig().group);
 		channel.connect(addr, channel, new CompletionHandler<Void, AsynchronousSocketChannel>() {
 			@Override
 			public void completed(Void none, AsynchronousSocketChannel channel) {
@@ -88,7 +90,7 @@ public abstract class ApiSocket {
 	 *             if there is an I/O-error
 	 */
 	public ApiSocket(int port) throws IOException {
-		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open()
+		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open(Main.getConfig().group)
 				.bind(new InetSocketAddress(port));
 		listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
@@ -145,8 +147,8 @@ public abstract class ApiSocket {
 	 * 
 	 * @param id
 	 *            ID of the connection
-	 * @throws IllegalArgumentException
-	 *             if the ID was not registered
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
-	public abstract void unregister(int id) throws IllegalArgumentException;
+	public abstract void unregister(int id) throws IllegalIDException;
 }

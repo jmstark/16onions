@@ -25,6 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalIDException;
 
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
@@ -70,10 +71,12 @@ public class RpsApiSocket extends ApiSocket {
 	 * @param id
 	 *            the ID
 	 * @return the RpsQueryMessage
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
-	public RpsQueryMessage newRpsQueryMessage(int id) {
+	public RpsQueryMessage newRpsQueryMessage(int id) throws IllegalIDException {
 		if (id != 0) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 		return new RpsQueryMessage();
 	}
@@ -133,13 +136,13 @@ public class RpsApiSocket extends ApiSocket {
 	 * 
 	 * @param id
 	 *            must be 0
-	 * @throws IllegalArgumentException
+	 * @throws IllegalIDException
 	 *             if id != 0
 	 */
 	@Override
-	public void unregister(int id) throws IllegalArgumentException {
+	public void unregister(int id) throws IllegalIDException {
 		if (id != 0) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 	}
 }

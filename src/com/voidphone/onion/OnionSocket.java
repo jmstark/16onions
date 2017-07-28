@@ -31,7 +31,6 @@ import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
 
 public class OnionSocket {
-	private final int size;
 	private final InetAddress address;
 	private final AsynchronousSocketChannel channel;
 	private final ByteBuffer readBuffer;
@@ -48,13 +47,12 @@ public class OnionSocket {
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch, int size) throws IOException {
-		readBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
-		writeBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
+	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch) throws IOException {
+		readBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
+		writeBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
 		this.channel = cch;
 		this.address = ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
 		this.multiplexer = m;
-		this.size = size;
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
@@ -85,7 +83,7 @@ public class OnionSocket {
 				close();
 				return;
 			}
-			OnionMessage message = OnionMessage.parse(size, readBuffer, address);
+			OnionMessage message = OnionMessage.parse(Main.getConfig().onionSize, readBuffer, address);
 			channel.read(readBuffer, null, this);
 			try {
 				multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);

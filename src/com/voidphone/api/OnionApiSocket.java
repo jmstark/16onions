@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Random;
 
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.general.Util;
 import com.voidphone.onion.Main;
@@ -102,10 +103,12 @@ public class OnionApiSocket extends ApiSocket {
 	 * @param hostkey
 	 *            the Hostkey
 	 * @return the OnionTunnelReadyMessage
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
-	public OnionTunnelReadyMessage newOnionTunnelReadyMessage(int id, byte hostkey[]) {
+	public OnionTunnelReadyMessage newOnionTunnelReadyMessage(int id, byte hostkey[]) throws IllegalIDException {
 		if (!map.containsKey(id)) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 		try {
 			return new OnionTunnelReadyMessage((long) id, hostkey);
@@ -123,10 +126,12 @@ public class OnionApiSocket extends ApiSocket {
 	 * @param hostkey
 	 *            the Hostkey
 	 * @return the OnionTunnelIncomingMessage
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
-	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(int id, byte hostkey[]) {
+	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(int id, byte hostkey[]) throws IllegalIDException {
 		if (!map.containsKey(id)) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 		try {
 			return new OnionTunnelIncomingMessage((long) id, hostkey);
@@ -144,10 +149,12 @@ public class OnionApiSocket extends ApiSocket {
 	 * @param data
 	 *            the data
 	 * @return the OnionTunnelDataMessage
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
-	public OnionTunnelDataMessage newOnionTunnelDataMessage(int id, byte data[]) {
+	public OnionTunnelDataMessage newOnionTunnelDataMessage(int id, byte data[]) throws IllegalIDException {
 		if (!map.containsKey(id)) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 		try {
 			return new OnionTunnelDataMessage((long) id, data);
@@ -165,10 +172,12 @@ public class OnionApiSocket extends ApiSocket {
 	 * @param requestType
 	 *            the requestType
 	 * @return the OnionErrorMessage
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
-	public OnionErrorMessage newOnionErrorMessage(int id, Protocol.MessageType requestType) {
+	public OnionErrorMessage newOnionErrorMessage(int id, Protocol.MessageType requestType) throws IllegalIDException {
 		if (!map.containsKey(id)) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 		return new OnionErrorMessage(requestType, (long) id);
 	}
@@ -368,13 +377,13 @@ public class OnionApiSocket extends ApiSocket {
 	 * 
 	 * @param id
 	 *            ID of the connection
-	 * @throws IllegalArgumentException
-	 *             if the ID was not registered
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
 	 */
 	@Override
-	public void unregister(int id) throws IllegalArgumentException {
+	public void unregister(int id) throws IllegalIDException {
 		if (!map.containsKey(id)) {
-			throw new IllegalArgumentException("Illegal ID!");
+			throw new IllegalIDException();
 		}
 		map.remove(id);
 	}
