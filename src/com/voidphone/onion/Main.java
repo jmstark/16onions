@@ -25,6 +25,8 @@ import com.voidphone.api.OnionApiSocket;
 import com.voidphone.api.OnionAuthApiSocket;
 import com.voidphone.api.RpsApiSocket;
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalAddressException;
+import com.voidphone.general.IllegalIDException;
 
 import protocol.MessageParserException;
 import protocol.ProtocolException;
@@ -40,8 +42,12 @@ public class Main {
 		final AsynchronousServerSocketChannel onionServerSocket;
 		final Multiplexer multiplexer;
 		final ByteBuffer readBuffer;
+		final int size;
 
-		multiplexer = new Multiplexer();
+		size = 0x1234; // TODO: create config or intelligent size detection
+		readBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
+		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(1234));
+		multiplexer = new Multiplexer(dataChannel, size);
 		General.info("Waiting for API connection on " + config.getOnionApiPort() + ".....");
 		onionApiSocket = new OnionApiSocket(config.getOnionApiPort());
 		General.debug("API connection successful");
@@ -52,28 +58,27 @@ public class Main {
 			public void completed(AsynchronousSocketChannel channel, Void none) {
 				onionServerSocket.accept(null, this);
 				try {
-					OnionSocket onionSocket = new OnionSocket(multiplexer, channel);
-					// TODO: monitor and delete unused OnionSocket
+					OnionSocket onionSocket = new OnionSocket(multiplexer, channel, size);
+					multiplexer.register(((InetSocketAddress) channel.getRemoteAddress()).getAddress(), onionSocket);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					General.error("I/O error!");
+				} catch (IllegalAddressException e) {
+					General.warning("Got multiple TCP channel from one Hop!");
 				}
 			}
 
 			@Override
 			public void failed(Throwable exception, Void none) {
-				// TODO Auto-generated method stub
+				General.fatal("Accept failed!");
 			}
 		});
-		readBuffer = ByteBuffer.allocate(2 * Short.MAX_VALUE);
-		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(1234));
 		while (true) {
-			dataChannel.receive(readBuffer);
-			OnionMessage message = OnionMessage.parse(readBuffer);
+			InetAddress addr = ((InetSocketAddress) dataChannel.receive(readBuffer)).getAddress();
+			OnionMessage message = OnionMessage.parse(size, readBuffer, addr);
 			try {
-				multiplexer.getQueue(message.getId()).offer(message);
-			} catch (IllegalArgumentException e) {
-				// TODO: kill connection
+				multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
+			} catch (IllegalAddressException | IllegalIDException e) {
+				General.warning("Got packet with wrong address or ID!");
 			}
 			readBuffer.clear();
 		}

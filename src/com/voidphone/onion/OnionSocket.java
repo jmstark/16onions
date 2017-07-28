@@ -1,82 +1,122 @@
 package com.voidphone.onion;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.spi.AsynchronousChannelProvider;
-import java.security.SecureRandom;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
 
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalAddressException;
+import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
 
-import protocol.Connection;
-import protocol.DisconnectHandler;
-import protocol.MessageHandler;
-import protocol.MessageParserException;
-import protocol.Protocol;
-import protocol.ProtocolException;
-import protocol.Protocol.MessageType;
-
 public class OnionSocket {
-	public final static int MAX_ONION_MESSAGE_SIZE = 2 * Short.MAX_VALUE + 2 * Short.BYTES;
-	private AsynchronousSocketChannel controlChannel;
-	private final ByteBuffer controlReadBuffer;
-	private final ByteBuffer controlWriteBuffer;
+	private final int size;
+	private final InetAddress address;
+	private final AsynchronousSocketChannel channel;
+	private final ByteBuffer readBuffer;
+	private final ByteBuffer writeBuffer;
 	private final Multiplexer multiplexer;
 
 	/**
-	 * Initializes the buffers.
+	 * Creates a OnionSocket.
 	 * 
+	 * @param m
+	 *            the multiplexer
+	 * @param cch
+	 *            the channel
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch) throws IOException {
-		controlReadBuffer = ByteBuffer.allocate(MAX_ONION_MESSAGE_SIZE);
-		controlWriteBuffer = ByteBuffer.allocate(MAX_ONION_MESSAGE_SIZE);
-		this.controlChannel = cch;
+	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch, int size) throws IOException {
+		readBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
+		writeBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
+		this.channel = cch;
+		this.address = ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
 		this.multiplexer = m;
-		controlChannel.read(controlReadBuffer, null, new ReadCompletionHandler());
+		this.size = size;
+		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
-	public OnionMessage read(short id) {
-		return multiplexer.getQueue(id).poll();
+	public void send(OnionMessage message) {
+		message.serialize(writeBuffer);
+		channel.write(writeBuffer, message, new WriteCompletionHandler());
+	}
+
+	public void close() {
+		try {
+			multiplexer.unregister(address);
+		} catch (IllegalAddressException e) {
+			General.warning("Address is not registered, but it should be!");
+		}
+		try {
+			if (channel.isOpen()) {
+				channel.close();
+			}
+		} catch (IOException e) {
+			General.error("TCP channel close failed!");
+		}
 	}
 
 	private class ReadCompletionHandler implements CompletionHandler<Integer, Void> {
-		OnionMessage message;
-
 		@Override
-		public void completed(Integer result, Void none) {
-			if (result <= 0) {
-				// TODO: signal error
-				controlChannel.close();
+		public void completed(Integer length, Void none) {
+			if (length <= 0) {
+				close();
 				return;
 			}
-			message = OnionMessage.parse(controlReadBuffer);
-			while (message != null) {
+			OnionMessage message = OnionMessage.parse(size, readBuffer, address);
+			channel.read(readBuffer, null, this);
+			try {
+				multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
+			} catch (IllegalAddressException e) {
+				General.warning("Got packet with wrong address!");
+			} catch (IllegalIDException e) {
 				try {
-					multiplexer.getQueue(message.getId()).offer(message);
-				} catch (IllegalArgumentException e) {
-					// TODO: handle new connection from known hop, e.g., handle(this, message)
+					multiplexer.register(message.getId(), address);
+					multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
+					// TODO: handle new connection
+				} catch (SizeLimitExceededException f) {
+					General.warning(f.getMessage());
+				} catch (IllegalIDException f) {
+					General.warning("Got packet with illegal ID!");
+				} catch (IllegalAddressException f) {
+					General.error("Address is not registered, but should be!");
+					close();
 				}
-				message = OnionMessage.parse(controlReadBuffer);
 			}
-			controlChannel.read(controlReadBuffer, null, this);
 		}
 
 		@Override
 		public void failed(Throwable ex, Void none) {
-			disconnect();
+			close();
+		}
+	}
+
+	private class WriteCompletionHandler implements CompletionHandler<Integer, OnionMessage> {
+		@Override
+		public void completed(Integer result, OnionMessage message) {
+			if (result <= 0) {
+				close();
+				return;
+			}
+			if (writeBuffer.hasRemaining()) {
+				channel.write(writeBuffer, null, this);
+				return;
+			}
+			try {
+				multiplexer.getWriteQueue(message.getId(), message.getAddress()).offer(null);
+			} catch (IllegalAddressException | IllegalIDException e) {
+				General.error("Address or ID not registered, but should be!");
+				close();
+			}
+		}
+
+		@Override
+		public void failed(Throwable exception, OnionMessage message) {
+			close();
 		}
 	}
 }

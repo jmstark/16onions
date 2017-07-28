@@ -22,6 +22,14 @@ public class General {
 	public static void info(String s) {
 		System.out.println("INFO: " + s);
 	}
+	
+	public static void warning(String s) {
+		System.err.println("WARNING: " + s);
+	}
+	
+	public static void error(String s) {
+		System.err.println("ERROR: " + s);
+	}
 
 	public static void fatal(String s) {
 		System.err.println("FATAL: " + s);
