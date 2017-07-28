@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2017, Charlie Groh and Josef Stark. All rights reserved.
+ * 
+ * This file is part of 16onions.
+ *
+ * 16onions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * 16onions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 16onions.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.voidphone.onion;
 
 import java.io.IOException;
@@ -57,7 +75,7 @@ public class Multiplexer {
 	}
 
 	private OnionSocket getOnionSocket(InetAddress addr) throws IllegalAddressException {
-		return getFirst(addr).y;
+		return getFirst(addr).b;
 	}
 
 	private Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>>> getFirst(
@@ -75,23 +93,23 @@ public class Multiplexer {
 	private Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>> getSecond(
 			Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>>> triple,
 			Short id) throws IllegalIDException {
-		triple.x.readLock().lock();
-		if (!triple.z.containsKey(id)) {
+		triple.a.readLock().lock();
+		if (!triple.c.containsKey(id)) {
 			throw new IllegalIDException();
 		}
-		Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>> ret = triple.z.get(id);
-		triple.x.readLock().unlock();
+		Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>> ret = triple.c.get(id);
+		triple.a.readLock().unlock();
 		return ret;
 	}
 
 	public LinkedBlockingQueue<OnionMessage> getReadQueue(short id, InetAddress addr)
 			throws IllegalAddressException, IllegalIDException {
-		return getSecond(getFirst(addr), id).x;
+		return getSecond(getFirst(addr), id).a;
 	}
 
 	public LinkedBlockingQueue<Void> getWriteQueue(short id, InetAddress addr)
 			throws IllegalAddressException, IllegalIDException {
-		return getSecond(getFirst(addr), id).y;
+		return getSecond(getFirst(addr), id).b;
 	}
 
 	public void register(InetAddress addr, OnionSocket sock) throws IllegalAddressException {
@@ -111,8 +129,8 @@ public class Multiplexer {
 		HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>> second;
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>>> triple;
 		triple = getFirst(addr);
-		triple.x.writeLock().lock();
-		second = triple.z;
+		triple.a.writeLock().lock();
+		second = triple.c;
 		if (second.size() >= Short.MAX_VALUE) {
 			throw new SizeLimitExceededException("Too many connections registered!");
 		}
@@ -121,7 +139,7 @@ public class Multiplexer {
 		} while (second.containsKey(id));
 		second.put(id, new Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>(
 				new LinkedBlockingQueue<OnionMessage>(), new LinkedBlockingQueue<Void>(1)));
-		triple.x.writeLock().unlock();
+		triple.a.writeLock().unlock();
 		return id;
 	}
 
@@ -130,8 +148,8 @@ public class Multiplexer {
 		HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>> second;
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>>> triple;
 		triple = getFirst(addr);
-		triple.x.writeLock().lock();
-		second = triple.z;
+		triple.a.writeLock().lock();
+		second = triple.c;
 		if (second.size() >= Short.MAX_VALUE) {
 			throw new SizeLimitExceededException("Too many connections registered!");
 		}
@@ -140,7 +158,7 @@ public class Multiplexer {
 		}
 		second.put(id, new Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>(
 				new LinkedBlockingQueue<OnionMessage>(), new LinkedBlockingQueue<Void>(1)));
-		triple.x.writeLock().unlock();
+		triple.a.writeLock().unlock();
 	}
 
 	public void unregister(InetAddress addr) throws IllegalAddressException {
@@ -156,17 +174,17 @@ public class Multiplexer {
 		HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>> second;
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, Double<LinkedBlockingQueue<OnionMessage>, LinkedBlockingQueue<Void>>>> triple;
 		triple = getFirst(addr);
-		triple.x.writeLock().lock();
-		second = triple.z;
+		triple.a.writeLock().lock();
+		second = triple.c;
 		if (!second.containsKey(id)) {
 			throw new IllegalIDException();
 		}
 		second.remove(id);
 		if (second.isEmpty()) {
-			triple.x.writeLock().unlock();
-			triple.y.close();
+			triple.a.writeLock().unlock();
+			triple.b.close();
 		} else {
-			triple.x.writeLock().unlock();
+			triple.a.writeLock().unlock();
 		}
 	}
 }
