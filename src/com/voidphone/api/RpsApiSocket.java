@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
+import com.voidphone.onion.Main;
 
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
@@ -93,7 +94,7 @@ public class RpsApiSocket extends ApiSocket {
 	 */
 	public RpsPeerMessage RPSQUERY(RpsQueryMessage rqm) throws InterruptedException {
 		fillPeerQueue();
-		return peerQueue.poll(1, TimeUnit.SECONDS);
+		return peerQueue.poll(Main.getConfig().apiTimeout, TimeUnit.MILLISECONDS);
 	}
 
 	/**

@@ -56,6 +56,10 @@ public class OnionSocket {
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
+	private void newConnection(Multiplexer m, short id, InetAddress addr) {
+		// TODO: handle new connection
+	}
+
 	public void send(OnionMessage message) {
 		message.serialize(writeBuffer);
 		channel.write(writeBuffer, message, new WriteCompletionHandler());
@@ -93,7 +97,7 @@ public class OnionSocket {
 				try {
 					multiplexer.register(message.getId(), address);
 					multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
-					// TODO: handle new connection
+					newConnection(multiplexer, message.getId(), address);
 				} catch (SizeLimitExceededException f) {
 					General.warning(f.getMessage());
 				} catch (IllegalIDException f) {

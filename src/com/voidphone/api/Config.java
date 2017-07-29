@@ -66,14 +66,14 @@ public class Config {
 	public Config(String configFilePath) throws InvalidFileFormatException, IOException, InvalidKeyException {
 		Wini configFile = new Wini(new File(configFilePath));
 
-		hostkeyPath = configFile.get("?", "HOSTKEY", String.class);
+		hostkeyPath = configFile.get("?", "hostkey", String.class);
 
 		hopCount = configFile.get("ONION", "hopcount", Integer.class).intValue();
 
 		apiTimeout = configFile.get("ONION", "api_timeout", Integer.class).intValue();
-		onionTimeout = configFile.get("ONION", "P2P_TIMEOUT", Integer.class).intValue();
+		onionTimeout = configFile.get("ONION", "p2p_timeout", Integer.class).intValue();
 
-		onionSize = configFile.get("ONION", "P2P_PACKETSIZE", Integer.class).intValue();
+		onionSize = configFile.get("ONION", "p2p_packetsize", Integer.class).intValue();
 
 		// api_address contains address and port, separated by a colon (':')
 		String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
@@ -82,8 +82,8 @@ public class Config {
 		onionAPIPort = (short) Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
 
 		// Onion hostname and port are separate config lines
-		onionAddress = configFile.get("ONION", "P2P_HOSTNAME", String.class);
-		onionPort = (short) configFile.get("ONION", "P2P_PORT", Integer.class).intValue();
+		onionAddress = configFile.get("ONION", "p2p_hostname", String.class);
+		onionPort = (short) configFile.get("ONION", "p2p_port", Integer.class).intValue();
 
 		// OnionAuth
 		String authAddressAndPort = configFile.get("AUTH", "api_address", String.class);
