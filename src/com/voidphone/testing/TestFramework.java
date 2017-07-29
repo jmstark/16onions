@@ -16,23 +16,30 @@
  * You should have received a copy of the GNU General Public License
  * along with 16onions.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.voidphone.general;
+package com.voidphone.testing;
 
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
 public class TestFramework {
 	public static void runTest(Class<? extends Object> test) {
 		System.out.println("Running test " + test.getSimpleName() + ":");
 		try {
-			Process p = new ProcessBuilder(Arrays.asList(new String[] { "java",
-					"-cp", System.getProperty("user.dir") + "/bin/",
-					test.getName() })).start();
+			LinkedList<String> cmd = new LinkedList<String>();
+			cmd.addLast("java");
+			cmd.addLast("-cp");
+			String classpath = System.getProperty("user.dir") + "/bin/";
+			for (String path : Helper.classpath) {
+				classpath += ":" + path;
+			}
+			cmd.addLast(classpath);
+			cmd.addLast(test.getName());
+			Process p = new ProcessBuilder(cmd).start();
 			new RedirectThread(p.getInputStream(), System.out).start();
 			new RedirectThread(p.getErrorStream(), System.err).start();
 			if (!p.waitFor(5, TimeUnit.SECONDS)) {
@@ -42,7 +49,9 @@ public class TestFramework {
 			} else if (p.exitValue() != 0) {
 				fail("Test returns non-null!");
 			}
-		} catch (IOException | InterruptedException e) {
+		} catch (IOException |
+
+				InterruptedException e) {
 			fail("Test throws unexpected Exception!");
 		}
 	}

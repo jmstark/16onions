@@ -56,43 +56,38 @@ public class Config {
 	// address and port of the Onion P2P
 	public final String onionAddress;
 	public final short onionPort;
-	// path to hostkey
-	public final String hostkeyPath;
 	// hostkey of this peer
 	public final RSAPublicKey hostkey;
 	// Hop-count
 	public final int hopCount;
 
 	public Config(String configFilePath) throws InvalidFileFormatException, IOException, InvalidKeyException {
-		Wini configFile = new Wini(new File(configFilePath));
+		Wini configFile = new Wini();
+		org.ini4j.Config iniConfig = configFile.getConfig();
+		iniConfig.setLowerCaseOption(true);
+		iniConfig.setLowerCaseSection(true);
+		configFile.setConfig(iniConfig);
+		configFile.load(new File(configFilePath));
 
-		hostkeyPath = configFile.get("?", "hostkey", String.class);
-
-		hopCount = configFile.get("ONION", "hopcount", Integer.class).intValue();
-
-		apiTimeout = configFile.get("ONION", "api_timeout", Integer.class).intValue();
-		onionTimeout = configFile.get("ONION", "p2p_timeout", Integer.class).intValue();
-
-		onionSize = configFile.get("ONION", "p2p_packetsize", Integer.class).intValue();
+		String hostkeyPath = configFile.get("?", "hostkey", String.class);
+		if (hostkeyPath == null) {
+			hostkeyPath = getString(configFile, "onion", "hostkey");
+		}
 
 		// api_address contains address and port, separated by a colon (':')
-		String apiAddressAndPort = configFile.get("ONION", "api_address", String.class);
+		String apiAddressAndPort = getString(configFile, "onion", "api_address");
 		int colonPos = apiAddressAndPort.lastIndexOf(':');
 		onionAPIAddress = apiAddressAndPort.substring(0, colonPos);
 		onionAPIPort = (short) Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
 
-		// Onion hostname and port are separate config lines
-		onionAddress = configFile.get("ONION", "p2p_hostname", String.class);
-		onionPort = (short) configFile.get("ONION", "p2p_port", Integer.class).intValue();
-
 		// OnionAuth
-		String authAddressAndPort = configFile.get("AUTH", "api_address", String.class);
+		String authAddressAndPort = getString(configFile, "auth", "api_address");
 		colonPos = authAddressAndPort.lastIndexOf(':');
 		onionAuthAPIAddress = apiAddressAndPort.substring(0, colonPos);
 		onionAuthAPIPort = (short) Integer.parseInt(authAddressAndPort.substring(colonPos + 1));
 
 		// RPS
-		String rpsAddressAndPort = configFile.get("RPS", "api_address", String.class);
+		String rpsAddressAndPort = getString(configFile, "rps", "api_address");
 		colonPos = rpsAddressAndPort.lastIndexOf(':');
 		rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
 		rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
@@ -104,9 +99,38 @@ public class Config {
 		ThreadFactory threadFactory = Executors.defaultThreadFactory();
 		group = AsynchronousChannelGroup.withFixedThreadPool(max(1, cores - 1), threadFactory);
 
+		// Onion hostname and port are separate config lines
+		onionAddress = getString(configFile, "onion", "p2p_hostname");
+		onionPort = (short) getInteger(configFile, "onion", "p2p_port");
+
+		hopCount = getInteger(configFile, "onion", "hopcount");
+
+		apiTimeout = getInteger(configFile, "onion", "api_timeout");
+		onionTimeout = getInteger(configFile, "onion", "p2p_timeout");
+
+		onionSize = getInteger(configFile, "onion", "p2p_packetsize");
+
 		General.debug("Hostkey: " + hostkeyPath + "; \nAPI will listen on " + onionAPIAddress + ", Port " + onionAPIPort
 				+ "; \nOnion P2P will listen on " + onionAddress + ", Port " + onionPort + ". \n"
 				+ "connecting to AUTH API on " + onionAuthAPIAddress + ":" + onionAuthAPIPort
 				+ "; \nconnecting to RPS API on " + rpsAPIAddress + ":" + rpsAPIPort);
+	}
+
+	private int getInteger(Wini configFile, String section, String option) {
+		Integer bp = configFile.get(section, option, Integer.class);
+		if (bp == null) {
+			General.fatal("Could not find " + option + " in " + section + "!");
+			return 0;
+		} else {
+			return bp.intValue();
+		}
+	}
+
+	private String getString(Wini configFile, String section, String option) {
+		String bp = configFile.get(section, option, String.class);
+		if (bp == null) {
+			General.fatal("Could not find option \"" + option + "\" in section \"" + section + "\"!");
+		}
+		return bp;
 	}
 }

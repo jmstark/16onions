@@ -29,7 +29,7 @@ import com.voidphone.general.General;
 public class ConfigFactory {
 	private static final int max_connections = 30;
 	private static final int cache_size = 50;
-	private final Wini config;
+	public final Wini config;
 	private final String name;
 	private int port;
 
@@ -37,23 +37,28 @@ public class ConfigFactory {
 		this.port = port;
 		this.name = name;
 		this.config = new Wini();
+		config.add("?", "hostkey", "");
 		if (bootstrapper == null) {
 			bootstrapper = nextPort();
-			config.add("gossip", "api_address", bootstrapper);
+			config.add("gossip", "listen_address", bootstrapper);
 		} else {
-			config.add("gossip", "api_address", nextPort());
+			config.add("gossip", "listen_address", nextPort());
 		}
 		config.add("gossip", "bootstrapper", bootstrapper);
-		config.add("gossip", "listen_address", nextPort());
+		config.add("gossip", "api_address", nextPort());
 		config.add("gossip", "max_connections", max_connections);
 		config.add("gossip", "cache_size", cache_size);
 		config.add("rps", "api_address", nextPort());
 		config.add("rps", "listen_address", nextPort());
 		config.add("onion", "api_address", nextPort());
 		config.add("onion", "listen_address", nextPort());
+		config.add("onion", "api_timeout", 3000);
 		config.add("onion", "hopcount", 3);
-		config.add("onion", "p2p_hostname", "???");
-		config.add("onion", "p2p_port", nextPort());
+		config.add("onion", "p2p_hostname", "xxx");
+		config.add("onion", "p2p_port", port);
+		port++;
+		config.add("onion", "p2p_timeout", 5000);
+		config.add("onion", "p2p_packetsize", 4096);
 		config.add("auth", "api_address", nextPort());
 		config.add("auth", "listen_address", nextPort());
 	}
@@ -69,7 +74,7 @@ public class ConfigFactory {
 		if (new ProcessBuilder(cmd).start().waitFor() != 0) {
 			General.fatal("Hostkey generation failed!");
 		}
-		config.add("?", "hostkey", hostkeyPath);
+		config.put("?", "hostkey", hostkeyPath);
 
 		config.store(configPath.toFile());
 		return configPath.toString();

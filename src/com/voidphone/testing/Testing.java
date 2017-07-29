@@ -18,14 +18,26 @@
  */
 package com.voidphone.testing;
 
-import com.voidphone.testing.TestProcess;
+import org.junit.Test;
 
-public class TesteePrintsAPIPort {
-	public static void main(String args[]) throws Exception {
-		String config = Helper.generateConfig(1) + "/peer0/peer0.conf";
-		TestProcess p = new TestProcess(com.voidphone.onion.Main.class, Helper.classpath,
-				new String[] { "-c", config });
-		Helper.contains(p.getOut(), "Waiting for API connection on ");
-		p.terminate();
+public class Testing {
+	@Test
+	public void testeePrintsAPIPort() {
+		TestFramework.runTest(com.voidphone.testing.TesteePrintsAPIPort.class);
+	}
+
+	@Test
+	public void testeeAcceptsAPIConnection() {
+		TestFramework.runTest(com.voidphone.testing.TesteeAcceptsAPIConnection.class);
+	}
+
+	@Test
+	public void testeePrintsOnionPort() {
+		TestFramework.runTest(com.voidphone.testing.TesteePrintsOnionPort.class);
+	}
+
+	@Test
+	public void testeeAcceptsOnionConnection() {
+		TestFramework.runTest(com.voidphone.testing.TesteeAcceptsOnionConnections.class);
 	}
 }

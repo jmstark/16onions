@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with 16onions.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.voidphone.general;
+package com.voidphone.testing;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,18 +27,25 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
+import com.voidphone.general.General;
+
 public class TestProcess {
 	private Process process;
 
 	public TestProcess(Class<? extends Object> main, String args[]) throws IOException {
-		this(main, new HashMap<String,String>(), new String[]{}, args);
+		this(main, new HashMap<String, String>(), new String[] {}, args);
 	}
-	
-	public TestProcess(Class<? extends Object> main, Map<String,String> properties, String classpath[], String args[]) throws IOException {
+
+	public TestProcess(Class<? extends Object> main, String classpath[], String args[]) throws IOException {
+		this(main, new HashMap<String, String>(), classpath, args);
+	}
+
+	public TestProcess(Class<? extends Object> main, Map<String, String> properties, String classpath[], String args[])
+			throws IOException {
 		int i = 0;
 		String cmd[] = new String[args.length + properties.size() + 4];
 		cmd[i++] = "java";
-		for (Entry<String,String> property : properties.entrySet()) {
+		for (Entry<String, String> property : properties.entrySet()) {
 			cmd[i++] = "-D" + property.getKey() + "=" + property.getValue();
 		}
 		cmd[i++] = "-cp";
@@ -51,6 +58,16 @@ public class TestProcess {
 		System.arraycopy(args, 0, cmd, i, args.length);
 		process = new ProcessBuilder(Arrays.asList(cmd)).start();
 		new TestFramework.RedirectThread(process.getErrorStream(), System.err).start();
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				try {
+					terminate();
+				} catch (InterruptedException e) {
+					General.error("Could not terminate process!");
+				}
+			}
+		});
 	}
 
 	public BufferedReader getOut() {

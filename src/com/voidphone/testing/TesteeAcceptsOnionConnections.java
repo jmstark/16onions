@@ -18,18 +18,26 @@
  */
 package com.voidphone.testing;
 
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
-import com.voidphone.general.TestProcess;
+import com.voidphone.testing.TestProcess;
 
 public class TesteeAcceptsOnionConnections {
 	public static void main(String args[]) throws Exception {
-		TestProcess p = new TestProcess(com.voidphone.onion.Main.class, new String[]{"-c", "bla"});
-		Socket api = Stub.getAPISocket(p.getOut());
-		int port = Stub.getOnionPort(p.getOut());
-		Socket onion = Stub.getOnionSocket(p.getOut(), port);
-		onion.close();
-		api.close();
+		Helper.generateConfig(1);
+		TestProcess p = new TestProcess(com.voidphone.onion.Main.class, Helper.classpath,
+				new String[] { "-c", Helper.getConfigPath(0) });
+		Socket api = new Socket();
+		Helper.contains(p.getOut(), "Waiting for API connection on ");
+		api.connect(Helper.getAddressFromConfig(Helper.getPeerConfig(0), "onion", "api_address"));
+		Socket onion = new Socket();
+		Helper.contains(p.getOut(), "Waiting for Onion connections on ");
+		onion.connect(new InetSocketAddress("127.0.0.1",
+				Helper.getPeerConfig(0).config.get("onion", "p2p_port", Integer.class).intValue()));
+		Helper.contains(p.getOut(), "Onion connection successful");
 		p.terminate();
+		api.close();
+		onion.close();
 	}
 }

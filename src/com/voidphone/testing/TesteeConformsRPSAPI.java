@@ -23,7 +23,7 @@ import java.util.HashMap;
 
 import com.voidphone.api.RpsApiSocket;
 import com.voidphone.general.General;
-import com.voidphone.general.TestProcess;
+import com.voidphone.testing.TestProcess;
 
 import rps.api.RpsPeerMessage;
 

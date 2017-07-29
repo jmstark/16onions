@@ -57,7 +57,7 @@ public class Main {
 	private static @Getter Config config;
 	private static @Getter OnionApiSocket oas;
 
-	private static void run2() throws IOException {
+	private static void run() throws IOException {
 		final DatagramChannel dataChannel;
 		final OnionApiSocket onionApiSocket;
 		final AsynchronousServerSocketChannel onionServerSocket;
@@ -67,15 +67,14 @@ public class Main {
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
 		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(1234));
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
-		General.info("Waiting for API connection on " + config.onionAPIPort + ".....");
 		onionApiSocket = new OnionApiSocket(config.onionAPIPort);
-		General.debug("API connection successful");
 		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
 		onionServerSocket = AsynchronousServerSocketChannel.open(config.group)
 				.bind(new InetSocketAddress(config.onionPort));
 		onionServerSocket.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
 			public void completed(AsynchronousSocketChannel channel, Void none) {
+				General.info("Onion connection successful");
 				onionServerSocket.accept(null, this);
 				try {
 					OnionSocket onionSocket = new OnionSocket(multiplexer, channel);
@@ -109,72 +108,51 @@ public class Main {
 	 * 
 	 * @throws Exception
 	 */
-	private static void run() throws Exception {
-		try {
-			// socket for all incoming UDP packets,
-			// for OnionConnectingSocket as well as OnionListenerSocket
-			DatagramChannel udpChannel = DatagramChannel.open()
-					.bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
-
-			selector = Selector.open();
-			General.info("Waiting for API connection on " + config.getOnionApiPort() + ".....");
-			SocketChannel onionApiSocket = ServerSocketChannel.open()
-					.bind(new InetSocketAddress("127.0.0.1", config.getOnionApiPort())).accept();
-			General.debug("API connection successful");
-			General.info("Waiting for Onion connections on " + config.getOnionPort() + ".....");
-			ServerSocketChannel onionServerSocket = ServerSocketChannel.open()
-					.bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
-
-			// for API requests
-			oas = new OnionApiSocket(onionApiSocket, config);
-			onionApiSocket.configureBlocking(false);
-			onionApiSocket.register(selector, SelectionKey.OP_READ, oas);
-
-			// for incoming Onion connections
-			onionServerSocket.configureBlocking(false);
-			onionServerSocket.register(selector, SelectionKey.OP_ACCEPT);
-
-			// wait for any socket getting ready
-			while (selector.select() != 0) {
-				Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
-				while (iterator.hasNext()) {
-					SelectionKey key = iterator.next();
-					if (key.isAcceptable()) {
-						// OnionServerSocket got a connection request
-						General.debug("Onion connection requested.....");
-						SocketChannel onionSocket = onionServerSocket.accept();
-						General.debug("Onion connection successful");
-						// create a new OnionListenerSocket ...
-						OnionListenerSocket ols = new OnionListenerSocket(onionSocket.socket(), config);
-						General.debug("Got connection from " + onionSocket.getRemoteAddress());
-						onionSocket.configureBlocking(false);
-						// ... and add it to the selector
-						onionSocket.register(selector, SelectionKey.OP_READ, ols);
-					} else if (key.isReadable()) {
-						// an OnionListenerSocket or the OnionAPISocket received
-						// data
-						General.debug("Received packet");
-						// enable blocking
-						key.cancel();
-						selector.selectNow();
-						key.channel().configureBlocking(true);
-						// handle the received data
-						boolean again = ((Attachable) key.attachment()).handle();
-						if (!again) {
-							// the connection is still alive
-							key.channel().configureBlocking(false);
-							key.channel().register(selector, SelectionKey.OP_READ, key.attachment());
-						}
-					} else {
-						General.fatal("Selector returns unknown key!");
-					}
-				}
-				selector.selectedKeys().clear();
-			}
-		} catch (IOException | MessageParserException | ProtocolException e) {
-			General.fatalException(e);
-		}
-	}
+	/*
+	 * private static void run() throws Exception { try { // socket for all incoming
+	 * UDP packets, // for OnionConnectingSocket as well as OnionListenerSocket
+	 * DatagramChannel udpChannel = DatagramChannel.open() .bind(new
+	 * InetSocketAddress("127.0.0.1", config.getOnionPort()));
+	 * 
+	 * selector = Selector.open(); General.info("Waiting for API connection on " +
+	 * config.getOnionApiPort() + "....."); SocketChannel onionApiSocket =
+	 * ServerSocketChannel.open() .bind(new InetSocketAddress("127.0.0.1",
+	 * config.getOnionApiPort())).accept();
+	 * General.debug("API connection successful");
+	 * General.info("Waiting for Onion connections on " + config.getOnionPort() +
+	 * "....."); ServerSocketChannel onionServerSocket = ServerSocketChannel.open()
+	 * .bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
+	 * 
+	 * // for API requests oas = new OnionApiSocket(onionApiSocket, config);
+	 * onionApiSocket.configureBlocking(false); onionApiSocket.register(selector,
+	 * SelectionKey.OP_READ, oas);
+	 * 
+	 * // for incoming Onion connections onionServerSocket.configureBlocking(false);
+	 * onionServerSocket.register(selector, SelectionKey.OP_ACCEPT);
+	 * 
+	 * // wait for any socket getting ready while (selector.select() != 0) {
+	 * Iterator<SelectionKey> iterator = selector.selectedKeys().iterator(); while
+	 * (iterator.hasNext()) { SelectionKey key = iterator.next(); if
+	 * (key.isAcceptable()) { // OnionServerSocket got a connection request
+	 * General.debug("Onion connection requested....."); SocketChannel onionSocket =
+	 * onionServerSocket.accept(); General.debug("Onion connection successful"); //
+	 * create a new OnionListenerSocket ... OnionListenerSocket ols = new
+	 * OnionListenerSocket(onionSocket.socket(), config);
+	 * General.debug("Got connection from " + onionSocket.getRemoteAddress());
+	 * onionSocket.configureBlocking(false); // ... and add it to the selector
+	 * onionSocket.register(selector, SelectionKey.OP_READ, ols); } else if
+	 * (key.isReadable()) { // an OnionListenerSocket or the OnionAPISocket received
+	 * // data General.debug("Received packet"); // enable blocking key.cancel();
+	 * selector.selectNow(); key.channel().configureBlocking(true); // handle the
+	 * received data boolean again = ((Attachable) key.attachment()).handle(); if
+	 * (!again) { // the connection is still alive
+	 * key.channel().configureBlocking(false); key.channel().register(selector,
+	 * SelectionKey.OP_READ, key.attachment()); } } else {
+	 * General.fatal("Selector returns unknown key!"); } }
+	 * selector.selectedKeys().clear(); } } catch (IOException |
+	 * MessageParserException | ProtocolException e) { General.fatalException(e); }
+	 * }
+	 */
 
 	private static void parseArgs(String args[]) {
 		if (args.length < 2 || !"-c".equals(args[0])) {

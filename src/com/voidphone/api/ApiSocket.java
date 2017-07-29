@@ -92,6 +92,7 @@ public abstract class ApiSocket {
 	public ApiSocket(int port) throws IOException {
 		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open(Main.getConfig().group)
 				.bind(new InetSocketAddress(port));
+		General.info("Waiting for API connection on " + port + ".....");
 		listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
 			public void completed(AsynchronousSocketChannel channel, Void none) {
@@ -108,7 +109,7 @@ public abstract class ApiSocket {
 						receive(buf, type);
 					}
 				});
-				General.info("Connected to API");
+				General.info("API connection successful");
 			}
 
 			@Override

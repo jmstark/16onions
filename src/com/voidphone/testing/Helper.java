@@ -19,25 +19,29 @@
 package com.voidphone.testing;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashMap;
 import java.util.Random;
 
 import com.voidphone.general.General;
 
 public class Helper {
-	private static final boolean deleteConfigAfterTest = false;
+	public static final String classpath[] = new String[] {
+			System.getProperty("user.dir") + "/testing/libs/commons-cli-1.3.1.jar",
+			System.getProperty("user.dir") + "/testing/libs/ini4j-0.5.4.jar", "junit-4.12.jar",
+			System.getProperty("user.dir") + "/testing/libs/bcprov-jdk15on-155.jar" };
+	private static final boolean deleteConfigAfterTest = true;
+	private static final HashMap<Integer, ConfigFactory> peers = new HashMap<Integer, ConfigFactory>();
+	private static final Path configs = Paths.get(System.getProperty("user.dir"), "tmp");
 
-	private static String contains(BufferedReader out, String ident) throws IOException {
+	public static String contains(BufferedReader out, String ident) throws IOException {
 		for (;;) {
 			String s = out.readLine();
 			System.out.println(s);
@@ -47,33 +51,38 @@ public class Helper {
 		}
 	}
 
-	private static int getPort(BufferedReader out, String ident) throws IOException {
-		String s = contains(out, ident);
-		s = s.replaceAll("[^0-9]", "");
-		return Integer.parseInt(s);
+	public static String getConfigPath(int peer) {
+		return configs.toString() + "/peer" + peer + "/peer" + peer + ".conf";
 	}
 
-	public static void generateConfig(int number) throws IOException, InterruptedException {
-		final Path configsDir = Paths.get(System.getProperty("user.dir"), "tmp");
-		if (configsDir.toFile().exists()) {
-			General.fatal(configsDir.toString() + " exists. Please delete it.");
+	public static ConfigFactory getPeerConfig(int peer) {
+		return peers.get(peer);
+	}
+
+	public static String generateConfig(int number) throws IOException, InterruptedException {
+		if (configs.toFile().exists()) {
+			General.fatal(configs.toString() + " exists. Please delete it.");
 		}
 		int port = new Random().nextInt(Short.MAX_VALUE - 1024) + 1024;
 		if (number <= 0) {
 			throw new IllegalArgumentException("Number of peers is <= 0!");
 		}
 		String bootstrapper = "127.0.0.1:" + port;
-		new ConfigFactory("peer0", null, port).store(configsDir);
+		ConfigFactory config = new ConfigFactory("peer0", null, port);
+		config.store(configs);
+		peers.put(0, config);
 		for (int i = 1; i < number; i++) {
 			port += 64;
-			new ConfigFactory("peer" + i, bootstrapper, port).store(configsDir);
+			config = new ConfigFactory("peer" + i, bootstrapper, port);
+			config.store(configs);
+			peers.put(i, config);
 		}
 		if (deleteConfigAfterTest) {
 			Runtime.getRuntime().addShutdownHook(new Thread() {
 				@Override
 				public void run() {
 					try {
-						Files.walkFileTree(configsDir, new SimpleFileVisitor<Path>() {
+						Files.walkFileTree(configs, new SimpleFileVisitor<Path>() {
 							@Override
 							public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 								Files.delete(file);
@@ -87,41 +96,18 @@ public class Helper {
 							}
 						});
 					} catch (IOException e) {
-						General.error("Error deleting " + configsDir);
+						General.error("Error deleting " + configs);
 					}
 				}
 			});
 		}
+		return configs.toString();
 	}
 
-	public static int getAPIPort(BufferedReader out) throws IOException {
-		return getPort(out, "Waiting for API connection on ");
-	}
-
-	public static int getOnionPort(BufferedReader out) throws IOException {
-		return getPort(out, "Waiting for Onion connections on ");
-	}
-
-	public static Socket getAPISocket(BufferedReader out) throws IOException {
-		Socket s = new Socket();
-		s.connect(new InetSocketAddress("127.0.0.1", Helper.getAPIPort(out)));
-		return s;
-	}
-
-	public static Socket getOnionSocket(BufferedReader out, int port) throws IOException {
-		Socket s = new Socket();
-		s.connect(new InetSocketAddress("127.0.0.1", port));
-		DataOutputStream dos = new DataOutputStream(s.getOutputStream());
-		dos.writeInt(0x7af3bef1);
-		dos.writeInt(1);
-		dos.writeShort(16);
-		dos.write(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
-		contains(out, "Got connection from /" + s.getLocalAddress().getHostAddress() + ":" + s.getLocalPort());
-		DataInputStream dis = new DataInputStream(s.getInputStream());
-		System.out.println(dis.readShort());
-		System.out.println(dis.read());
-		System.out.println(dis.read());
-		System.out.println(dis.read());
-		return s;
+	public static InetSocketAddress getAddressFromConfig(ConfigFactory config, String section, String option) {
+		String addressAndPort = config.config.get("onion", "api_address", String.class);
+		int colonPos = addressAndPort.lastIndexOf(':');
+		return new InetSocketAddress(addressAndPort.substring(0, colonPos),
+				(short) Integer.parseInt(addressAndPort.substring(colonPos + 1)));
 	}
 }

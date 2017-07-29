@@ -16,23 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with 16onions.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.voidphone.general;
+package com.voidphone.testing;
 
-import org.junit.Test;
+import java.net.Socket;
 
-public class Testing {
-	@Test
-	public void testeePrintsAPIPort() {
-		TestFramework.runTest(com.voidphone.testing.TesteePrintsAPIPort.class);
-	}
-	
-	@Test
-	public void testeePrintsOnionPort() {
-		TestFramework.runTest(com.voidphone.testing.TesteePrintsOnionPort.class);
-	}
-	
-	@Test
-	public void testeeAcceptsOnionConnection() {
-		TestFramework.runTest(com.voidphone.testing.TesteeAcceptsOnionConnections.class);
+public class TesteeAcceptsAPIConnection {
+	public static void main(String args[]) throws Exception {
+		Helper.generateConfig(1);
+		TestProcess p = new TestProcess(com.voidphone.onion.Main.class, Helper.classpath,
+				new String[] { "-c", Helper.getConfigPath(0) });
+		Socket s = new Socket();
+		Helper.contains(p.getOut(), "Waiting for API connection on ");
+		s.connect(Helper.getAddressFromConfig(Helper.getPeerConfig(0), "onion", "api_address"));
+		Helper.contains(p.getOut(), "API connection successful");
+		p.terminate();
+		s.close();
 	}
 }
