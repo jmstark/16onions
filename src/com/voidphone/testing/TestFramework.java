@@ -42,9 +42,12 @@ public class TestFramework {
 			Process p = new ProcessBuilder(cmd).start();
 			new RedirectThread(p.getInputStream(), System.out).start();
 			new RedirectThread(p.getErrorStream(), System.err).start();
-			if (!p.waitFor(5, TimeUnit.SECONDS)) {
-				p.destroyForcibly();
-				p.waitFor();
+			if (!p.waitFor(10, TimeUnit.SECONDS)) {
+				p.destroy();
+				if (!p.waitFor(2, TimeUnit.SECONDS)) {
+					p.destroyForcibly();
+					p.waitFor();
+				}
 				fail("Test reaches timeout!");
 			} else if (p.exitValue() != 0) {
 				fail("Test returns non-null!");
@@ -57,8 +60,8 @@ public class TestFramework {
 	}
 
 	public static class RedirectThread extends Thread {
-		InputStream is;
-		OutputStream os;
+		private final InputStream is;
+		private final OutputStream os;
 
 		public RedirectThread(InputStream is, OutputStream os) {
 			this.is = is;

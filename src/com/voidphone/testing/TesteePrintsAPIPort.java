@@ -19,13 +19,21 @@
 package com.voidphone.testing;
 
 import com.voidphone.testing.TestProcess;
+import com.voidphone.testing.Helper.RedirectBackupThread;
 
 public class TesteePrintsAPIPort {
+	private static RedirectBackupThread rbt;
+
 	public static void main(String args[]) throws Exception {
 		String config = Helper.generateConfig(1) + "/peer0/peer0.conf";
 		TestProcess p = new TestProcess(com.voidphone.onion.Main.class, Helper.classpath,
 				new String[] { "-c", config });
-		Helper.contains(p.getOut(), "Waiting for API connection on ");
+		rbt = new RedirectBackupThread(p.getOut());
+		rbt.start();
+		while (rbt.contains("Waiting for API connection on ")) {
+			Thread.sleep(500);
+		}
+		Thread.sleep(500);
 		p.terminate();
 	}
 }

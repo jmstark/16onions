@@ -74,16 +74,16 @@ public class Main {
 		onionServerSocket.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
 			public void completed(AsynchronousSocketChannel channel, Void none) {
-				General.info("Onion connection successful");
 				onionServerSocket.accept(null, this);
 				try {
 					OnionSocket onionSocket = new OnionSocket(multiplexer, channel);
-					multiplexer.register(((InetSocketAddress) channel.getRemoteAddress()).getAddress(), onionSocket);
+					
 				} catch (IOException e) {
 					General.error("I/O error!");
 				} catch (IllegalAddressException e) {
 					General.warning("Got multiple TCP channel from one Hop!");
 				}
+				General.info("Onion connection successful");
 			}
 
 			@Override

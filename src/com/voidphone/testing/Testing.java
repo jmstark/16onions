@@ -40,4 +40,9 @@ public class Testing {
 	public void testeeAcceptsOnionConnection() {
 		TestFramework.runTest(com.voidphone.testing.TesteeAcceptsOnionConnections.class);
 	}
+
+	@Test
+	public void testeeReadsFromOnionConnection() {
+		TestFramework.runTest(com.voidphone.testing.TesteeReadsFromOnionConnection.class);
+	}
 }

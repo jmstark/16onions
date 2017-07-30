@@ -18,11 +18,13 @@
  */
 package com.voidphone.testing;
 
+import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
 
 import com.voidphone.testing.Helper.RedirectBackupThread;
 
-public class TesteeAcceptsAPIConnection {
+public class TesteeReadsFromOnionConnection {
 	private static RedirectBackupThread rbt;
 
 	public static void main(String args[]) throws Exception {
@@ -32,8 +34,26 @@ public class TesteeAcceptsAPIConnection {
 		rbt = new RedirectBackupThread(p.getOut());
 		rbt.start();
 		Socket api = Helper.connectToAPI(rbt, Helper.getPeerConfig(0));
+		new TestPeer0(rbt, Helper.getPeerConfig(0)).run();
 		Thread.sleep(500);
 		p.terminate();
 		api.close();
+	}
+
+	private static class TestPeer0 extends Helper.TestPeer {
+		public TestPeer0(RedirectBackupThread rbt, ConfigFactory config) {
+			super(rbt, config);
+		}
+
+		@Override
+		public void run() {
+			try {
+				writeControl((short) 123, new byte[] { 1, 2, 3 });
+				rbt.contains(Arrays.toString(new byte[] { 1, 2, 3 }));
+			} catch (IOException e) {
+				Helper.fatal(e.getMessage());
+			}
+
+		}
 	}
 }

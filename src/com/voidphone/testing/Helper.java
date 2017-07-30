@@ -21,6 +21,8 @@ package com.voidphone.testing;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +33,7 @@ import java.util.HashMap;
 import java.util.Random;
 
 import com.voidphone.general.General;
+import com.voidphone.onion.OnionMessage;
 
 public class Helper {
 	public static final String classpath[] = new String[] {
@@ -40,16 +43,6 @@ public class Helper {
 	private static final boolean deleteConfigAfterTest = true;
 	private static final HashMap<Integer, ConfigFactory> peers = new HashMap<Integer, ConfigFactory>();
 	private static final Path configs = Paths.get(System.getProperty("user.dir"), "tmp");
-
-	public static String contains(BufferedReader out, String ident) throws IOException {
-		for (;;) {
-			String s = out.readLine();
-			System.out.println(s);
-			if (s.contains(ident)) {
-				return s;
-			}
-		}
-	}
 
 	public static String getConfigPath(int peer) {
 		return configs.toString() + "/peer" + peer + "/peer" + peer + ".conf";
@@ -109,5 +102,132 @@ public class Helper {
 		int colonPos = addressAndPort.lastIndexOf(':');
 		return new InetSocketAddress(addressAndPort.substring(0, colonPos),
 				(short) Integer.parseInt(addressAndPort.substring(colonPos + 1)));
+	}
+
+	public static Socket connectToAPI(RedirectBackupThread rbt, ConfigFactory config)
+			throws IOException, InterruptedException {
+		final Socket api = new Socket();
+		while (!rbt.contains("Waiting for API connection on ")) {
+			Thread.sleep(500);
+		}
+		api.connect(Helper.getAddressFromConfig(config, "onion", "api_address"));
+		while (!rbt.contains("API connection successful")) {
+			Thread.sleep(500);
+		}
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				try {
+					api.close();
+				} catch (IOException e) {
+					Helper.error(e.getMessage());
+				}
+			}
+		});
+		return api;
+	}
+
+	public static Socket connectToOnion(RedirectBackupThread rbt, ConfigFactory config)
+			throws IOException, InterruptedException {
+		final Socket onion = new Socket();
+		while (!rbt.contains("Waiting for Onion connections on ")) {
+			Thread.sleep(500);
+		}
+		onion.connect(
+				new InetSocketAddress("127.0.0.1", config.config.get("onion", "p2p_port", Integer.class).intValue()));
+		while (!rbt.contains("Onion connection successful")) {
+			Thread.sleep(500);
+		}
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				try {
+					onion.close();
+				} catch (IOException e) {
+					Helper.error(e.getMessage());
+				}
+			}
+		});
+		return onion;
+	}
+
+	public static void info(String s) {
+		System.out.println("TEST: INFO: " + s);
+	}
+
+	public static void warning(String s) {
+		System.err.println("TEST: WARNING: " + s);
+	}
+
+	public static void error(String s) {
+		System.err.println("TEST: ERROR: " + s);
+	}
+
+	public static void fatal(String s) {
+		System.err.println("TEST: FATAL: " + s);
+		System.exit(1);
+	}
+
+	public static class TestPeer extends Thread {
+		private final ByteBuffer buffer;
+		private Socket controlOnion;
+		private final int size;
+		protected final RedirectBackupThread rbt;
+
+		public TestPeer(RedirectBackupThread rbt, ConfigFactory config) {
+			this.rbt = rbt;
+			size = config.config.get("onion", "p2p_packetsize", Integer.class);
+			buffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
+			try {
+				controlOnion = Helper.connectToOnion(rbt, config);
+			} catch (IOException | InterruptedException e) {
+				Helper.fatal(e.getMessage());
+			}
+		}
+
+		protected void writeControl(short id, byte data[]) throws IOException {
+			OnionMessage message = new OnionMessage(size, id, null, data);
+			message.serialize(buffer);
+			controlOnion.getOutputStream().write(buffer.array());
+		}
+
+		protected byte[] readControl(short id) throws IOException {
+			controlOnion.getInputStream().read(buffer.array());
+			OnionMessage message = OnionMessage.parse(size, buffer, null);
+			if (id == message.getId()) {
+				return null;
+			} else {
+				return message.getData();
+			}
+		}
+	}
+
+	public static class RedirectBackupThread extends Thread {
+		private final BufferedReader reader;
+		private final StringBuilder backup = new StringBuilder(4096);
+
+		public RedirectBackupThread(BufferedReader reader) {
+			this.reader = reader;
+		}
+
+		@Override
+		public void run() {
+			try {
+				for (;;) {
+					String line = reader.readLine();
+					if (line == null) {
+						return;
+					}
+					System.out.println(line);
+					backup.append(line);
+				}
+			} catch (IOException e) {
+				return;
+			}
+		}
+
+		public boolean contains(String match) {
+			return backup.toString().contains(match);
+		}
 	}
 }

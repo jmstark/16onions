@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.Arrays;
 
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
@@ -42,22 +43,37 @@ public class OnionSocket {
 	 * 
 	 * @param m
 	 *            the multiplexer
-	 * @param cch
+	 * @param ch
 	 *            the channel
 	 * @throws IOException
 	 *             if there is an I/O-error
+	 * @throws IllegalAddressException
+	 *             if the address is already registered
 	 */
-	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch) throws IOException {
+	public OnionSocket(Multiplexer m, AsynchronousSocketChannel ch) throws IOException, IllegalAddressException {
 		readBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
 		writeBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
-		this.channel = cch;
+		this.channel = ch;
 		this.address = ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
 		this.multiplexer = m;
+		multiplexer.register(((InetSocketAddress) channel.getRemoteAddress()).getAddress(), this);
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
 	private void newConnection(Multiplexer m, short id, InetAddress addr) {
-		// TODO: handle new connection
+		// TODO: handle new connection and do something reasonable
+		try {
+			OnionMessage message = m.read(id, addr);
+			if (message == null) {
+				General.error("Timeout!");
+			} else {
+				General.debug("packet data: " + Arrays.toString(message.getData()));
+			}
+			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 1, 2, 3 }));
+		} catch (IllegalAddressException | IllegalIDException | InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void send(OnionMessage message) {
@@ -87,14 +103,16 @@ public class OnionSocket {
 				close();
 				return;
 			}
+			General.debug(Arrays.toString(readBuffer.array()));
 			OnionMessage message = OnionMessage.parse(Main.getConfig().onionSize, readBuffer, address);
 			channel.read(readBuffer, null, this);
 			try {
 				multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
 			} catch (IllegalAddressException e) {
-				General.warning("Got packet with wrong address!");
+				General.warning("Got packet with wrong address (" + message.getAddress() + ")!");
 			} catch (IllegalIDException e) {
 				try {
+					General.debug("Got packet with unknown ID - maybe a new connection.....");
 					multiplexer.register(message.getId(), address);
 					multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
 					newConnection(multiplexer, message.getId(), address);
@@ -127,7 +145,7 @@ public class OnionSocket {
 				return;
 			}
 			try {
-				multiplexer.getWriteQueue(message.getId(), message.getAddress()).offer(null);
+				multiplexer.getWriteQueue(message.getId(), message.getAddress()).offer(message);
 			} catch (IllegalAddressException | IllegalIDException e) {
 				General.error("Address or ID not registered, but should be!");
 				close();

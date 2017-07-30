@@ -58,7 +58,7 @@ public class ConfigFactory {
 		config.add("onion", "p2p_port", port);
 		port++;
 		config.add("onion", "p2p_timeout", 5000);
-		config.add("onion", "p2p_packetsize", 4096);
+		config.add("onion", "p2p_packetsize", 3);
 		config.add("auth", "api_address", nextPort());
 		config.add("auth", "listen_address", nextPort());
 	}
