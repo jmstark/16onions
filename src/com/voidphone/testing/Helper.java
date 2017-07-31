@@ -192,12 +192,13 @@ public class Helper {
 		}
 
 		protected byte[] readControl(short id) throws IOException {
-			controlOnion.getInputStream().read(buffer.array());
+			int n = controlOnion.getInputStream().read(buffer.array());
+			buffer.position(n);
 			OnionMessage message = OnionMessage.parse(size, buffer, null);
 			if (id == message.getId()) {
-				return null;
-			} else {
 				return message.getData();
+			} else {
+				return null;
 			}
 		}
 	}

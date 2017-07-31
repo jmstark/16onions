@@ -25,7 +25,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Arrays;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
@@ -38,7 +41,7 @@ public class OnionSocket {
 	private final ByteBuffer readBuffer;
 	private final ByteBuffer writeBuffer;
 	private final Multiplexer multiplexer;
-	private LinkedBlockingQueue<OnionMessage> queue;
+	private final ReentrantLock writeLock;
 
 	/**
 	 * Creates a OnionSocket.
@@ -58,6 +61,7 @@ public class OnionSocket {
 		this.channel = ch;
 		this.address = ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
 		this.multiplexer = m;
+		this.writeLock = new ReentrantLock();
 		multiplexer.register(((InetSocketAddress) channel.getRemoteAddress()).getAddress(), this);
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
@@ -71,23 +75,45 @@ public class OnionSocket {
 			} else {
 				General.debug("packet data: " + Arrays.toString(message.getData()));
 			}
-			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 1, 2, 3 }));
+			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 4, 5, 6 }));
+			message = m.read(id, addr);
+			if (message == null) {
+				General.error("Timeout!");
+			} else {
+				General.debug("packet data: " + Arrays.toString(message.getData()));
+			}
+			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 10, 11, 12 }));
 		} catch (IllegalAddressException | IllegalIDException | InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-	public synchronized void send(OnionMessage message) {
-		if (queue == null) {
-			queue = new LinkedBlockingQueue<OnionMessage>(Main.getConfig().writeQueueCapacity);
-			message.serialize(writeBuffer);
-			channel.write(writeBuffer, message, new WriteCompletionHandler());
-		} else {
-			if (!queue.offer(message)) {
-				close();
-			}
+	public void send(OnionMessage message) {
+		if (writeLock.getQueueLength() >= Main.getConfig().writeQueueCapacity) {
+			close();
 		}
+		writeLock.lock();
+		message.serialize(writeBuffer);
+		try {
+			while (writeBuffer.hasRemaining()) {
+				boolean error = false;
+				try {
+					if (channel.write(writeBuffer).get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS) <= 0) {
+						error = true;
+					}
+				} catch (TimeoutException e) {
+					error = true;
+				}
+				if (error) {
+					close();
+					break;
+				}
+			}
+		} catch (InterruptedException | ExecutionException e) {
+			General.fatalException(e);
+		}
+		writeLock.unlock();
 	}
 
 	public void close() {
@@ -138,39 +164,6 @@ public class OnionSocket {
 
 		@Override
 		public void failed(Throwable ex, Void none) {
-			close();
-		}
-	}
-
-	private class WriteCompletionHandler implements CompletionHandler<Integer, OnionMessage> {
-		@Override
-		public void completed(Integer result, OnionMessage message) {
-			if (result <= 0) {
-				close();
-				return;
-			}
-			if (writeBuffer.hasRemaining()) {
-				channel.write(writeBuffer, message, this);
-				return;
-			}
-			try {
-				multiplexer.getWriteQueue(message.getId(), message.getAddress()).offer(message);
-			} catch (IllegalAddressException | IllegalIDException e) {
-				General.error("Address or ID not registered, but should be!");
-				close();
-			}
-			OnionMessage msg;
-			try {
-				msg = queue.take();
-				msg.serialize(writeBuffer);
-				channel.write(writeBuffer, msg, this);
-			} catch (InterruptedException e) {
-				General.fatalException(e);
-			}
-		}
-
-		@Override
-		public void failed(Throwable exception, OnionMessage message) {
 			close();
 		}
 	}
