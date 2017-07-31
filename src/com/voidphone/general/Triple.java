@@ -18,11 +18,40 @@
  */
 package com.voidphone.general;
 
+/**
+ * Represents a triple of objects.
+ * 
+ * @param <A>
+ *            type of the first object
+ * @param <B>
+ *            type of the second object
+ * @param <C>
+ *            type of the third object
+ */
 public class Triple<A, B, C> {
+	/**
+	 * the first object
+	 */
 	public final A a;
+	/**
+	 * the second object
+	 */
 	public final B b;
+	/**
+	 * the third object
+	 */
 	public final C c;
 
+	/**
+	 * Creates a new triple of objects.
+	 * 
+	 * @param a
+	 *            the first object
+	 * @param b
+	 *            the second object
+	 * @param c
+	 *            the third object
+	 */
 	public Triple(A a, B b, C c) {
 		this.a = a;
 		this.b = b;

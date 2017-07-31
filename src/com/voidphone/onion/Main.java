@@ -92,9 +92,9 @@ public class Main {
 		});
 		while (true) {
 			InetAddress addr = ((InetSocketAddress) dataChannel.receive(readBuffer)).getAddress();
-			OnionMessage message = OnionMessage.parse(config.onionSize, readBuffer, addr);
+			OnionMessage message = OnionMessage.parse(readBuffer, addr);
 			try {
-				multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
+				multiplexer.getReadQueue(message.id, message.address).offer(message);
 			} catch (IllegalAddressException | IllegalIDException e) {
 				General.warning("Got packet with wrong address or ID!");
 			}

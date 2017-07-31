@@ -18,9 +18,15 @@
  */
 package com.voidphone.general;
 
+/**
+ * Signals that the requested address is illegal.
+ */
 public class IllegalAddressException extends Exception {
 	private static final long serialVersionUID = -3790776669504352693L;
 
+	/**
+	 * Creates a new IllegalAddressException.
+	 */
 	public IllegalAddressException() {
 		super("Illegal address!");
 	}

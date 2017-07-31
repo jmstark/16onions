@@ -27,16 +27,22 @@ import java.nio.ByteBuffer;
 public class OnionMessage {
 	public static final int ONION_HEADER_SIZE = 2;
 
-	private final int size;
-	private final short id;
-	private final InetAddress addr;
-	private final byte data[];
+	/**
+	 * the ID of the message
+	 */
+	public final short id;
+	/**
+	 * the address of the endpoint
+	 */
+	public final InetAddress address;
+	/**
+	 * the payload of the message
+	 */
+	public final byte data[];
 
 	/**
 	 * Creates a new Onion message.
 	 * 
-	 * @param size
-	 *            payload size in bytes
 	 * @param id
 	 *            ID of the logical connection
 	 * @param addr
@@ -45,9 +51,8 @@ public class OnionMessage {
 	 *            payload
 	 */
 	public OnionMessage(int size, short id, InetAddress addr, byte[] data) {
-		this.size = size;
 		this.id = id;
-		this.addr = addr;
+		this.address = addr;
 		this.data = data;
 	}
 
@@ -60,60 +65,30 @@ public class OnionMessage {
 	 *            the address of the destination of the logical connection
 	 * @return the OnionMessage
 	 */
-	public static OnionMessage parse(int size, ByteBuffer buf, InetAddress addr) {
+	public static OnionMessage parse(ByteBuffer buf, InetAddress addr) {
 		OnionMessage message = null;
-		
+		int size = buf.capacity() - ONION_HEADER_SIZE;
 		buf.flip();
-		if (buf.remaining() == ONION_HEADER_SIZE + size) {
+		if (buf.remaining() == size + ONION_HEADER_SIZE) {
 			short id = buf.getShort();
 			byte data[] = new byte[size];
 			buf.get(data);
-			message =  new OnionMessage(size, id, addr, data);
+			message = new OnionMessage(size, id, addr, data);
 		}
 		buf.clear();
 		return message;
 	}
 
+	/**
+	 * Serializes a this onion message into a buffer.
+	 * 
+	 * @param buf
+	 *            the buffer
+	 */
 	public void serialize(ByteBuffer buf) {
 		buf.clear();
 		buf.putShort(id);
 		buf.put(data);
 		buf.flip();
-	}
-
-	/**
-	 * Returns the size of the payload.
-	 * 
-	 * @return the size
-	 */
-	public int getSize() {
-		return size;
-	}
-
-	/**
-	 * Returns the ID of the logical connection.
-	 * 
-	 * @return the ID
-	 */
-	public short getId() {
-		return id;
-	}
-
-	/**
-	 * Returns the address of the destination of the logical connection.
-	 * 
-	 * @return the address
-	 */
-	public InetAddress getAddress() {
-		return addr;
-	}
-
-	/**
-	 * Returns the payload.
-	 * 
-	 * @return the payload.
-	 */
-	public byte[] getData() {
-		return data;
 	}
 }

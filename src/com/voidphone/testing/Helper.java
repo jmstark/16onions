@@ -194,9 +194,9 @@ public class Helper {
 		protected byte[] readControl(short id) throws IOException {
 			int n = controlOnion.getInputStream().read(buffer.array());
 			buffer.position(n);
-			OnionMessage message = OnionMessage.parse(size, buffer, null);
-			if (id == message.getId()) {
-				return message.getData();
+			OnionMessage message = OnionMessage.parse(buffer, null);
+			if (id == message.id) {
+				return message.data;
 			} else {
 				return null;
 			}

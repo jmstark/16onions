@@ -73,14 +73,14 @@ public class OnionSocket {
 			if (message == null) {
 				General.error("Timeout!");
 			} else {
-				General.debug("packet data: " + Arrays.toString(message.getData()));
+				General.debug("packet data: " + Arrays.toString(message.data));
 			}
 			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 4, 5, 6 }));
 			message = m.read(id, addr);
 			if (message == null) {
 				General.error("Timeout!");
 			} else {
-				General.debug("packet data: " + Arrays.toString(message.getData()));
+				General.debug("packet data: " + Arrays.toString(message.data));
 			}
 			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 10, 11, 12 }));
 		} catch (IllegalAddressException | IllegalIDException | InterruptedException e) {
@@ -89,29 +89,23 @@ public class OnionSocket {
 		}
 	}
 
-	public void send(OnionMessage message) {
-		if (writeLock.getQueueLength() >= Main.getConfig().writeQueueCapacity) {
-			close();
-		}
+	public void send(OnionMessage message) throws InterruptedException {
 		writeLock.lock();
 		message.serialize(writeBuffer);
-		try {
-			while (writeBuffer.hasRemaining()) {
-				boolean error = false;
-				try {
-					if (channel.write(writeBuffer).get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS) <= 0) {
-						error = true;
-					}
-				} catch (TimeoutException e) {
-					error = true;
+		while (writeBuffer.hasRemaining()) {
+			boolean error = true;
+			try {
+				if (channel.write(writeBuffer).get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS) > 0) {
+					error = false;
 				}
-				if (error) {
-					close();
-					break;
-				}
+			} catch (TimeoutException e) {
+			} catch (ExecutionException e) {
+				General.error(e.getMessage());
 			}
-		} catch (InterruptedException | ExecutionException e) {
-			General.fatalException(e);
+			if (error) {
+				close();
+				break;
+			}
 		}
 		writeLock.unlock();
 	}
@@ -139,18 +133,18 @@ public class OnionSocket {
 				return;
 			}
 			General.debug(Arrays.toString(readBuffer.array()));
-			OnionMessage message = OnionMessage.parse(Main.getConfig().onionSize, readBuffer, address);
+			OnionMessage message = OnionMessage.parse(readBuffer, address);
 			channel.read(readBuffer, null, this);
 			try {
-				multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
+				multiplexer.getReadQueue(message.id, message.address).offer(message);
 			} catch (IllegalAddressException e) {
-				General.warning("Got packet with wrong address (" + message.getAddress() + ")!");
+				General.warning("Got packet with wrong address (" + message.address + ")!");
 			} catch (IllegalIDException e) {
 				try {
 					General.debug("Got packet with unknown ID - maybe a new connection.....");
-					multiplexer.register(message.getId(), address);
-					multiplexer.getReadQueue(message.getId(), message.getAddress()).offer(message);
-					newConnection(multiplexer, message.getId(), address);
+					multiplexer.register(message.id, address);
+					multiplexer.getReadQueue(message.id, message.address).offer(message);
+					newConnection(multiplexer, message.id, address);
 				} catch (SizeLimitExceededException f) {
 					General.warning(f.getMessage());
 				} catch (IllegalIDException f) {

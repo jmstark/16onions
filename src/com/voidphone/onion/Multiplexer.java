@@ -34,6 +34,12 @@ import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.general.Triple;
 import com.voidphone.general.General;
 
+/**
+ * This is the central database that contains and manages all logical
+ * connections going through this hop. When a logical connection was registered,
+ * it is possible to read from and write to it. after using a connection
+ * unregister should be called.
+ */
 public class Multiplexer {
 	private final ReentrantReadWriteLock firstLock;
 	private final HashMap<InetAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>> first;
@@ -41,6 +47,14 @@ public class Multiplexer {
 	private final ByteBuffer writeBuffer;
 	private final DatagramChannel channel;
 
+	/**
+	 * Creates a new Multiplexer.
+	 * 
+	 * @param channel
+	 *            a datagram channel
+	 * @param size
+	 *            the size of a encrypted packet
+	 */
 	public Multiplexer(DatagramChannel channel, int size) {
 		random = new SecureRandom();
 		first = new HashMap<InetAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>>();
@@ -49,22 +63,52 @@ public class Multiplexer {
 		this.channel = channel;
 	}
 
+	/**
+	 * Returns a previously received onion message (i.e. polls one from the read
+	 * queue) or null if it timed out. If no message is available, the method blocks
+	 * until it times out. The message is received by either the OnionSocket or the
+	 * datagram channel.
+	 * 
+	 * @param id
+	 *            the ID of the logical connection
+	 * @param addr
+	 *            the address of the endpoint
+	 * @return a previously received onion message of null if it timed out
+	 * @throws IllegalAddressException
+	 *             if the ID is not registerd
+	 * @throws IllegalIDException
+	 *             if the address is not registered
+	 * @throws InterruptedException
+	 *             if the operation was interrupted
+	 */
 	public OnionMessage read(short id, InetAddress addr)
 			throws IllegalAddressException, IllegalIDException, InterruptedException {
 		return getReadQueue(id, addr).poll(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS);
 	}
 
-	public void writeControl(OnionMessage message)
-			throws IllegalAddressException, IllegalIDException, InterruptedException {
-		getOnionSocket(message.getAddress()).send(message);
+	/**
+	 * Sends a message through the OnionSocket. This method blocks until the write
+	 * completes. For details see send(OnionMessage message) in OnionSocket
+	 * 
+	 * @param message
+	 *            the message to send
+	 * @throws IllegalAddressException
+	 *             if the address is not registered
+	 * @throws InterruptedException
+	 *             if the operation was interrupted
+	 */
+	public void writeControl(OnionMessage message) throws IllegalAddressException, InterruptedException {
+		getOnionSocket(message.address).send(message);
 	}
 
-	public void writeData(OnionMessage message)
-			throws IllegalAddressException, IllegalIDException, InterruptedException {
-		send(message);
-	}
+	/**
+	 * Sends a message through the datagram channel.
+	 * 
+	 * @param message
+	 *            the message to send
+	 */
+	public void writeData(OnionMessage message) {
 
-	private void send(OnionMessage message) throws IllegalAddressException, IllegalIDException {
 		message.serialize(writeBuffer);
 		try {
 			channel.write(writeBuffer);
@@ -103,11 +147,34 @@ public class Multiplexer {
 		return ret;
 	}
 
+	/**
+	 * Returns the read queue of a logical connection.
+	 * 
+	 * @param id
+	 *            the ID of the logical connection
+	 * @param addr
+	 *            the address of the endpoint
+	 * @return the read queue of a logical connection
+	 * @throws IllegalAddressException
+	 *             if the address is not registered
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
+	 */
 	public LinkedBlockingQueue<OnionMessage> getReadQueue(short id, InetAddress addr)
 			throws IllegalAddressException, IllegalIDException {
 		return getSecond(getFirst(addr), id);
 	}
 
+	/**
+	 * Registers a new underlying connection.
+	 * 
+	 * @param addr
+	 *            the address of the endpoint of the connection
+	 * @param sock
+	 *            an OnionSocket representing the connected to the endpoint
+	 * @throws IllegalAddressException
+	 *             if the address is already registered
+	 */
 	public void register(InetAddress addr, OnionSocket sock) throws IllegalAddressException {
 		firstLock.writeLock().lock();
 		if (first.containsKey(addr)) {
@@ -120,6 +187,17 @@ public class Multiplexer {
 		firstLock.writeLock().unlock();
 	}
 
+	/**
+	 * Registers a new logical connection.
+	 * 
+	 * @param addr
+	 *            the address of the endpoint
+	 * @return the ID of the connection
+	 * @throws SizeLimitExceededException
+	 *             if too many connections are registered
+	 * @throws IllegalAddressException
+	 *             if the address is not registered
+	 */
 	public short register(InetAddress addr) throws SizeLimitExceededException, IllegalAddressException {
 		short id;
 		HashMap<Short, LinkedBlockingQueue<OnionMessage>> second;
@@ -139,6 +217,20 @@ public class Multiplexer {
 		return id;
 	}
 
+	/**
+	 * Registers a new logical connection with chosen ID.
+	 * 
+	 * @param id
+	 *            the ID of the connection
+	 * @param addr
+	 *            the address of the endpoint
+	 * @throws SizeLimitExceededException
+	 *             if too many connections are registered
+	 * @throws IllegalIDException
+	 *             if the ID is already registered
+	 * @throws IllegalAddressException
+	 *             if the address is not registered
+	 */
 	public void register(short id, InetAddress addr)
 			throws SizeLimitExceededException, IllegalIDException, IllegalAddressException {
 		HashMap<Short, LinkedBlockingQueue<OnionMessage>> second;
@@ -158,6 +250,14 @@ public class Multiplexer {
 		triple.a.writeLock().unlock();
 	}
 
+	/**
+	 * Unregisters a underlying connection.
+	 * 
+	 * @param addr
+	 *            the address of the endpoint
+	 * @throws IllegalAddressException
+	 *             if the address is not registered
+	 */
 	public void unregister(InetAddress addr) throws IllegalAddressException {
 		firstLock.writeLock().lock();
 		if (!first.containsKey(addr)) {
@@ -168,6 +268,18 @@ public class Multiplexer {
 		firstLock.writeLock().unlock();
 	}
 
+	/**
+	 * Unregisters a logical connection.
+	 * 
+	 * @param id
+	 *            the ID of the connection
+	 * @param addr
+	 *            the address of the endpoint
+	 * @throws IllegalAddressException
+	 *             if the address is not registered
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
+	 */
 	public void unregister(short id, InetAddress addr) throws IllegalAddressException, IllegalIDException {
 		HashMap<Short, LinkedBlockingQueue<OnionMessage>> second;
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> triple;

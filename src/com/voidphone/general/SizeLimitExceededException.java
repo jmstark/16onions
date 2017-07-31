@@ -18,9 +18,18 @@
  */
 package com.voidphone.general;
 
+/**
+ * Signals that too many objects are registered.
+ */
 public class SizeLimitExceededException extends Exception {
 	private static final long serialVersionUID = 4728355616743993401L;
 
+	/**
+	 * Creates a new SizeLimitExceededException.
+	 * 
+	 * @param msg
+	 *            the exception message
+	 */
 	public SizeLimitExceededException(String msg) {
 		super(msg);
 	}
