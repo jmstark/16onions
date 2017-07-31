@@ -76,8 +76,7 @@ public class Main {
 			public void completed(AsynchronousSocketChannel channel, Void none) {
 				onionServerSocket.accept(null, this);
 				try {
-					OnionSocket onionSocket = new OnionSocket(multiplexer, channel);
-					
+					new OnionSocket(multiplexer, channel);
 				} catch (IOException e) {
 					General.error("I/O error!");
 				} catch (IllegalAddressException e) {

@@ -38,6 +38,8 @@ import util.PEMParser;
 public class Config {
 	// group for asynchronous channels
 	public final AsynchronousChannelGroup group;
+	// write queue capacity
+	public final int writeQueueCapacity;
 	// timeout for API connections
 	public final int apiTimeout;
 	// timeout for Onion connections
@@ -104,10 +106,9 @@ public class Config {
 		onionPort = (short) getInteger(configFile, "onion", "p2p_port");
 
 		hopCount = getInteger(configFile, "onion", "hopcount");
-
 		apiTimeout = getInteger(configFile, "onion", "api_timeout");
+		writeQueueCapacity = getInteger(configFile, "onion", "cache_size");
 		onionTimeout = getInteger(configFile, "onion", "p2p_timeout");
-
 		onionSize = getInteger(configFile, "onion", "p2p_packetsize");
 
 		General.debug("Hostkey: " + hostkeyPath + "; \nAPI will listen on " + onionAPIAddress + ", Port " + onionAPIPort

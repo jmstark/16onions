@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Arrays;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
@@ -37,6 +38,7 @@ public class OnionSocket {
 	private final ByteBuffer readBuffer;
 	private final ByteBuffer writeBuffer;
 	private final Multiplexer multiplexer;
+	private LinkedBlockingQueue<OnionMessage> queue;
 
 	/**
 	 * Creates a OnionSocket.
@@ -76,9 +78,16 @@ public class OnionSocket {
 		}
 	}
 
-	public void send(OnionMessage message) {
-		message.serialize(writeBuffer);
-		channel.write(writeBuffer, message, new WriteCompletionHandler());
+	public synchronized void send(OnionMessage message) {
+		if (queue == null) {
+			queue = new LinkedBlockingQueue<OnionMessage>(Main.getConfig().writeQueueCapacity);
+			message.serialize(writeBuffer);
+			channel.write(writeBuffer, message, new WriteCompletionHandler());
+		} else {
+			if (!queue.offer(message)) {
+				close();
+			}
+		}
 	}
 
 	public void close() {
@@ -141,7 +150,7 @@ public class OnionSocket {
 				return;
 			}
 			if (writeBuffer.hasRemaining()) {
-				channel.write(writeBuffer, null, this);
+				channel.write(writeBuffer, message, this);
 				return;
 			}
 			try {
@@ -149,6 +158,14 @@ public class OnionSocket {
 			} catch (IllegalAddressException | IllegalIDException e) {
 				General.error("Address or ID not registered, but should be!");
 				close();
+			}
+			OnionMessage msg;
+			try {
+				msg = queue.take();
+				msg.serialize(writeBuffer);
+				channel.write(writeBuffer, msg, this);
+			} catch (InterruptedException e) {
+				General.fatalException(e);
 			}
 		}
 
