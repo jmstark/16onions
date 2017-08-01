@@ -32,15 +32,15 @@ public class Triple<A, B, C> {
 	/**
 	 * the first object
 	 */
-	public final A a;
+	public A a;
 	/**
 	 * the second object
 	 */
-	public final B b;
+	public B b;
 	/**
 	 * the third object
 	 */
-	public final C c;
+	public C c;
 
 	/**
 	 * Creates a new triple of objects.

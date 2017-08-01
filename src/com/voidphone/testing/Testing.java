@@ -42,7 +42,12 @@ public class Testing {
 	}
 
 	@Test
-	public void testeeReadsFromOnionConnection() {
-		TestFramework.runTest(com.voidphone.testing.TesteeReadsFromOnionConnection.class);
+	public void testeeManagesMultipleOnionConnections() {
+		TestFramework.runTest(com.voidphone.testing.TesteeManagesMultipleOnionConnections.class);
+	}
+
+	@Test
+	public void testeeRoutesPackets() {
+		TestFramework.runTest(com.voidphone.testing.TesteeRoutesPackets.class);
 	}
 }

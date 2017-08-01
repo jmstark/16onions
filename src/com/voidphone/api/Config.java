@@ -56,6 +56,7 @@ public class Config {
 	// address and port of the Onion P2P
 	public final String onionAddress;
 	public final short onionPort;
+	public final short onionDataPort;
 	// hostkey of this peer
 	public final RSAPublicKey hostkey;
 	// Hop-count
@@ -102,6 +103,7 @@ public class Config {
 		// Onion hostname and port are separate config lines
 		onionAddress = getString(configFile, "onion", "p2p_hostname");
 		onionPort = (short) getInteger(configFile, "onion", "p2p_port");
+		onionDataPort = (short) getInteger(configFile, "onion", "p2p_data_port");
 
 		hopCount = getInteger(configFile, "onion", "hopcount");
 		apiTimeout = getInteger(configFile, "onion", "api_timeout");

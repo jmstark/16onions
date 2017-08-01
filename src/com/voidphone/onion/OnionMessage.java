@@ -18,8 +18,9 @@
  */
 package com.voidphone.onion;
 
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * Represents a message sent to/received from another Hop.
@@ -34,7 +35,7 @@ public class OnionMessage {
 	/**
 	 * the address of the endpoint
 	 */
-	public final InetAddress address;
+	public final InetSocketAddress address;
 	/**
 	 * the payload of the message
 	 */
@@ -50,7 +51,7 @@ public class OnionMessage {
 	 * @param data
 	 *            payload
 	 */
-	public OnionMessage(int size, short id, InetAddress addr, byte[] data) {
+	public OnionMessage(short id, InetSocketAddress addr, byte[] data) {
 		this.id = id;
 		this.address = addr;
 		this.data = data;
@@ -65,7 +66,7 @@ public class OnionMessage {
 	 *            the address of the destination of the logical connection
 	 * @return the OnionMessage
 	 */
-	public static OnionMessage parse(ByteBuffer buf, InetAddress addr) {
+	public static OnionMessage parse(ByteBuffer buf, InetSocketAddress addr) {
 		OnionMessage message = null;
 		int size = buf.capacity() - ONION_HEADER_SIZE;
 		buf.flip();
@@ -73,7 +74,7 @@ public class OnionMessage {
 			short id = buf.getShort();
 			byte data[] = new byte[size];
 			buf.get(data);
-			message = new OnionMessage(size, id, addr, data);
+			message = new OnionMessage(id, addr, data);
 		}
 		buf.clear();
 		return message;
@@ -90,5 +91,9 @@ public class OnionMessage {
 		buf.putShort(id);
 		buf.put(data);
 		buf.flip();
+	}
+
+	public String toString() {
+		return address + " " + id + " " + Arrays.toString(data);
 	}
 }

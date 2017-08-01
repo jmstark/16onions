@@ -133,11 +133,14 @@ public class Helper {
 		while (!rbt.contains("Waiting for Onion connections on ")) {
 			Thread.sleep(500);
 		}
-		onion.connect(
-				new InetSocketAddress("127.0.0.1", config.config.get("onion", "p2p_port", Integer.class).intValue()));
+		InetSocketAddress addr = new InetSocketAddress("127.0.0.1",
+				config.config.get("onion", "p2p_port", Integer.class).intValue());
+		Helper.info("Try to connect to " + addr);
+		onion.connect(addr);
 		while (!rbt.contains("Onion connection successful")) {
 			Thread.sleep(500);
 		}
+		Helper.info("connect successful");
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
@@ -181,12 +184,19 @@ public class Helper {
 			try {
 				controlOnion = Helper.connectToOnion(rbt, config);
 			} catch (IOException | InterruptedException e) {
-				Helper.fatal(e.getMessage());
+				Helper.fatal("TestPeer: " + e.getMessage());
 			}
 		}
 
+		public TestPeer(RedirectBackupThread rbt, ConfigFactory config, Socket sock) {
+			this.rbt = rbt;
+			size = config.config.get("onion", "p2p_packetsize", Integer.class);
+			buffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
+			this.controlOnion = sock;
+		}
+
 		protected void writeControl(short id, byte data[]) throws IOException {
-			OnionMessage message = new OnionMessage(size, id, null, data);
+			OnionMessage message = new OnionMessage(id, null, data);
 			message.serialize(buffer);
 			controlOnion.getOutputStream().write(buffer.array());
 		}
@@ -195,20 +205,27 @@ public class Helper {
 			int n = controlOnion.getInputStream().read(buffer.array());
 			buffer.position(n);
 			OnionMessage message = OnionMessage.parse(buffer, null);
-			if (id == message.id) {
-				return message.data;
-			} else {
-				return null;
-			}
+			return message.data;
+		}
+
+		public Socket getSocket() {
+			return controlOnion;
 		}
 	}
 
 	public static class RedirectBackupThread extends Thread {
 		private final BufferedReader reader;
 		private final StringBuilder backup = new StringBuilder(4096);
+		private final int id;
 
 		public RedirectBackupThread(BufferedReader reader) {
 			this.reader = reader;
+			this.id = 0;
+		}
+
+		public RedirectBackupThread(BufferedReader reader, int id) {
+			this.reader = reader;
+			this.id = id;
 		}
 
 		@Override
@@ -219,7 +236,7 @@ public class Helper {
 					if (line == null) {
 						return;
 					}
-					System.out.println(line);
+					System.out.println(id + ": " + line);
 					backup.append(line);
 				}
 			} catch (IOException e) {

@@ -24,7 +24,7 @@ import java.util.Arrays;
 
 import com.voidphone.testing.Helper.RedirectBackupThread;
 
-public class TesteeWritesToOnionConnection {
+public class TesteeManagesMultipleOnionConnections {
 	private static RedirectBackupThread rbt;
 
 	public static void main(String args[]) throws Exception {
@@ -34,29 +34,36 @@ public class TesteeWritesToOnionConnection {
 		rbt = new RedirectBackupThread(p.getOut());
 		rbt.start();
 		Socket api = Helper.connectToAPI(rbt, Helper.getPeerConfig(0));
-		new TestPeer0(rbt, Helper.getPeerConfig(0)).run();
-		Thread.sleep(500);
+		TestPeer0 peer0 = new TestPeer0(rbt, Helper.getPeerConfig(0), (short) 123);
+		peer0.start();
+		TestPeer0 peer1 = new TestPeer0(rbt, Helper.getPeerConfig(0), (short) 7);
+		peer1.start();
+		peer0.join();
+		peer1.join();
+		Thread.sleep(100);
 		p.terminate();
 		api.close();
 	}
 
 	private static class TestPeer0 extends Helper.TestPeer {
-		public TestPeer0(RedirectBackupThread rbt, ConfigFactory config) {
+		short id;
+
+		public TestPeer0(RedirectBackupThread rbt, ConfigFactory config, short id) {
 			super(rbt, config);
+			this.id = id;
 		}
 
 		@Override
 		public void run() {
+			Helper.info("Started " + id);
 			try {
-				writeControl((short) 123, new byte[] { 1, 2, 3 });
-				if (!Arrays.equals(readControl((short) 123), new byte[] { 4, 5, 6 })) {
-					Helper.fatal("Received wrong packet!");
-				} else {
-					System.out.println("Got 4, 5, 6");
-				}
-				writeControl((short) 123, new byte[] { 7, 8, 9 });
-				if (!Arrays.equals(readControl((short) 123), new byte[] { 10, 11, 12 })) {
-					Helper.fatal("Received wrong packet!");
+				for (int i = 0; i < 20; i++) {
+					writeControl(id, new byte[] { 1, 2, -1 });
+					if (!Arrays.equals(readControl((short) 123), new byte[] { 3, 4, -1 })) {
+						Helper.fatal("Received wrong packet!");
+					} else {
+						Helper.info(id + ": Got " + Arrays.toString(new byte[] { 3, 4, -1 }));
+					}
 				}
 			} catch (IOException e) {
 				Helper.fatal(e.getMessage());

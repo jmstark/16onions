@@ -19,13 +19,14 @@
 package com.voidphone.onion;
 
 import java.io.IOException;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.voidphone.general.IllegalAddressException;
@@ -42,7 +43,7 @@ import com.voidphone.general.General;
  */
 public class Multiplexer {
 	private final ReentrantReadWriteLock firstLock;
-	private final HashMap<InetAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>> first;
+	private final HashMap<InetSocketAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>> first;
 	private final SecureRandom random;
 	private final ByteBuffer writeBuffer;
 	private final DatagramChannel channel;
@@ -57,7 +58,7 @@ public class Multiplexer {
 	 */
 	public Multiplexer(DatagramChannel channel, int size) {
 		random = new SecureRandom();
-		first = new HashMap<InetAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>>();
+		first = new HashMap<InetSocketAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>>();
 		firstLock = new ReentrantReadWriteLock(true);
 		writeBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
 		this.channel = channel;
@@ -81,7 +82,7 @@ public class Multiplexer {
 	 * @throws InterruptedException
 	 *             if the operation was interrupted
 	 */
-	public OnionMessage read(short id, InetAddress addr)
+	public OnionMessage read(short id, InetSocketAddress addr)
 			throws IllegalAddressException, IllegalIDException, InterruptedException {
 		return getReadQueue(id, addr).poll(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS);
 	}
@@ -96,8 +97,10 @@ public class Multiplexer {
 	 *             if the address is not registered
 	 * @throws InterruptedException
 	 *             if the operation was interrupted
+	 * @throws IOException
+	 *             if an I/O-error occurs
 	 */
-	public void writeControl(OnionMessage message) throws IllegalAddressException, InterruptedException {
+	public void writeControl(OnionMessage message) throws IllegalAddressException, InterruptedException, IOException {
 		getOnionSocket(message.address).send(message);
 	}
 
@@ -117,12 +120,12 @@ public class Multiplexer {
 		}
 	}
 
-	private OnionSocket getOnionSocket(InetAddress addr) throws IllegalAddressException {
+	private OnionSocket getOnionSocket(InetSocketAddress addr) throws IllegalAddressException {
 		return getFirst(addr).b;
 	}
 
 	private Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> getFirst(
-			InetAddress addr) throws IllegalAddressException {
+			InetSocketAddress addr) throws IllegalAddressException {
 		firstLock.readLock().lock();
 		if (!first.containsKey(addr)) {
 			firstLock.readLock().unlock();
@@ -160,7 +163,7 @@ public class Multiplexer {
 	 * @throws IllegalIDException
 	 *             if the ID is not registered
 	 */
-	public LinkedBlockingQueue<OnionMessage> getReadQueue(short id, InetAddress addr)
+	public LinkedBlockingQueue<OnionMessage> getReadQueue(short id, InetSocketAddress addr)
 			throws IllegalAddressException, IllegalIDException {
 		return getSecond(getFirst(addr), id);
 	}
@@ -175,7 +178,7 @@ public class Multiplexer {
 	 * @throws IllegalAddressException
 	 *             if the address is already registered
 	 */
-	public void register(InetAddress addr, OnionSocket sock) throws IllegalAddressException {
+	public void registerAddress(InetSocketAddress addr, OnionSocket sock) throws IllegalAddressException {
 		firstLock.writeLock().lock();
 		if (first.containsKey(addr)) {
 			firstLock.writeLock().unlock();
@@ -185,6 +188,41 @@ public class Multiplexer {
 				new Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>(
 						new ReentrantReadWriteLock(), sock, new HashMap<Short, LinkedBlockingQueue<OnionMessage>>()));
 		firstLock.writeLock().unlock();
+	}
+
+	/**
+	 * Creates a new underlying connection and registers it.
+	 * 
+	 * @param addr
+	 *            the address of the endpoint of the connection
+	 * @throws InterruptedException
+	 *             if the connection process is interrupted
+	 * @throws TimeoutException
+	 *             if the connection process timed out
+	 * @throws IOException
+	 *             if an I/O-error occurs
+	 * @return the OnionSocket for the address
+	 */
+	public OnionSocket registerAddress(InetSocketAddress addr)
+			throws IOException, TimeoutException, InterruptedException {
+		OnionSocket sock = null;
+		firstLock.writeLock().lock();
+		try {
+			if (first.containsKey(addr)) {
+				sock = getFirst(addr).b;
+				firstLock.writeLock().unlock();
+				return sock;
+			}
+			sock = new OnionSocket(this, addr);
+		} catch (IllegalAddressException e) {
+			General.fatal("Address is not registered, but it must be!");
+		}
+		first.put(addr,
+				new Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>(
+						new ReentrantReadWriteLock(), sock, new HashMap<Short, LinkedBlockingQueue<OnionMessage>>()));
+		firstLock.writeLock().unlock();
+		return sock;
+
 	}
 
 	/**
@@ -198,7 +236,7 @@ public class Multiplexer {
 	 * @throws IllegalAddressException
 	 *             if the address is not registered
 	 */
-	public short register(InetAddress addr) throws SizeLimitExceededException, IllegalAddressException {
+	public short registerID(InetSocketAddress addr) throws SizeLimitExceededException, IllegalAddressException {
 		short id;
 		HashMap<Short, LinkedBlockingQueue<OnionMessage>> second;
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> triple;
@@ -231,7 +269,7 @@ public class Multiplexer {
 	 * @throws IllegalAddressException
 	 *             if the address is not registered
 	 */
-	public void register(short id, InetAddress addr)
+	public void registerID(short id, InetSocketAddress addr)
 			throws SizeLimitExceededException, IllegalIDException, IllegalAddressException {
 		HashMap<Short, LinkedBlockingQueue<OnionMessage>> second;
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> triple;
@@ -258,7 +296,7 @@ public class Multiplexer {
 	 * @throws IllegalAddressException
 	 *             if the address is not registered
 	 */
-	public void unregister(InetAddress addr) throws IllegalAddressException {
+	public void unregisterAddress(InetSocketAddress addr) throws IllegalAddressException {
 		firstLock.writeLock().lock();
 		if (!first.containsKey(addr)) {
 			firstLock.writeLock().unlock();
@@ -280,7 +318,7 @@ public class Multiplexer {
 	 * @throws IllegalIDException
 	 *             if the ID is not registered
 	 */
-	public void unregister(short id, InetAddress addr) throws IllegalAddressException, IllegalIDException {
+	public void unregisterID(short id, InetSocketAddress addr) throws IllegalAddressException, IllegalIDException {
 		HashMap<Short, LinkedBlockingQueue<OnionMessage>> second;
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> triple;
 		triple = getFirst(addr);

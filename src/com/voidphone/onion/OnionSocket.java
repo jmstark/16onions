@@ -19,13 +19,13 @@
 package com.voidphone.onion;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,12 +36,12 @@ import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
 
 public class OnionSocket {
-	private final InetAddress address;
-	private final AsynchronousSocketChannel channel;
-	private final ByteBuffer readBuffer;
-	private final ByteBuffer writeBuffer;
-	private final Multiplexer multiplexer;
-	private final ReentrantLock writeLock;
+	private InetSocketAddress address;
+	private AsynchronousSocketChannel channel;
+	private ByteBuffer readBuffer;
+	private ByteBuffer writeBuffer;
+	private Multiplexer multiplexer;
+	private ReentrantLock writeLock;
 
 	/**
 	 * Creates a OnionSocket.
@@ -56,40 +56,98 @@ public class OnionSocket {
 	 *             if the address is already registered
 	 */
 	public OnionSocket(Multiplexer m, AsynchronousSocketChannel ch) throws IOException, IllegalAddressException {
-		readBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
-		writeBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
-		this.channel = ch;
-		this.address = ((InetSocketAddress) channel.getRemoteAddress()).getAddress();
-		this.multiplexer = m;
-		this.writeLock = new ReentrantLock();
-		multiplexer.register(((InetSocketAddress) channel.getRemoteAddress()).getAddress(), this);
+		init(m, ch);
+		m.registerAddress(address, this);
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
-	private void newConnection(Multiplexer m, short id, InetAddress addr) {
-		// TODO: handle new connection and do something reasonable
+	private void init(Multiplexer m, AsynchronousSocketChannel ch) throws IOException, IllegalAddressException {
+		readBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
+		writeBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
+		this.multiplexer = m;
+		this.writeLock = new ReentrantLock();
+		this.channel = ch;
+		this.address = (InetSocketAddress) channel.getRemoteAddress();
+	}
+
+	public OnionSocket(Multiplexer m, InetSocketAddress addr)
+			throws IOException, IllegalAddressException, TimeoutException, InterruptedException {
+		channel = AsynchronousSocketChannel.open();
+		Future<Void> future = channel.connect(addr);
 		try {
-			OnionMessage message = m.read(id, addr);
-			if (message == null) {
-				General.error("Timeout!");
-			} else {
-				General.debug("packet data: " + Arrays.toString(message.data));
+			future.get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS);
+		} catch (ExecutionException e) {
+			throw new IOException("connect failed");
+		}
+		init(m, channel);
+		channel.read(readBuffer, null, new ReadCompletionHandler());
+	}
+
+	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) {
+		// TODO: handle new connection and do something reasonable
+		General.debug("newConnection");
+		int state = 0;
+		short nextId = 0;
+		OnionMessage message;
+		InetSocketAddress nextAddr = null;
+		boolean again = true;
+		try {
+			for (; again;) {
+				message = m.read(id, addr);
+				if (message == null) {
+					General.error("Timeout!");
+					break;
+				}
+				General.debug(Arrays.toString(message.data));
+				if (message.data[2] == -1) {
+					m.writeControl(new OnionMessage(id, addr, new byte[] { 3, 4, -1 }));
+					continue;
+				}
+				switch (state) {
+				case 0:
+					if (Arrays.equals(message.data, new byte[] { 0, 0, 1 })) {
+						state = 2;
+						break;
+					}
+					if (message.data[2] != 0) {
+						General.error("Wrong init message!");
+						again = false;
+					} else {
+						ByteBuffer buf = ByteBuffer.wrap(message.data);
+						nextAddr = new InetSocketAddress("127.0.0.1", buf.getShort());
+						General.info("New tunnel to " + nextAddr + "!");
+						m.registerAddress(nextAddr);
+						nextId = m.registerID(nextAddr);
+						state = 1;
+					}
+					break;
+				case 1:
+					General.info("Forward packet to next hop!");
+					m.writeControl(new OnionMessage(nextId, nextAddr, message.data));
+					if (Arrays.equals(message.data, new byte[] { 0, 0, 0 })) {
+						General.info("Tunnel closed!");
+						m.unregisterID(nextId, nextAddr);
+						return;
+					}
+					break;
+				case 2:
+					if (Arrays.equals(message.data, new byte[] { 0, 0, 0 })) {
+						General.info("Tunnel closed!");
+						return;
+					}
+				}
 			}
-			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 4, 5, 6 }));
-			message = m.read(id, addr);
-			if (message == null) {
-				General.error("Timeout!");
-			} else {
-				General.debug("packet data: " + Arrays.toString(message.data));
-			}
-			m.writeControl(new OnionMessage(3, id, addr, new byte[] { 10, 11, 12 }));
-		} catch (IllegalAddressException | IllegalIDException | InterruptedException e) {
+		} catch (IllegalAddressException | IllegalIDException | InterruptedException | IOException
+				| SizeLimitExceededException | TimeoutException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-	public void send(OnionMessage message) throws InterruptedException {
+	public void send(OnionMessage message) throws InterruptedException, IOException {
+		if (!channel.isOpen()) {
+			throw new IOException("Socket is closed!");
+		}
 		writeLock.lock();
 		message.serialize(writeBuffer);
 		while (writeBuffer.hasRemaining()) {
@@ -104,18 +162,14 @@ public class OnionSocket {
 			}
 			if (error) {
 				close();
-				break;
+				throw new IOException("write failed!");
 			}
 		}
 		writeLock.unlock();
 	}
 
 	public void close() {
-		try {
-			multiplexer.unregister(address);
-		} catch (IllegalAddressException e) {
-			General.warning("Address is not registered, but it should be!");
-		}
+		General.info("Closing connection to " + address);
 		try {
 			if (channel.isOpen()) {
 				channel.close();
@@ -128,13 +182,15 @@ public class OnionSocket {
 	private class ReadCompletionHandler implements CompletionHandler<Integer, Void> {
 		@Override
 		public void completed(Integer length, Void none) {
+			if (!channel.isOpen()) {
+				return;
+			}
 			if (length <= 0) {
 				close();
 				return;
 			}
 			General.debug(Arrays.toString(readBuffer.array()));
 			OnionMessage message = OnionMessage.parse(readBuffer, address);
-			channel.read(readBuffer, null, this);
 			try {
 				multiplexer.getReadQueue(message.id, message.address).offer(message);
 			} catch (IllegalAddressException e) {
@@ -142,9 +198,11 @@ public class OnionSocket {
 			} catch (IllegalIDException e) {
 				try {
 					General.debug("Got packet with unknown ID - maybe a new connection.....");
-					multiplexer.register(message.id, address);
+					multiplexer.registerID(message.id, address);
 					multiplexer.getReadQueue(message.id, message.address).offer(message);
+					channel.read(readBuffer, null, this);
 					newConnection(multiplexer, message.id, address);
+					return;
 				} catch (SizeLimitExceededException f) {
 					General.warning(f.getMessage());
 				} catch (IllegalIDException f) {
@@ -154,6 +212,7 @@ public class OnionSocket {
 					close();
 				}
 			}
+			channel.read(readBuffer, null, this);
 		}
 
 		@Override

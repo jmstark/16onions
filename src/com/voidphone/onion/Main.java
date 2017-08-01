@@ -19,23 +19,14 @@
 package com.voidphone.onion;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.security.InvalidKeyException;
-import java.util.Iterator;
 
 import org.ini4j.InvalidFileFormatException;
 
@@ -43,8 +34,6 @@ import lombok.Getter;
 
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionApiSocket;
-import com.voidphone.api.OnionAuthApiSocket;
-import com.voidphone.api.RpsApiSocket;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
@@ -65,7 +54,7 @@ public class Main {
 		final ByteBuffer readBuffer;
 
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
-		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(1234));
+		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(config.onionDataPort));
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
 		onionApiSocket = new OnionApiSocket(config.onionAPIPort);
 		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
@@ -76,11 +65,15 @@ public class Main {
 			public void completed(AsynchronousSocketChannel channel, Void none) {
 				onionServerSocket.accept(null, this);
 				try {
+					General.debug("Got connection from " + (InetSocketAddress) channel.getRemoteAddress() + " to "
+							+ (InetSocketAddress) channel.getLocalAddress());
 					new OnionSocket(multiplexer, channel);
 				} catch (IOException e) {
 					General.error("I/O error!");
+					return;
 				} catch (IllegalAddressException e) {
 					General.warning("Got multiple TCP channel from one Hop!");
+					return;
 				}
 				General.info("Onion connection successful");
 			}
@@ -91,7 +84,7 @@ public class Main {
 			}
 		});
 		while (true) {
-			InetAddress addr = ((InetSocketAddress) dataChannel.receive(readBuffer)).getAddress();
+			InetSocketAddress addr = (InetSocketAddress) dataChannel.receive(readBuffer);
 			OnionMessage message = OnionMessage.parse(readBuffer, addr);
 			try {
 				multiplexer.getReadQueue(message.id, message.address).offer(message);
