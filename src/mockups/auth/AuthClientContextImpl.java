@@ -16,11 +16,17 @@
  */
 package mockups.auth;
 
+import auth.api.OnionAuthApiMessage;
+import auth.api.OnionAuthCipherDecrypt;
+import auth.api.OnionAuthCipherDecryptResp;
+import auth.api.OnionAuthCipherEncrypt;
+import auth.api.OnionAuthCipherEncryptResp;
 import auth.api.OnionAuthClose;
 import auth.api.OnionAuthDecrypt;
 import auth.api.OnionAuthDecryptResp;
 import auth.api.OnionAuthEncrypt;
 import auth.api.OnionAuthEncryptResp;
+import auth.api.OnionAuthError;
 import auth.api.OnionAuthSessionHS1;
 import auth.api.OnionAuthSessionHS2;
 import auth.api.OnionAuthSessionIncomingHS1;
@@ -187,6 +193,7 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                     try {
                         if (null == cipher) {
                             cipher = session.encrypt(false, data);
+                            continue;
                         }
                         cipher = session.encrypt(true, cipher);
                     } catch (IllegalBlockSizeException ex) {
@@ -222,9 +229,10 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                     try {
                         block = session.decrypt(data);
                     } catch (ShortBufferException ex) {
-                        logger.log(Level.SEVERE, "Decryption failed", ex);
-                    } catch (IllegalBlockSizeException ex) {
-                        throw new ProtocolException("Illegal block size");
+                        logger.log(Level.WARNING,
+                                "Decryption failed due to illegal block size");
+                        throw new ProtocolException(
+                                "Decryption failed due to illegal block size");
                     }
                     if (block.isCipher()) {
                         data = block.getPayload();
@@ -235,7 +243,8 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                     throw new ProtocolException(
                             "Layer decryption did not give result in plaintext");
                 try {
-                    reply = new OnionAuthDecryptResp(request.getRequestID(), data);
+                    reply = new OnionAuthDecryptResp(request.getRequestID(),
+                            block.getPayload());
                 } catch (MessageSizeExceededException ex) {
                     // shouldn't happen as decryption should reduce the payload size
                     throw new RuntimeException(
@@ -262,12 +271,77 @@ class AuthClientContextImpl extends MessageHandler<Void> implements
                         getID());
                 return;
             }
+            case API_AUTH_CIPHER_ENCRYPT: {
+                OnionAuthCipherEncrypt request;
+                request = OnionAuthCipherEncrypt.parse(buf);
+                logger.log(Level.INFO,
+                        "Received CIPHER ENCRYPT message for session:{0} "
+                        + "with request ID: {1}",
+                        new Object[]{request.getSessionID(), request.
+                            getRequestID()});
+                Session session = findSession(request.getSessionID());
+                if (null == session) {
+                    throw new ProtocolException("Given session is not known");
+                }
+                byte[] cipher = null;
+                OnionAuthApiMessage reply;
+                try {
+                    cipher = session.encrypt(request.isCipher(), request.
+                            getPayload());
+                } catch (IllegalBlockSizeException ex) {
+                    reply = new OnionAuthError(request.getRequestID());
+                    connection.sendMsg(reply);
+                    return;
+                }
+                try {
+                    reply = new OnionAuthCipherEncryptResp(request.
+                            getRequestID(),
+                            cipher);
+                } catch (MessageSizeExceededException ex) {
+                    throw new RuntimeException("this is a bug; please report");
+                }
+                connection.sendMsg(reply);
+            }
+            break;
+            case API_AUTH_CIPHER_DECRYPT: {
+                OnionAuthCipherDecrypt request;
+                request = OnionAuthCipherDecrypt.parse(buf);
+
+                logger.log(Level.INFO,
+                        "Received CIPHER DECRYPT message in session: {0} "
+                        + "with requestID: {1}",
+                        new Object[]{request.getSessionID(), request.
+                            getRequestID()});
+                EncryptDecryptBlock block;
+                Session session;
+                session = findSession(request.getSessionID());
+                if (null == session) {
+                    throw new ProtocolException("Given session is not known");
+                }
+                try {
+                    block = session.decrypt(request.getPayload());
+                } catch (ShortBufferException ex) {
+                    throw new ProtocolException(
+                            "Asked to decrypt a block with illegal block length");
+                }
+                OnionAuthCipherDecryptResp reply;
+                try {
+                reply = new OnionAuthCipherDecryptResp(block.isCipher(),
+                        request.getRequestID(), block.getPayload());
+                } catch (MessageSizeExceededException ex) {
+                    throw new RuntimeException("This is a bug; please report");
+                }
+                connection.sendMsg(reply);
+            }
+            break;
             // The following are message types we send as replies,
             // so we do not expect to handle them here
             case API_AUTH_SESSION_HS1:
             case API_AUTH_SESSION_HS2:
             case API_AUTH_LAYER_ENCRYPT_RESP:
             case API_AUTH_LAYER_DECRYPT_RESP:
+            case API_AUTH_CIPHER_ENCRYPT_RESP:
+            case API_AUTH_CIPHER_DECRYPT_RESP:
                 throw new ProtocolException("Invalid message type sent");
             default:
                 throw new RuntimeException("This is a bug, please report");

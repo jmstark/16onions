@@ -33,6 +33,9 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import util.Misc;
+import static util.Misc.toBase64;
+import util.SecurityHelper;
 
 public class PartialSessionImpl implements PartialSession {
 
@@ -41,6 +44,8 @@ public class PartialSessionImpl implements PartialSession {
     protected static final int KEY_SIZE = 128 / 8; //size in bytes
     protected final byte[] ourKeyBytes;
     protected final Random random;
+    private static final Logger logger = Logger.
+            getLogger("mockups.auth.Session");
 
     public PartialSessionImpl() {
         random = new Random();
@@ -79,7 +84,6 @@ public class PartialSessionImpl implements PartialSession {
             Session {
 
         private static final String CIPHER_TRANSFORMATION = "AES/CBC/NoPadding";
-        private static final IvParameterSpec magicIVSpec;
         private static final Cipher ivCipher;
         private static final short MAGIC = (short) 34884;
         private static final int MAX_BLOCK_SIZE = 20 * 1024;
@@ -87,7 +91,6 @@ public class PartialSessionImpl implements PartialSession {
 
         static {
             byte[] iv = "1234567890ABCDEF".getBytes(Charset.forName("US-ASCII"));
-            magicIVSpec = new IvParameterSpec(iv);
             String IV_TRANSFORMATION = "AES/ECB/NoPadding";
             try {
                 ivCipher = Cipher.getInstance(IV_TRANSFORMATION);
@@ -122,6 +125,10 @@ public class PartialSessionImpl implements PartialSession {
             }
             this.spec = new SecretKeySpec(key, "AES");
 
+        }
+
+        protected String getKeyHash() {
+            return toBase64(SecurityHelper.hash(spec.getEncoded()));
         }
 
         @Override
@@ -159,6 +166,11 @@ public class PartialSessionImpl implements PartialSession {
             }
             return output;
         }
+
+        private String hash(byte[] input) {
+            return toBase64(SecurityHelper.hash(input));
+        }
+
         @Override
         public byte[] encrypt(boolean isCipher, byte[] data) throws
                 IllegalBlockSizeException {
@@ -167,6 +179,8 @@ public class PartialSessionImpl implements PartialSession {
             IvParameterSpec ivSpec;
             Cipher cipher;
 
+            logger.log(Level.FINER, "Asked to encrypt data: {0} with key: {1}",
+                    new Object[]{hash(data), getKeyHash()});
             if (isCipher) {
                 if (data.length != MAX_BLOCK_SIZE) {
                     throw new IllegalBlockSizeException();
@@ -216,6 +230,8 @@ public class PartialSessionImpl implements PartialSession {
             out.put(iv);
             out.put(enc);
             out.flip();
+            logger.log(Level.FINER, "Encrypted to cipher: {0}",
+                    hash(out.array()));
             return out.array();
         }
 
@@ -234,6 +250,8 @@ public class PartialSessionImpl implements PartialSession {
             iv = Arrays.copyOf(data, KEY_SIZE);
             ivSpec = new IvParameterSpec(iv);
 
+            logger.log(Level.FINER, "Asked to decrypt data: {0} with key: {1}",
+                    new Object[]{hash(data), getKeyHash()});
             try {
                 cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
             } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
@@ -255,6 +273,7 @@ public class PartialSessionImpl implements PartialSession {
             } catch (IllegalBlockSizeException ex) {
                 throw new RuntimeException(ex); //should not happen
             }
+            logger.log(Level.FINER, "Decrypted to: {0}", hash(output));
             ByteBuffer outBuffer;
             outBuffer = ByteBuffer.allocate(MAX_BLOCK_SIZE);
             outBuffer.put(iv);

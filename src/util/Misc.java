@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Base64;
 import protocol.MessageParserException;
 
 /**
@@ -59,5 +60,9 @@ public abstract class Misc {
             buffer.reset();
         }
         return key;
+    }
+
+    public static String toBase64(byte[] input) {
+        return Base64.getEncoder().encodeToString(input);
     }
 }

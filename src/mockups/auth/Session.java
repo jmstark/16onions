@@ -42,5 +42,5 @@ public interface Session extends PartialSession {
             throws IllegalBlockSizeException;
 
     EncryptDecryptBlock decrypt(byte[] data)
-            throws IllegalBlockSizeException, ShortBufferException;
+            throws ShortBufferException;
 }

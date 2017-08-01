@@ -29,6 +29,7 @@ import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
 import java.security.KeyStoreException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -52,6 +53,7 @@ public class SecurityHelper {
     private static final Logger LOGGER = Logger.getLogger("SecurityHelper");
     private static final KeyFactory FACTORY;
     public static final KeyStore KEY_STORE;
+    private static final MessageDigest md;
 
     static {
         KeyStore keyStore;
@@ -109,6 +111,11 @@ public class SecurityHelper {
             }
         }
         KEY_STORE = keyStore;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex.toString());
+        }
     }
 
     public static byte[] encodeRSAPublicKey(PublicKey pkey) {
@@ -169,5 +176,9 @@ public class SecurityHelper {
         }
         gen.initialize(keysize);
         return gen.generateKeyPair();
+    }
+
+    public static byte[] hash(byte[] input) {
+        return md.digest(input);
     }
 }
