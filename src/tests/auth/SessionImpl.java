@@ -17,6 +17,9 @@
 package tests.auth;
 
 import auth.api.OnionAuthCipherEncrypt;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import protocol.Connection;
 import protocol.MessageSizeExceededException;
@@ -27,8 +30,19 @@ import protocol.MessageSizeExceededException;
  */
 class SessionImpl extends AbstractSessionImpl implements Session {
 
+    private static final Map<Long, FutureImpl> requestMap = new HashMap(3000);
+
     public SessionImpl(int id, Connection connection) {
         super(id, connection);
+    }
+
+    public static FutureImpl getFuture(long requestID) throws
+            NoSuchElementException {
+        FutureImpl future = requestMap.remove(requestID);
+        if (null == future) {
+            throw new NoSuchElementException(Long.toString(requestID));
+        }
+        return future;
     }
 
     @Override
