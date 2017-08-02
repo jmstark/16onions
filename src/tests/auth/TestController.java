@@ -16,7 +16,6 @@
  */
 package tests.auth;
 
-import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -59,8 +58,8 @@ public class TestController {
                     partial1.getDiffiePayload(), null);
             partial2 = future.get();
         }
-        Session session1;
-        Session session2;
+        AbstractSession session1;
+        AbstractSession session2;
         session1 = partial1.completeSession(partial2.getDiffiePayload());
         session2 = partial2.completeSession(partial1.getDiffiePayload());
 
@@ -70,12 +69,12 @@ public class TestController {
         String cleartext = "Hello World";
         byte[] encrypted;
         {
-            Future<byte[]> future = tunnel1.encrypt(cleartext.getBytes(), null);
+            Future<byte[]> future = tunnel1.layerEncrypt(cleartext.getBytes(), null);
             encrypted = future.get();
         }
         byte[] decrypted;
         {
-            Future<byte[]> future = tunnel2.decrypt(encrypted, null);
+            Future<byte[]> future = tunnel2.layerDecrypt(encrypted, null);
             decrypted = future.get();
         }
         String decryptedText = new String(decrypted);
@@ -84,11 +83,11 @@ public class TestController {
         Tunnel t1, t2;
         {
             Future<PartialSession>[] fA, fB;
-            Session[] A, B;
+            AbstractSession[] A, B;
             fA = new Future[15];
             fB = new Future[fA.length];
-            A = new Session[fA.length];
-            B = new Session[fB.length];
+            A = new AbstractSession[fA.length];
+            B = new AbstractSession[fB.length];
             int index;
             for (index = 0; index < fA.length; index++) {
                 fA[index] = context2.startSession(pub1, null);
@@ -116,14 +115,14 @@ public class TestController {
     private byte[] tunnelEncrypt(Tunnel tunnel, byte[] data) throws
             MessageSizeExceededException, InterruptedException,
             ExecutionException {
-        Future<byte[]> f = tunnel.encrypt(data, null);
+        Future<byte[]> f = tunnel.layerEncrypt(data, null);
         return f.get();
     }
 
     private byte[] tunnelDecrypt(Tunnel tunnel, byte[] data) throws
             MessageSizeExceededException, InterruptedException,
             ExecutionException {
-        Future<byte[]> f = tunnel.decrypt(data, null);
+        Future<byte[]> f = tunnel.layerDecrypt(data, null);
         return f.get();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 totakura
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,32 +16,31 @@
  */
 package tests.auth;
 
-import auth.api.OnionAuthClose;
+import auth.api.OnionAuthCipherEncrypt;
+import java.util.concurrent.Future;
 import protocol.Connection;
+import protocol.MessageSizeExceededException;
 
 /**
- * Class for fully instantiated sessions.
+ *
+ * @author totakura
  */
-public class SessionImpl implements Session {
-
-    protected final int id;
-    protected final Connection connection;
+class SessionImpl extends AbstractSessionImpl implements Session {
 
     public SessionImpl(int id, Connection connection) {
-        super();
-        this.id = id;
-        this.connection = connection;
+        super(id, connection);
     }
 
     @Override
-    public int getID() {
-        return this.id;
+    public Future<byte[]> encrypt(boolean isCipher, byte[] payload) throws MessageSizeExceededException {
+        OnionAuthCipherEncrypt request;
+        request = new OnionAuthCipherEncrypt(isCipher, RequestID.get(), id, payload);
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public void close() {
-        OnionAuthClose message;
-        message = new OnionAuthClose(id);
-        connection.sendMsg(message);
+    public Future<DecryptedData> decrypt(byte[] payload) throws MessageSizeExceededException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
 }

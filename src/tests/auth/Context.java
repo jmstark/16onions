@@ -69,5 +69,5 @@ public interface Context {
      *           removed from the tunnel
      * @return the tunnel
      */
-    public Tunnel createTunnel(Session session);
+    public Tunnel createTunnel(AbstractSession session);
 }

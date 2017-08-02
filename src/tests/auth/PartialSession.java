@@ -23,7 +23,7 @@ import protocol.MessageSizeExceededException;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface PartialSession extends Session {
+interface PartialSession extends AbstractSession {
 
     /**
      * Return the Diffie-Hellman payload of this session

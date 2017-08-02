@@ -16,27 +16,26 @@
  */
 package tests.auth;
 
+import auth.api.OnionAuthDecrypt;
+import auth.api.OnionAuthEncrypt;
 import java.nio.channels.CompletionHandler;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
-import auth.api.OnionAuthDecrypt;
-import auth.api.OnionAuthEncrypt;
 import protocol.Connection;
-import protocol.Message;
 import protocol.MessageSizeExceededException;
 
 public class TunnelImpl implements Tunnel {
 
-    private final LinkedList<Session> sessions;
-    private final Session main;
+    private final LinkedList<AbstractSession> sessions;
+    private final AbstractSession main;
     private final Connection connection;
     private static final Map<Long, FutureImpl> requestMap = new HashMap(3000);
     private static int counter = 0;
 
-    public TunnelImpl(Session session, Connection connection) {
+    public TunnelImpl(AbstractSession session, Connection connection) {
         this.main = session;
         this.sessions = new LinkedList();
         this.connection = connection;
@@ -52,12 +51,12 @@ public class TunnelImpl implements Tunnel {
     }
 
     @Override
-    public void addHop(Session session) {
+    public void addHop(AbstractSession session) {
         this.sessions.addLast(session);
     }
 
     @Override
-    public boolean removeHop(Session session) {
+    public boolean removeHop(AbstractSession session) {
         return this.sessions.remove(session);
     }
 
@@ -65,7 +64,7 @@ public class TunnelImpl implements Tunnel {
         sessions.addFirst(main);
         int[] ids = new int[sessions.size()];
         int index = 0;
-        for (Session session : sessions) {
+        for (AbstractSession session : sessions) {
             ids[index++] = session.getID();
         }
         sessions.removeFirst();
@@ -73,7 +72,7 @@ public class TunnelImpl implements Tunnel {
     }
 
     @Override
-    public Future<byte[]> encrypt(byte[] payload,
+    public Future<byte[]> layerEncrypt(byte[] payload,
             CompletionHandler<byte[], ? extends Object> handler) throws
             MessageSizeExceededException {
         OnionAuthEncrypt request;
@@ -89,7 +88,7 @@ public class TunnelImpl implements Tunnel {
     }
 
     @Override
-    public Future<byte[]> decrypt(byte[] payload,
+    public Future<byte[]> layerDecrypt(byte[] payload,
             CompletionHandler<byte[], ? extends Object> handler) throws
             MessageSizeExceededException {
 

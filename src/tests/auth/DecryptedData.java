@@ -16,18 +16,22 @@
  */
 package tests.auth;
 
-import java.util.concurrent.Future;
-import protocol.MessageSizeExceededException;
+import lombok.Data;
 
 /**
  *
  * @author totakura
  */
-public interface Session extends AbstractSession {
+@Data
+public class DecryptedData {
 
-    public Future<byte[]> encrypt(boolean isCipher, byte[] payload) throws
-            MessageSizeExceededException;
+    /**
+     * Is the decrypted data still a cipher which requires further decryption?
+     */
+    private final boolean isCipher;
 
-    public Future<DecryptedData> decrypt(byte[] payload) throws
-            MessageSizeExceededException;
+    /**
+     * The data
+     */
+    private final byte[] payload;
 }

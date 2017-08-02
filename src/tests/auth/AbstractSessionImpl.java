@@ -16,34 +16,32 @@
  */
 package tests.auth;
 
-import auth.api.OnionAuthSessionIncomingHS2;
+import auth.api.OnionAuthClose;
 import protocol.Connection;
-import protocol.MessageSizeExceededException;
 
 /**
- *
- * @author Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Class for fully instantiated sessions.
  */
-public class PartialSessionHS1Impl extends AbstractPartialSessionImpl {
+public class AbstractSessionImpl implements AbstractSession {
 
-    public PartialSessionHS1Impl(int id, byte[] payload, Connection connection) {
-        super(id, payload, connection);
+    protected final int id;
+    protected final Connection connection;
+
+    public AbstractSessionImpl(int id, Connection connection) {
+        super();
+        this.id = id;
+        this.connection = connection;
     }
 
-    /**
-     * Create a session object and send the DH payload to OnionAuth
-     *
-     * @param diffiePayload
-     * @return session object
-     * @throws MessageSizeExceededException
-     */
     @Override
-    public Session completeSession(byte[] diffiePayload) throws
-            MessageSizeExceededException {
-        OnionAuthSessionIncomingHS2 message;
-        message = new OnionAuthSessionIncomingHS2(id, RequestID.get(),
-                diffiePayload);
+    public int getID() {
+        return this.id;
+    }
+
+    @Override
+    public void close() {
+        OnionAuthClose message;
+        message = new OnionAuthClose(id);
         connection.sendMsg(message);
-        return new SessionImpl(id, connection);
     }
 }

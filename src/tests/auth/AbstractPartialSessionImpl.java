@@ -22,7 +22,7 @@ import protocol.Connection;
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public abstract class AbstractPartialSessionImpl extends SessionImpl
+public abstract class AbstractPartialSessionImpl extends AbstractSessionImpl
         implements
         PartialSession {
 

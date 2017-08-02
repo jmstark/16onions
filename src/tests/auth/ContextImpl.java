@@ -28,7 +28,6 @@ import java.nio.channels.CompletionHandler;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -47,16 +46,8 @@ import protocol.ProtocolException;
 class ContextImpl implements Context {
 
     private final Connection connection;
-    private final HashMap<Integer, Future> map;
-    private FutureImpl future;
+    private final HashMap<Long, FutureImpl> map;
     private final Logger logger;
-
-    private enum State {
-        START_SESSION, //we start a session by sending SESSION_START
-        START_SESSION_HS1, //we start a session by sending SESSION_INCOMNIG_HS1
-        OTHER
-    };
-    private State state;
 
     public ContextImpl(AsynchronousSocketChannel channel,
             DisconnectHandler disconnectHandler) {
@@ -64,21 +55,58 @@ class ContextImpl implements Context {
         map = new HashMap(1000);
         connection = new Connection(channel, disconnectHandler);
         connection.receive(new AuthMessageHandler());
-        state = State.OTHER;
+    }
+
+    private class FutureNotFoundException extends Exception {
+    };
+
+    /**
+     * Look up for the future corresponding to the given request ID
+     *
+     * @param id the request ID
+     * @return the found future; null if nothing is found
+     */
+    FutureImpl findFuture(long id) throws FutureNotFoundException {
+        FutureImpl future = null;
+        if (null == future) {
+            throw new FutureNotFoundException();
+        }
+        return future;
+    }
+
+    /**
+     * Remove future from the map
+     *
+     * @param id the id of the future to remove
+     */
+    void removeFuture(long id) {
+
+    }
+
+    /**
+     * Add the future into the map by assigning it to the given ID
+     *
+     * @param id the request ID to which the given future should be associated
+     *          with
+     * @param future the future
+     */
+    void addFuture(long id, FutureImpl future) {
+
     }
 
     @Override
     public Future<PartialSession> startSession(RSAPublicKey key,
             CompletionHandler<PartialSession, Void> handler) {
         OnionAuthSessionStartMessage message;
+        FutureImpl future;
         try {
             message = new OnionAuthSessionStartMessage(RequestID.get(), key);
         } catch (MessageSizeExceededException ex) {
             throw new RuntimeException("Public key too big");
         }
-        connection.sendMsg(message);
-        state = State.START_SESSION;
         future = new FutureImpl(handler, key);
+        addFuture(message.getRequestID(), future);
+        connection.sendMsg(message);
         return future;
     }
 
@@ -88,21 +116,12 @@ class ContextImpl implements Context {
             CompletionHandler<PartialSession, Void> handler) throws
             MessageSizeExceededException {
         OnionAuthSessionIncomingHS1 message;
+        FutureImpl future;
         message = new OnionAuthSessionIncomingHS1(RequestID.get(), key,
                 diffiePayload);
-        connection.sendMsg(message);
-        /**
-         * we assume that SESSION_START and START_SESSION_HS1 are progressed
-         * synchronously. This is because of the limitation of the
-         * specification: AUTH_SESSION_HS1 and AUTH_SESSION_HS2 messages have no
-         * fields to link them to a response. These messages should also contain
-         * the key and payload from their corresponding requests so that the
-         * responses can be linked to the requests.
-         */
-        assert (State.OTHER == state);
-        assert (null == future);
-        state = State.START_SESSION_HS1;
         future = new FutureImpl(handler, key);
+        addFuture(message.getRequestID(), future);
+        connection.sendMsg(message);
         return future;
     }
 
@@ -114,8 +133,74 @@ class ContextImpl implements Context {
     }
 
     @Override
-    public Tunnel createTunnel(Session session) {
+    public Tunnel createTunnel(AbstractSession session) {
         return new TunnelImpl(session, connection);
+    }
+
+    private void handleSessionHS1(ByteBuffer buf)
+            throws MessageParserException, ProtocolException, FutureNotFoundException {
+        FutureImpl future;
+        logger.log(Level.FINE, "Received AUTH SESSION HS1");
+
+        OnionAuthSessionHS1 message = null;
+        PartialSessionHS1Impl session;
+        message = OnionAuthSessionHS1.parse(buf);
+        logger.log(Level.FINER, "Parsed AUTH SESSION HS1");
+        future = findFuture(message.getRequestID());
+        session = new PartialSessionHS1Impl(message.getSessionID(),
+                message.getPayload(), connection);
+        logger.log(Level.FINER,
+                "Created a partial session with ID: {0}",
+                message.getSessionID());
+        future.trigger(session, null);
+    }
+
+    private void handleSessionHS2(ByteBuffer buf)
+            throws MessageParserException, ProtocolException, FutureNotFoundException {
+        FutureImpl future;
+        logger.log(Level.FINE, "Received AUTH SESSION HS2 message");
+        OnionAuthSessionHS2 message = null;
+        PartialSession session;
+        message = OnionAuthSessionHS2.parse(buf);
+        logger.log(Level.FINER, "Parsed AUTH SESSION HS2");
+        future = findFuture(message.getRequestID());
+        session = new PartialSessionHS2Impl(message.
+                getSessionID(),
+                message.getPayload(), connection);
+        logger.log(Level.FINEST, "Created ReceiverSession");
+        future.trigger(session, null);
+    }
+
+    private void handleEncryptResp(ByteBuffer buf)
+            throws MessageParserException, ProtocolException, FutureNotFoundException {
+        OnionAuthEncryptResp message = OnionAuthEncryptResp.parse(buf);
+        logger.log(Level.FINE, "Received AUTH LAYER ENCRYPT RESP message");
+        FutureImpl future;
+        try {
+            future = TunnelImpl.getFuture(message.
+                    getRequestID());
+        } catch (NoSuchElementException ex) {
+            logger.warning(
+                    "Received encrypt response for an unknown ID");
+            return;
+        }
+        future.trigger(message.getPayload(), null);
+    }
+
+    private void handleDecryptResp(ByteBuffer buf)
+            throws MessageParserException, ProtocolException, FutureNotFoundException {
+        OnionAuthDecryptResp message = OnionAuthDecryptResp.parse(buf);
+        logger.log(Level.FINE, "Received AUTH LAYER DECRYPT RESP message");
+        FutureImpl future;
+        try {
+            future = TunnelImpl.getFuture(message.
+                    getRequestID());
+        } catch (NoSuchElementException ex) {
+            logger.warning(
+                    "Received encrypt response for an unknown ID");
+            return;
+        }
+        future.trigger(message.getPayload(), null);
     }
 
     private class AuthMessageHandler extends MessageHandler {
@@ -127,102 +212,29 @@ class ContextImpl implements Context {
         @Override
         public void parseMessage(ByteBuffer buf, Protocol.MessageType type,
                 Object closure) throws MessageParserException, ProtocolException {
-            switch (state) {
-                case START_SESSION:
-                    switch (type) {
-                        case API_AUTH_SESSION_HS1:
-                            break;
-                        default:
-                            throw new ProtocolException("Excepting HS1 message");
-                    }
-                    logger.log(Level.FINE, "Received AUTH SESSION HS1");
-                     {
-                         OnionAuthSessionHS1 message = null;
-                         PartialSessionHS1Impl session;
-                         try {
-                        message = OnionAuthSessionHS1.parse(buf);
-                    } catch (MessageParserException messageParserException) {
-                        future.triggerException(
-                                new ExecutionException(messageParserException),
-                                null);
-                    }
-                         logger.log(Level.FINER, "Parsed AUTH SESSION HS1");
-                    if (null != message) {
-                        session = new PartialSessionHS1Impl(message.getSessionID(),
-                                message.getPayload(), connection);
-                        logger.log(Level.FINEST, "Created IncompleteSession");
-                        future.trigger(session, null);
-                        }
-                    }
-                    future = null;
-                    state = State.OTHER;
-                    return;
-                case START_SESSION_HS1:
-                    switch (type) {
-                        case API_AUTH_SESSION_HS2:
-                            break;
-                        default:
-                            throw new ProtocolException("Expecting HS2 message");
-                    }
-                    logger.log(Level.FINE, "Received AUTH SESSION HS2 message");
-                     {
-                         OnionAuthSessionHS2 message = null;
-                         PartialSession session;
-                         message = OnionAuthSessionHS2.parse(buf);
-                         logger.log(Level.FINER, "Parsed AUTH SESSION HS2");
-                         session = new PartialSessionHS2Impl(message.
-                                 getSessionID(),
-                                 message.getPayload(), connection);
-                         logger.log(Level.FINEST, "Created ReceiverSession");
-                         future.trigger(session, null);
-                    }
-                    future = null;
-                    state = State.OTHER;
-                    return;
-                default:
-                    //encryption and decryption happens here
-                    switch (type) {
-                        case API_AUTH_LAYER_ENCRYPT_RESP: {
-                            OnionAuthEncryptResp message
-                                    = OnionAuthEncryptResp.parse(buf);
-                            logger.log(Level.FINE,
-                                    "Received AUTH LAYER ENCRYPT RESP message");
-                            FutureImpl future;
-                            try {
-                                future = TunnelImpl.getFuture(message.
-                                        getRequestID());
-                            } catch (NoSuchElementException ex) {
-                                logger.warning(
-                                        "Received encrypt response for an unknown ID");
-                                return;
-                            }
-                            future.trigger(message.getPayload(), null);
-                        }
-                            return;
-                        case API_AUTH_LAYER_DECRYPT_RESP: {
-                            OnionAuthDecryptResp message
-                                    = OnionAuthDecryptResp.parse(buf);
-                            logger.log(Level.FINE,
-                                    "Received AUTH LAYER DECRYPT RESP message");
-                            FutureImpl future;
-                            try {
-                                future = TunnelImpl.getFuture(message.
-                                        getRequestID());
-                            } catch (NoSuchElementException ex) {
-                                logger.warning(
-                                        "Received encrypt response for an unknown ID");
-                                return;
-                            }
-                            future.trigger(message.getPayload(), null);
-                        }
-                            return;
-                        default:
-                    }
-                    break;
+            try {
+                switch (type) {
+            case API_AUTH_SESSION_HS1:
+                handleSessionHS1(buf);
+                break;
+            case API_AUTH_SESSION_HS2:
+                handleSessionHS2(buf);
+                break;
+            case API_AUTH_LAYER_ENCRYPT_RESP:
+                handleEncryptResp(buf);
+            break;
+            case API_AUTH_LAYER_DECRYPT_RESP:
+                handleDecryptResp(buf);
+            break;
+            default:
+                logger.log(Level.SEVERE, "Received unexpected message of type {0}",
+                        type.toString());
+                        throw new ProtocolException("Protocol reached incorrect state");
+                }
+            } catch (FutureNotFoundException ex) {
+                logger.warning("Received a message with an unknown request ID; ignoring");
             }
-            logger.log(Level.SEVERE, "Received unexpected message of type {0}",
-                    type.toString());
-            throw new ProtocolException("Protocol reached incorrect state");
-        }
     }
+
+}
 }
