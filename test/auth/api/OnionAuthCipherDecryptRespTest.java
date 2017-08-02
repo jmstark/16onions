@@ -27,6 +27,7 @@ import org.junit.Test;
 import protocol.Message;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
+import protocol.Protocol.MessageType;
 import util.MyRandom;
 
 /**
@@ -74,7 +75,9 @@ public class OnionAuthCipherDecryptRespTest {
         buffer.clear();
         message.send(buffer);
         buffer.flip();
-        buffer.position(4);
+        buffer.position(2);
+        assertEquals(MessageType.API_AUTH_CIPHER_DECRYPT_RESP.getNumVal(),
+                buffer.getShort());
         OnionAuthCipherDecryptResp result
                 = OnionAuthCipherDecryptResp.parse(buffer);
         assertEquals(expResult, result);

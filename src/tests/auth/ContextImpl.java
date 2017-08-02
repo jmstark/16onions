@@ -16,6 +16,8 @@
  */
 package tests.auth;
 
+import auth.api.OnionAuthCipherDecryptResp;
+import auth.api.OnionAuthCipherEncryptResp;
 import auth.api.OnionAuthDecryptResp;
 import auth.api.OnionAuthEncryptResp;
 import auth.api.OnionAuthSessionHS1;
@@ -193,6 +195,35 @@ class ContextImpl implements Context {
         future.trigger(message.getPayload(), null);
     }
 
+    private void handleCipherEncryptResp(ByteBuffer buf)
+            throws MessageParserException, ProtocolException,
+            FutureNotFoundException {
+        OnionAuthCipherEncryptResp message = OnionAuthCipherEncryptResp.parse(
+                buf);
+        logger.fine("Received CIPHER ENCRYPT RESP message");
+        FutureImpl future;
+        future = SessionImpl.getFuture(message.getRequestID());
+        if (null == future) {
+            logger.warning("Received a CIPHER ENCRYPT RESP without any future");
+            return;
+        }
+        future.trigger(message.getPayload(), null);
+    }
+    private void handleCipherDecryptResp(ByteBuffer buf)
+            throws MessageParserException, ProtocolException,
+            FutureNotFoundException {
+        OnionAuthCipherDecryptResp message;
+        FutureImpl future;
+
+        message = OnionAuthCipherDecryptResp.parse(buf);
+        future = SessionImpl.getFuture(message.getRequestID());
+        if (null == future) {
+            logger.warning("Received a CIPHER DECRYPT RESP without any future");
+            return;
+        }
+        future.trigger(new DecryptedData(message.isCipher(), message.
+                getPayload()), null);
+    }
     private class AuthMessageHandler extends MessageHandler {
 
         public AuthMessageHandler() {
@@ -204,18 +235,24 @@ class ContextImpl implements Context {
                 Object closure) throws MessageParserException, ProtocolException {
             try {
                 switch (type) {
-            case API_AUTH_SESSION_HS1:
-                handleSessionHS1(buf);
-                break;
-            case API_AUTH_SESSION_HS2:
-                handleSessionHS2(buf);
-                break;
-            case API_AUTH_LAYER_ENCRYPT_RESP:
-                handleEncryptResp(buf);
-            break;
-            case API_AUTH_LAYER_DECRYPT_RESP:
-                handleDecryptResp(buf);
-            break;
+                    case API_AUTH_SESSION_HS1:
+                        handleSessionHS1(buf);
+                        break;
+                    case API_AUTH_SESSION_HS2:
+                        handleSessionHS2(buf);
+                        break;
+                    case API_AUTH_LAYER_ENCRYPT_RESP:
+                        handleEncryptResp(buf);
+                        break;
+                    case API_AUTH_LAYER_DECRYPT_RESP:
+                        handleDecryptResp(buf);
+                        break;
+                    case API_AUTH_CIPHER_ENCRYPT_RESP:
+                        handleCipherEncryptResp(buf);
+                        break;
+                    case API_AUTH_CIPHER_DECRYPT_RESP:
+                        handleCipherDecryptResp(buf);
+                        break;
             default:
                 logger.log(Level.SEVERE, "Received unexpected message of type {0}",
                         type.toString());
