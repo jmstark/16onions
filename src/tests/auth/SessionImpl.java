@@ -38,23 +38,28 @@ class SessionImpl extends AbstractSessionImpl implements Session {
 
     public static FutureImpl getFuture(long requestID) throws
             NoSuchElementException {
-        FutureImpl future = requestMap.remove(requestID);
-        if (null == future) {
-            throw new NoSuchElementException(Long.toString(requestID));
+        if (!requestMap.containsKey(requestID)) {
+            return null;
         }
-        return future;
+        return requestMap.remove(requestID);
     }
 
     @Override
     public Future<byte[]> encrypt(boolean isCipher, byte[] payload) throws MessageSizeExceededException {
+        FutureImpl future;
         OnionAuthCipherEncrypt request;
-        request = new OnionAuthCipherEncrypt(isCipher, RequestID.get(), id, payload);
-        throw new UnsupportedOperationException("Not supported yet.");
+        request = new OnionAuthCipherEncrypt(isCipher, RequestID.get(), id,
+                payload);
+        future = new FutureImpl(null, null);
+        requestMap.put(request.getRequestID(), future);
+        connection.sendMsg(request);
+        return future;
     }
 
     @Override
     public Future<DecryptedData> decrypt(byte[] payload) throws MessageSizeExceededException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        FutureImpl future;
+
     }
 
 }

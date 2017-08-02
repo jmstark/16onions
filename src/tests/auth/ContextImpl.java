@@ -67,20 +67,10 @@ class ContextImpl implements Context {
      * @return the found future; null if nothing is found
      */
     FutureImpl findFuture(long id) throws FutureNotFoundException {
-        FutureImpl future = null;
-        if (null == future) {
+        if (!map.containsKey(id)) {
             throw new FutureNotFoundException();
         }
-        return future;
-    }
-
-    /**
-     * Remove future from the map
-     *
-     * @param id the id of the future to remove
-     */
-    void removeFuture(long id) {
-
+        return map.remove(id);
     }
 
     /**
@@ -91,7 +81,7 @@ class ContextImpl implements Context {
      * @param future the future
      */
     void addFuture(long id, FutureImpl future) {
-
+        map.put(id, future);
     }
 
     @Override
