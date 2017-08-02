@@ -20,6 +20,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.logging.Logger;
 import protocol.MessageSizeExceededException;
 
 /**
@@ -28,6 +29,7 @@ import protocol.MessageSizeExceededException;
  */
 public class TestController {
 
+    private static final Logger logger = Logger.getLogger("tests.auth");
     private final Context context1;
     private final ScheduledExecutorService scheduledExecutor;
     private final Context context2;
@@ -78,7 +80,20 @@ public class TestController {
             decrypted = future.get();
         }
         String decryptedText = new String(decrypted);
-        System.out.println("Decrypted: " + decryptedText);
+        logger.info("Decrypted: " + decryptedText);
+        {
+            Future<byte[]> future = session1.encrypt(false, cleartext.getBytes());
+            encrypted = future.get();
+        }
+        {
+            Future<DecryptedData> future = session2.decrypt(encrypted);
+            decrypted = future.get().getPayload();
+            if (future.get().isCipher()) {
+                logger.warning("Payload should be decrypted here");
+            } else {
+                logger.info("Decrypted: " + new String(decrypted));
+            }
+        }
 
         Tunnel t1, t2;
         {
@@ -108,7 +123,7 @@ public class TestController {
         {
             byte[] data = tunnelEncrypt(t1, "hello world".getBytes());
             data = tunnelDecrypt(t2, data);
-            System.out.println("Decrypted: " + new String(data));
+            logger.info("Decrypted: " + new String(data));
         }
     }
 

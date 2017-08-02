@@ -16,6 +16,7 @@
  */
 package tests.auth;
 
+import auth.api.OnionAuthCipherDecrypt;
 import auth.api.OnionAuthCipherEncrypt;
 import java.util.HashMap;
 import java.util.Map;
@@ -59,7 +60,12 @@ class SessionImpl extends AbstractSessionImpl implements Session {
     @Override
     public Future<DecryptedData> decrypt(byte[] payload) throws MessageSizeExceededException {
         FutureImpl future;
-
+        OnionAuthCipherDecrypt request;
+        request = new OnionAuthCipherDecrypt(RequestID.get(), id, payload);
+        future = new FutureImpl(null, null);
+        requestMap.put(request.getRequestID(), future);
+        connection.sendMsg(request);
+        return future;
     }
 
 }
