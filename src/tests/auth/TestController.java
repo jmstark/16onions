@@ -58,8 +58,8 @@ public class TestController {
                     partial1.getDiffiePayload(), null);
             partial2 = future.get();
         }
-        AbstractSession session1;
-        AbstractSession session2;
+        Session session1;
+        Session session2;
         session1 = partial1.completeSession(partial2.getDiffiePayload());
         session2 = partial2.completeSession(partial1.getDiffiePayload());
 
@@ -83,11 +83,11 @@ public class TestController {
         Tunnel t1, t2;
         {
             Future<PartialSession>[] fA, fB;
-            AbstractSession[] A, B;
+            Session[] A, B;
             fA = new Future[15];
             fB = new Future[fA.length];
-            A = new AbstractSession[fA.length];
-            B = new AbstractSession[fB.length];
+            A = new Session[fA.length];
+            B = new Session[fB.length];
             int index;
             for (index = 0; index < fA.length; index++) {
                 fA[index] = context2.startSession(pub1, null);

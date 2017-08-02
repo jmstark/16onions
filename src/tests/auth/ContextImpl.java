@@ -133,7 +133,7 @@ class ContextImpl implements Context {
     }
 
     @Override
-    public Tunnel createTunnel(AbstractSession session) {
+    public Tunnel createTunnel(Session session) {
         return new TunnelImpl(session, connection);
     }
 

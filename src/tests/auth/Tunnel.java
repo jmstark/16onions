@@ -34,7 +34,7 @@ public interface Tunnel {
      *
      * @param session
      */
-    public void addHop(AbstractSession session);
+    public void addHop(Session session);
 
     /**
      * Remove a session from the tunnel.
@@ -43,7 +43,7 @@ public interface Tunnel {
      *
      * @param session
      */
-    public boolean removeHop(AbstractSession session);
+    public boolean removeHop(Session session);
 
     /**
      * Layer layerEncrypt the given payload.

@@ -29,13 +29,13 @@ import protocol.MessageSizeExceededException;
 
 public class TunnelImpl implements Tunnel {
 
-    private final LinkedList<AbstractSession> sessions;
-    private final AbstractSession main;
+    private final LinkedList<Session> sessions;
+    private final Session main;
     private final Connection connection;
     private static final Map<Long, FutureImpl> requestMap = new HashMap(3000);
     private static int counter = 0;
 
-    public TunnelImpl(AbstractSession session, Connection connection) {
+    public TunnelImpl(Session session, Connection connection) {
         this.main = session;
         this.sessions = new LinkedList();
         this.connection = connection;
@@ -51,12 +51,12 @@ public class TunnelImpl implements Tunnel {
     }
 
     @Override
-    public void addHop(AbstractSession session) {
+    public void addHop(Session session) {
         this.sessions.addLast(session);
     }
 
     @Override
-    public boolean removeHop(AbstractSession session) {
+    public boolean removeHop(Session session) {
         return this.sessions.remove(session);
     }
 
