@@ -120,6 +120,40 @@ public class Multiplexer {
 		}
 	}
 
+	/**
+	 * Merges to logical connections for reading.
+	 * 
+	 * @param id1
+	 *            id of logical connection 1
+	 * @param addr1
+	 *            address of logical connection 1
+	 * @param id2
+	 *            id of logical connection 2
+	 * @param addr2
+	 *            address of logical connection 2
+	 * @throws IllegalAddressException
+	 *             if either addr1 or addr2, is not registered
+	 * @throws IllegalIDException
+	 *             if either id1 or id2, is not registered
+	 */
+	public void merge(short id1, InetSocketAddress addr1, short id2, InetSocketAddress addr2)
+			throws IllegalAddressException, IllegalIDException {
+		LinkedBlockingQueue<OnionMessage> queue1;
+		LinkedBlockingQueue<OnionMessage> queue2;
+		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> triple1;
+		triple1 = getFirst(addr1);
+		queue1 = getReadQueue(id1, addr1);
+		queue2 = getReadQueue(id2, addr2);
+		triple1.a.writeLock().lock();
+		if (!triple1.c.containsKey(id1)) {
+			triple1.a.writeLock().unlock();
+			throw new IllegalIDException();
+		}
+		queue2.addAll(queue1);
+		triple1.c.put(id1, queue2);
+		triple1.a.writeLock().unlock();
+	}
+
 	private OnionSocket getOnionSocket(InetSocketAddress addr) throws IllegalAddressException {
 		return getFirst(addr).b;
 	}
