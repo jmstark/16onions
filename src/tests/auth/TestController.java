@@ -56,8 +56,8 @@ public class TestController {
             partial1 = future.get();
         }
         {
-            Future<PartialSession> future = context2.deriveSession(pub1,
-                    partial1.getDiffiePayload(), null);
+            Future<PartialSession> future
+                    = context2.deriveSession(partial1.getDiffiePayload(), null);
             partial2 = future.get();
         }
         Session session1;
@@ -107,8 +107,7 @@ public class TestController {
             for (index = 0; index < fA.length; index++) {
                 fA[index] = context2.startSession(pub1, null);
                 PartialSession pa = fA[index].get();
-                fB[index] = context1.deriveSession(pub2,
-                        pa.getDiffiePayload(), null);
+                fB[index] = context1.deriveSession(pa.getDiffiePayload(), null);
                 PartialSession pb = fB[index].get();
                 A[index] = pa.completeSession(pb.getDiffiePayload());
                 B[index] = pb.completeSession(pa.getDiffiePayload());

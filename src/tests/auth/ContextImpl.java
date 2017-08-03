@@ -103,15 +103,14 @@ class ContextImpl implements Context {
     }
 
     @Override
-    public Future<PartialSession> deriveSession(RSAPublicKey key,
-            byte[] diffiePayload,
+    public Future<PartialSession> deriveSession(byte[] diffiePayload,
             CompletionHandler<PartialSession, Void> handler) throws
             MessageSizeExceededException {
         OnionAuthSessionIncomingHS1 message;
         FutureImpl future;
-        message = new OnionAuthSessionIncomingHS1(RequestID.get(), key,
+        message = new OnionAuthSessionIncomingHS1(RequestID.get(),
                 diffiePayload);
-        future = new FutureImpl(handler, key);
+        future = new FutureImpl(handler, null);
         addFuture(message.getRequestID(), future);
         connection.sendMsg(message);
         return future;

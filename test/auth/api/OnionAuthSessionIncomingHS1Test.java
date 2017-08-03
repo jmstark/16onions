@@ -40,7 +40,6 @@ public class OnionAuthSessionIncomingHS1Test {
 
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
-    static final KeyPair keyPair = util.SecurityHelper.generateRSAKeyPair(2048);
     static final long requestID;
     static final byte[] payload;
 
@@ -53,19 +52,7 @@ public class OnionAuthSessionIncomingHS1Test {
     private OnionAuthSessionIncomingHS1 message;
 
     public OnionAuthSessionIncomingHS1Test() throws MessageSizeExceededException {
-        message = new OnionAuthSessionIncomingHS1(requestID,
-                (RSAPublicKey) keyPair.getPublic(), payload);
-    }
-
-    /**
-     * Test of getSourceKey method, of class OnionAuthSessionIncomingHS1.
-     */
-    @Test
-    public void testGetSourceKey() {
-        System.out.println("getSourceKey");
-        RSAPublicKey expResult = (RSAPublicKey) keyPair.getPublic();
-        RSAPublicKey result = message.getSourceKey();
-        assertEquals(expResult, result);
+        message = new OnionAuthSessionIncomingHS1(requestID, payload);
     }
 
     /**

@@ -35,25 +35,16 @@ import protocol.Protocol;
 @EqualsAndHashCode(callSuper = true)
 public class OnionAuthSessionIncomingHS1 extends OnionAuthApiMessage {
 
-    @Getter private final RSAPublicKey sourceKey;
     @Getter private final byte[] payload;
-    private final byte[] keyEnc;
     @Getter private final long requestID;
 
-    public OnionAuthSessionIncomingHS1(long requestID,
-            RSAPublicKey key, byte[] payload) throws
+    public OnionAuthSessionIncomingHS1(long requestID, byte[] payload) throws
             MessageSizeExceededException {
         this.addHeader(Protocol.MessageType.API_AUTH_SESSION_INCOMING_HS1);
         this.size += 4; //reserved
         assert (requestID <= Message.UINT32_MAX);
         this.requestID = requestID;
         this.size += 4;
-
-        this.size += 2; //hostkey size
-        this.sourceKey = key;
-        this.keyEnc = util.SecurityHelper.encodeRSAPublicKey(key);
-        this.size += keyEnc.length;
-
         this.payload = payload;
         this.size += payload.length;
 
@@ -67,46 +58,26 @@ public class OnionAuthSessionIncomingHS1 extends OnionAuthApiMessage {
         super.send(out);
         this.sendEmptyBytes(out, 4); //reserved 4 bytes
         out.putInt((int) requestID);
-        out.putShort((short) keyEnc.length);
-        out.put(keyEnc);
         out.put(payload);
     }
 
     public static OnionAuthSessionIncomingHS1 parse(ByteBuffer buf)
             throws MessageParserException {
-        RSAPublicKey key;
         long requestID;
-        byte[] enc;
         byte[] payload;
-        int size;
 
-        size = buf.remaining();
-        if (size <= 10) {
+        if (buf.remaining() <= 12) {
             throw new MessageParserException(
                     "Message format not recognized");
         }
         buf.getInt();//read out reserved 4  bytes
-        size -= 4;
         requestID = Message.unsignedLongFromInt(buf.getInt());
-        size -= 4;
-        enc = new byte[protocol.Message.unsignedIntFromShort(buf.getShort())];
-        size -= 2;
-        buf.get(enc);
-        size -= enc.length;
-        try {
-            key = util.SecurityHelper.getRSAPublicKeyFromEncoding(enc);
-        } catch (InvalidKeyException ex) {
-            throw new MessageParserException("Invalid hostkey in message");
-        }
-        if (size <= 0) {
-            throw new MessageParserException("Message does not contain payload");
-        }
-        payload = new byte[size];
+        payload = new byte[buf.remaining()];
         buf.get(payload);
 
         OnionAuthSessionIncomingHS1 message;
         try {
-            message = new OnionAuthSessionIncomingHS1(requestID, key, payload);
+            message = new OnionAuthSessionIncomingHS1(requestID, payload);
         } catch (MessageSizeExceededException ex) {
             throw new RuntimeException(
                     "Message size exceeded. The protocol.parser should have caught this");

@@ -42,15 +42,13 @@ public interface Context {
      * Fully instantiate new session from the Diffie-Hellman (DH) payload
      * received from the other peer
      *
-     * @param key the public key of the other peer
      * @param diffePayload the DH payload
      * @param handler the handler to receive the instantiated session object
      * @return future object
      * @throws exception when the payload size or the given key are too big to
      * be fit into a single API message
      */
-    public Future<PartialSession> deriveSession(RSAPublicKey key,
-            byte[] diffePayload,
+    public Future<PartialSession> deriveSession(byte[] diffePayload,
             CompletionHandler<PartialSession, Void> handler) throws
             MessageSizeExceededException;
 
