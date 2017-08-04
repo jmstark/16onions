@@ -88,8 +88,7 @@ public class Multiplexer {
 	}
 
 	/**
-	 * Sends a message through the OnionSocket. This method blocks until the write
-	 * completes. For details see send(OnionMessage message) in OnionSocket
+	 * Sends a message. This method blocks until the write completes.
 	 * 
 	 * @param message
 	 *            the message to send
@@ -100,24 +99,18 @@ public class Multiplexer {
 	 * @throws IOException
 	 *             if an I/O-error occurs
 	 */
-	public void writeControl(OnionMessage message) throws IllegalAddressException, InterruptedException, IOException {
-		getOnionSocket(message.address).send(message);
-	}
-
-	/**
-	 * Sends a message through the datagram channel.
-	 * 
-	 * @param message
-	 *            the message to send
-	 */
-	public void writeData(OnionMessage message) {
-
-		message.serialize(writeBuffer);
-		try {
-			channel.write(writeBuffer);
-		} catch (IOException e) {
-			General.fatalException(e);
+	public void write(OnionMessage message) throws IllegalAddressException, InterruptedException, IOException {
+		if (message.type == OnionMessage.CONTROL_MESSAGE) {
+			getOnionSocket(message.address).send(message);
+		} else {
+			message.serialize(writeBuffer);
+			try {
+				channel.write(writeBuffer);
+			} catch (IOException e) {
+				General.fatalException(e);
+			}
 		}
+
 	}
 
 	/**

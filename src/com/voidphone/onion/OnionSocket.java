@@ -85,10 +85,10 @@ public class OnionSocket {
 
 	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) throws Exception {
 		// TODO: handle new connection and do something reasonable
-		OnionListenerSocket incomingSocket = new OnionListenerSocket(addr,m,id);
+		OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
 		incomingSocket.authenticate();
-		
-		//TODO: the following can probably be removed
+
+		// TODO: the following can probably be removed
 		General.debug("newConnection");
 		int state = 0;
 		short nextId = 0;
@@ -194,7 +194,7 @@ public class OnionSocket {
 				return;
 			}
 			General.debug(Arrays.toString(readBuffer.array()));
-			OnionMessage message = OnionMessage.parse(readBuffer, address);
+			OnionMessage message = OnionMessage.parse(readBuffer, OnionMessage.CONTROL_MESSAGE, address);
 			try {
 				multiplexer.getReadQueue(message.id, message.address).offer(message);
 			} catch (IllegalAddressException e) {

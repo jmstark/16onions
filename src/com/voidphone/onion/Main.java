@@ -47,8 +47,8 @@ public class Main {
 	private static @Getter Selector selector;
 	private static @Getter Config config;
 	private static @Getter OnionApiSocket oas;
-	//TODO: How and where do we initialise oaas and ras and oas?
-	//And why do we have another OnionApiSocket in run()?
+	// TODO: How and where do we initialise oaas and ras and oas?
+	// And why do we have another OnionApiSocket in run()?
 	private static @Getter OnionAuthApiSocket oaas;
 	private static @Getter RpsApiSocket ras;
 
@@ -59,13 +59,13 @@ public class Main {
 		final Multiplexer multiplexer;
 		final ByteBuffer readBuffer;
 
-		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress,config.onionAuthAPIPort));
-		ras = new RpsApiSocket(new InetSocketAddress(config.rpsAPIAddress,config.rpsAPIPort));
+		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress, config.onionAuthAPIPort));
+		ras = new RpsApiSocket(new InetSocketAddress(config.rpsAPIAddress, config.rpsAPIPort));
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
 		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(config.onionDataPort));
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
 		onionApiSocket = new OnionApiSocket(config.onionAPIPort);
-		
+
 		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
 		onionServerSocket = AsynchronousServerSocketChannel.open(config.group)
 				.bind(new InetSocketAddress(config.onionPort));
@@ -94,7 +94,7 @@ public class Main {
 		});
 		while (true) {
 			InetSocketAddress addr = (InetSocketAddress) dataChannel.receive(readBuffer);
-			OnionMessage message = OnionMessage.parse(readBuffer, addr);
+			OnionMessage message = OnionMessage.parse(readBuffer, OnionMessage.DATA_MESSAGE, addr);
 			try {
 				multiplexer.getReadQueue(message.id, message.address).offer(message);
 			} catch (IllegalAddressException | IllegalIDException e) {

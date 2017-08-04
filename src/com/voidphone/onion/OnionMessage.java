@@ -27,6 +27,8 @@ import java.util.Arrays;
  */
 public class OnionMessage {
 	public static final int ONION_HEADER_SIZE = 2;
+	public static final boolean CONTROL_MESSAGE = true;
+	public static final boolean DATA_MESSAGE = true;
 
 	/**
 	 * the ID of the message
@@ -40,6 +42,10 @@ public class OnionMessage {
 	 * the payload of the message
 	 */
 	public final byte data[];
+	/**
+	 * the type of the message
+	 */
+	public final boolean type;
 
 	/**
 	 * Creates a new Onion message.
@@ -51,10 +57,11 @@ public class OnionMessage {
 	 * @param data
 	 *            payload
 	 */
-	public OnionMessage(short id, InetSocketAddress addr, byte[] data) {
+	public OnionMessage(short id, boolean type, InetSocketAddress addr, byte[] data) {
 		this.id = id;
 		this.address = addr;
 		this.data = data;
+		this.type = type;
 	}
 
 	/**
@@ -66,7 +73,7 @@ public class OnionMessage {
 	 *            the address of the destination of the logical connection
 	 * @return the OnionMessage
 	 */
-	public static OnionMessage parse(ByteBuffer buf, InetSocketAddress addr) {
+	public static OnionMessage parse(ByteBuffer buf, boolean type, InetSocketAddress addr) {
 		OnionMessage message = null;
 		int size = buf.capacity() - ONION_HEADER_SIZE;
 		buf.flip();
@@ -74,7 +81,7 @@ public class OnionMessage {
 			short id = buf.getShort();
 			byte data[] = new byte[size];
 			buf.get(data);
-			message = new OnionMessage(id, addr, data);
+			message = new OnionMessage(id, type, addr, data);
 		}
 		buf.clear();
 		return message;
