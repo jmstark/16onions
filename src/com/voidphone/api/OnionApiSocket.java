@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
@@ -53,6 +54,7 @@ public class OnionApiSocket extends ApiSocket {
 	protected byte[] destinationHostkey;
 	public static final int ipAddressLength = 4;
 
+	private final ReentrantReadWriteLock lock;
 	private final HashMap<Integer, Void> map;
 	private final Random random;
 
@@ -68,6 +70,7 @@ public class OnionApiSocket extends ApiSocket {
 		super(port);
 		random = new Random();
 		map = new HashMap<Integer, Void>();
+		lock = new ReentrantReadWriteLock(true);
 	}
 
 	/**
@@ -107,9 +110,7 @@ public class OnionApiSocket extends ApiSocket {
 	 *             if the ID is not registered
 	 */
 	public OnionTunnelReadyMessage newOnionTunnelReadyMessage(int id, byte hostkey[]) throws IllegalIDException {
-		if (!map.containsKey(id)) {
-			throw new IllegalIDException();
-		}
+		isRegistered(id);
 		try {
 			return new OnionTunnelReadyMessage((long) id, hostkey);
 		} catch (MessageSizeExceededException e) {
@@ -130,9 +131,7 @@ public class OnionApiSocket extends ApiSocket {
 	 *             if the ID is not registered
 	 */
 	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(int id, byte hostkey[]) throws IllegalIDException {
-		if (!map.containsKey(id)) {
-			throw new IllegalIDException();
-		}
+		isRegistered(id);
 		try {
 			return new OnionTunnelIncomingMessage((long) id, hostkey);
 		} catch (MessageSizeExceededException e) {
@@ -153,9 +152,7 @@ public class OnionApiSocket extends ApiSocket {
 	 *             if the ID is not registered
 	 */
 	public OnionTunnelDataMessage newOnionTunnelDataMessage(int id, byte data[]) throws IllegalIDException {
-		if (!map.containsKey(id)) {
-			throw new IllegalIDException();
-		}
+		isRegistered(id);
 		try {
 			return new OnionTunnelDataMessage((long) id, data);
 		} catch (MessageSizeExceededException e) {
@@ -176,9 +173,7 @@ public class OnionApiSocket extends ApiSocket {
 	 *             if the ID is not registered
 	 */
 	public OnionErrorMessage newOnionErrorMessage(int id, Protocol.MessageType requestType) throws IllegalIDException {
-		if (!map.containsKey(id)) {
-			throw new IllegalIDException();
-		}
+		isRegistered(id);
 		return new OnionErrorMessage(requestType, (long) id);
 	}
 
@@ -339,16 +334,38 @@ public class OnionApiSocket extends ApiSocket {
 		case API_ONION_TUNNEL_BUILD:
 			ONIONTUNNELBUILD(OnionTunnelBuildMessage.parse(buffer));
 			return;
-		case API_ONION_TUNNEL_DATA:
-			ONIONTUNNELDATAOUTGOING(OnionTunnelDataMessage.parse(buffer));
+		case API_ONION_TUNNEL_DATA: {
+			OnionTunnelDataMessage msg = OnionTunnelDataMessage.parse(buffer);
+			try {
+				isRegistered((int) msg.getId());
+			} catch (IllegalIDException e) {
+				General.fatalException(e);
+			}
+			ONIONTUNNELDATAOUTGOING(msg);
 			return;
-		case API_ONION_TUNNEL_DESTROY:
-			ONIONTUNNELDESTROY(OnionTunnelDestroyMessage.parse(buffer));
+		}
+		case API_ONION_TUNNEL_DESTROY: {
+			OnionTunnelDestroyMessage msg = OnionTunnelDestroyMessage.parse(buffer);
+			try {
+				isRegistered((int) msg.getId());
+			} catch (IllegalIDException e) {
+				General.fatalException(e);
+			}
+			ONIONTUNNELDESTROY(msg);
 			return;
+		}
 		default:
 			throw new ProtocolException("Unexpected message received");
 		}
+	}
 
+	private void isRegistered(int id) throws IllegalIDException {
+		lock.readLock().lock();
+		if (!map.containsKey(id)) {
+			lock.readLock().unlock();
+			throw new IllegalIDException();
+		}
+		lock.readLock().unlock();
 	}
 
 	/**
@@ -361,14 +378,16 @@ public class OnionApiSocket extends ApiSocket {
 	@Override
 	public int register() throws SizeLimitExceededException {
 		int id;
-
+		lock.writeLock().lock();
 		if (map.size() >= Integer.MAX_VALUE) {
+			lock.writeLock().unlock();
 			throw new SizeLimitExceededException("Too many connections registered!");
 		}
 		do {
 			id = random.nextInt();
 		} while (map.containsKey(id));
 		map.put(id, null);
+		lock.writeLock().unlock();
 		return id;
 	}
 
@@ -382,9 +401,12 @@ public class OnionApiSocket extends ApiSocket {
 	 */
 	@Override
 	public void unregister(int id) throws IllegalIDException {
+		lock.writeLock().lock();
 		if (!map.containsKey(id)) {
+			lock.writeLock().unlock();
 			throw new IllegalIDException();
 		}
 		map.remove(id);
+		lock.writeLock().unlock();
 	}
 }
