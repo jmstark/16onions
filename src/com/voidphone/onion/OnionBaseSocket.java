@@ -47,10 +47,13 @@ public abstract class OnionBaseSocket implements Main.Attachable
 	protected final byte MSG_COVER = 0xc;
 	protected final int CONTROL_PACKET_SIZE = 8192;
 	protected final int DATA_PACKET_SIZE = 65536 / 2;
-	protected short[] authSessionIds;
+	protected long[] authSessionIds;
 	protected Config config;
 	public final int externalID;
 	protected static int idCounter = 1;
+	protected int authApiId;
+	protected short mId;
+	protected Multiplexer m;
 
 	
 	protected static long apiRequestCounter = 1;
@@ -62,13 +65,15 @@ public abstract class OnionBaseSocket implements Main.Attachable
 	protected ByteBuffer ctlDataBuf = ByteBuffer.allocate(CONTROL_PACKET_SIZE);
 	protected ByteBuffer voipDataBuf = ByteBuffer.allocate(DATA_PACKET_SIZE);
 	
-	public OnionBaseSocket()
+	public OnionBaseSocket(Multiplexer m, short multiplexerId)
 	{
-		this(idCounter++);
+		this(m, multiplexerId, idCounter++);
 	}
 	
-	public OnionBaseSocket(int tunnelID)
+	public OnionBaseSocket(Multiplexer m, short multiplexerId, int tunnelID)
 	{
+		this.m = m;
+		this.mId = multiplexerId;
 		externalID = tunnelID;
 	}
 	
@@ -92,7 +97,7 @@ public abstract class OnionBaseSocket implements Main.Attachable
 		DataOutputStream sessionIds = new DataOutputStream(new ByteArrayOutputStream());
 		for(int i=0; i < numLayers; i++)
 		{
-			sessionIds.writeShort(authSessionIds[numLayers - i - 1]);
+			sessionIds.writeLong(authSessionIds[numLayers - i - 1]);
 		}
 		sessionIds.flush();
 		
@@ -125,7 +130,7 @@ public abstract class OnionBaseSocket implements Main.Attachable
 		DataOutputStream sessionIds = new DataOutputStream(new ByteArrayOutputStream());
 		for(int i=0; i < numLayers; i++)
 		{
-			sessionIds.writeShort(authSessionIds[numLayers - i - 1]);
+			sessionIds.writeLong(authSessionIds[numLayers - i - 1]);
 		}
 		sessionIds.flush();
 		

@@ -18,11 +18,13 @@
  */
 package com.voidphone.onion;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -52,16 +54,24 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	protected DataOutputStream nextHopDos;
 	protected DatagramChannel nextHopUdp;
 	protected NextHopUdpHandler nextHopUdpHandler = new NextHopUdpHandler();
+	protected InetSocketAddress previousHopAddress;
+	protected InetSocketAddress nextHopAddress;
 
-	public OnionListenerSocket(Socket previousHopSocket, Config config) throws IOException {
-		super();
-		this.config = config;
-		previousHopDis = new DataInputStream(previousHopSocket.getInputStream());
+
+
+	public OnionListenerSocket(InetSocketAddress previousHopAddress, Multiplexer m, short multiplexerId) throws IOException {
+		super(m, multiplexerId);
+		this.config = Main.getConfig();
+		/*previousHopDis = new DataInputStream(previousHopSocket.getInputStream());
 		previousHopDos = new DataOutputStream(previousHopSocket.getOutputStream());
 		// bind UDP socket to the same local and remote port as TCP
 		previousHopUdp = DatagramChannel.open().bind(previousHopSocket.getLocalSocketAddress())
 				.connect(previousHopSocket.getRemoteSocketAddress());
 		previousHopUdp.register(Main.getSelector(), SelectionKey.OP_READ, previousHopUdpHandler);
+		*/
+		this.previousHopAddress = previousHopAddress;
+
+		authApiId = Main.getOaas().register();
 	}
 
 	/**
@@ -96,31 +106,32 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	short authenticate() throws Exception {
 		OnionAuthSessionHS2 hs2;
 
-		ctlDataBuf.clear();
+		OnionMessage incomingMsg = m.read((short)mId, previousHopAddress);
+		
+		ByteBuffer incomingDataBuf = ByteBuffer.wrap(incomingMsg.data);
 
-		previousHopDis.readFully(ctlDataBuf.array());
-
-		if (ctlDataBuf.getInt() != MAGIC_SEQ_CONNECTION_START | ctlDataBuf.getInt() != VERSION)
+		if (incomingDataBuf.getInt() != MAGIC_SEQ_CONNECTION_START | incomingDataBuf.getInt() != VERSION)
 			throw new IOException("Tried to connect with non-onion node or wrong version node");
 
 		// read incoming hostkey
-		byte[] previousHopHostkey = new byte[ctlDataBuf.getShort()];
-		ctlDataBuf.get(previousHopHostkey);
+		byte[] previousHopHostkey = new byte[incomingDataBuf.getInt()];
+		incomingDataBuf.get(previousHopHostkey);
 
-		// read incoming hs1 from remote peer
-		byte[] hs1Payload = new byte[ctlDataBuf.getShort()];
-		ctlDataBuf.get(hs1Payload);
+		// read incoming hs1
+		byte[] hs1Payload = new byte[incomingDataBuf.getInt()];
+		incomingDataBuf.get(hs1Payload);
 
-		ctlDataBuf.clear();
 
 		// get hs2 from onionAuth and send it back to remote peer
-		hs2 = config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS1(new OnionAuthSessionIncomingHS1(apiRequestCounter++,
+		authSessionIds[0] = apiRequestCounter++;
+		hs2 = Main.getOaas().AUTHSESSIONINCOMINGHS1(new OnionAuthSessionIncomingHS1(authSessionIds[0],
 				Util.getHostkeyObject(previousHopHostkey), hs1Payload));
-		ctlDataBuf.putShort((short) hs2.getPayload().length);
-		ctlDataBuf.put(hs2.getPayload());
-		previousHopDos.write(ctlDataBuf.array());
-
-		ctlDataBuf.clear();
+		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
+		DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
+		outgoingData.writeInt(hs2.getPayload().length);
+		outgoingData.write(hs2.getPayload());
+		
+		m.writeControl(new OnionMessage(mId, previousHopAddress, outgoingDataBAOS.toByteArray()));
 
 		return (short) hs2.getSessionID();
 	}
@@ -201,7 +212,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		if (authSessionIds == null) {
 			// not yet authenticated ->
 			// the incoming data must be the handshake
-			authSessionIds = new short[1];
+			authSessionIds = new long[1];
 			authSessionIds[0] = authenticate();
 		} else {
 			processNextControlMessage();

@@ -59,6 +59,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	protected Socket nextHopSocket;
 	protected DatagramChannel nextHopDatagramChannel;
 	protected SocketChannel nextHopSocketChannel;
+	protected int rpsApiId;
+
 
 	/**
 	 * Constructor
@@ -80,26 +82,28 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 *            second constructor which assigns a new ID.
 	 * @throws Exception
 	 */
-	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config, int hopCount,
-			int externalID) throws Exception {
-		super(externalID);
+	public OnionConnectingSocket(Multiplexer m, short multiplexerId, InetSocketAddress destAddr, byte[] destHostkey, 
+			Config config, int hopCount, int externalID) throws Exception {
+		super(m, multiplexerId, externalID);
 		this.config = config;
 		this.destAddr = destAddr;
 		this.destHostkey = destHostkey;
-		authSessionIds = new short[hopCount + 1];
+		authSessionIds = new long[hopCount + 1];
+		rpsApiId = Main.getRas().register();
 
 		// Fill up an array with intermediate hops and the target node
 		OnionPeer[] hops = new OnionPeer[hopCount + 1];
 		for (int i = 0; i < hopCount; i++) {
-			hops[i] = new OnionPeer(config.getRPSAPISocket().RPSQUERY());
+			hops[i] = new OnionPeer(Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId)));
 		}
 		// If end node is unspecified, use another random node
 		if (destAddr == null || destHostkey == null)
-			hops[hopCount] = new OnionPeer(config.getRPSAPISocket().RPSQUERY());
+			hops[hopCount] = new OnionPeer(Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId)));
 		else
 			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
 
 		// Connect to first hop - all other connections are forwarded over this hop
+		//TODO: How to do this with multiplexer?
 		nextHopSocketChannel = SocketChannel.open(hops[0].address);
 		// Bind UDP socket to the same local port as the TCP socket so so we can correlate
 		nextHopDatagramChannel = DatagramChannel.open().bind(nextHopSocketChannel.getLocalAddress())
@@ -154,7 +158,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception {
-		this(destAddr, destHostkey, config, config.getHopCount(), idCounter++);
+		this(destAddr, destHostkey, config, config.hopCount, idCounter++);
 	}
 
 
@@ -174,7 +178,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 */
 	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config, int externalID)
 			throws Exception {
-		this(destAddr, destHostkey, config, config.getHopCount(), externalID);
+		this(destAddr, destHostkey, config, config.hopCount, externalID);
 
 	}
 	

@@ -34,6 +34,8 @@ import lombok.Getter;
 
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionApiSocket;
+import com.voidphone.api.OnionAuthApiSocket;
+import com.voidphone.api.RpsApiSocket;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
@@ -45,6 +47,10 @@ public class Main {
 	private static @Getter Selector selector;
 	private static @Getter Config config;
 	private static @Getter OnionApiSocket oas;
+	//TODO: How and where do we initialise oaas and ras and oas?
+	//And why do we have another OnionApiSocket in run()?
+	private static @Getter OnionAuthApiSocket oaas;
+	private static @Getter RpsApiSocket ras;
 
 	private static void run() throws IOException {
 		final DatagramChannel dataChannel;
@@ -57,6 +63,7 @@ public class Main {
 		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(config.onionDataPort));
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
 		onionApiSocket = new OnionApiSocket(config.onionAPIPort);
+		
 		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
 		onionServerSocket = AsynchronousServerSocketChannel.open(config.group)
 				.bind(new InetSocketAddress(config.onionPort));
