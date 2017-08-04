@@ -56,11 +56,13 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	protected NextHopUdpHandler nextHopUdpHandler = new NextHopUdpHandler();
 	protected InetSocketAddress previousHopAddress;
 	protected InetSocketAddress nextHopAddress;
+	protected short previousHopMId;
 
 
 
 	public OnionListenerSocket(InetSocketAddress previousHopAddress, Multiplexer m, short multiplexerId) throws IOException {
-		super(m, multiplexerId);
+		super(m);
+		previousHopMId = multiplexerId;
 		this.config = Main.getConfig();
 		/*previousHopDis = new DataInputStream(previousHopSocket.getInputStream());
 		previousHopDos = new DataOutputStream(previousHopSocket.getOutputStream());
@@ -106,7 +108,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	short authenticate() throws Exception {
 		OnionAuthSessionHS2 hs2;
 
-		OnionMessage incomingMsg = m.read((short)mId, previousHopAddress);
+		OnionMessage incomingMsg = m.read(previousHopMId, previousHopAddress);
 		
 		ByteBuffer incomingDataBuf = ByteBuffer.wrap(incomingMsg.data);
 

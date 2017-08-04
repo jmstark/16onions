@@ -18,6 +18,7 @@
  */
 package com.voidphone.onion;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -49,17 +50,10 @@ import onion.api.OnionTunnelIncomingMessage;
 public class OnionConnectingSocket extends OnionBaseSocket {
 
 	protected InetSocketAddress destAddr;
-	protected DataInputStream dis;
-	protected DataOutputStream dos;
 	protected byte[] destHostkey;
-	protected UdpHandler udpHandler;
 	protected InetSocketAddress nextHopAddress;
-	protected static int idCounter = 1;
-
-	protected Socket nextHopSocket;
-	protected DatagramChannel nextHopDatagramChannel;
-	protected SocketChannel nextHopSocketChannel;
 	protected int rpsApiId;
+	protected short nextHopMId;
 
 
 	/**
@@ -82,9 +76,9 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 *            second constructor which assigns a new ID.
 	 * @throws Exception
 	 */
-	public OnionConnectingSocket(Multiplexer m, short multiplexerId, InetSocketAddress destAddr, byte[] destHostkey, 
+	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, 
 			Config config, int hopCount, int externalID) throws Exception {
-		super(m, multiplexerId, externalID);
+		super(m, externalID);
 		this.config = config;
 		this.destAddr = destAddr;
 		this.destHostkey = destHostkey;
@@ -103,14 +97,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
 
 		// Connect to first hop - all other connections are forwarded over this hop
-		//TODO: How to do this with multiplexer?
-		nextHopSocketChannel = SocketChannel.open(hops[0].address);
+		OnionSocket nextHop = m.registerAddress(hops[0].address);
+		nextHopMId = m.registerID(hops[0].address);
+		
 		// Bind UDP socket to the same local port as the TCP socket so so we can correlate
-		nextHopDatagramChannel = DatagramChannel.open().bind(nextHopSocketChannel.getLocalAddress())
-				.connect(hops[0].address);
-		nextHopSocket = nextHopSocketChannel.socket();
-		dis = new DataInputStream(nextHopSocket.getInputStream());
-		dos = new DataOutputStream(nextHopSocket.getOutputStream());
 		authSessionIds[0] = authenticate(hops[0].hostkey, 0);
 
 		// Establish forwardings (if any)
@@ -120,19 +110,17 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			// everything it receives from that point on.
 
 			// First, send the actual request along with the target address. Encrypted.
-			ctlDataBuf.clear();
-			ctlDataBuf.putShort(MSG_BUILD_TUNNEL);
+			ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
+			DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
+			
+			outgoingData.writeShort(MSG_BUILD_TUNNEL);
 			byte[] rawAddress = hops[i].address.getAddress().getAddress();
-			ctlDataBuf.put((byte) rawAddress.length);
-			ctlDataBuf.put(rawAddress);
-			ctlDataBuf.putShort((short) hops[i].address.getPort());
-			byte[] encryptedPayload = encrypt(ctlDataBuf.array(), i);
+			outgoingData.write((byte) rawAddress.length);
+			outgoingData.write(rawAddress);
+			outgoingData.writeInt((short) hops[i].address.getPort());
+			byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), i);
 
-			dos.writeShort(encryptedPayload.length);
-			dos.write(encryptedPayload);
-			dos.flush();
-
-
+			m.writeControl(new OnionMessage(nextHopMId, nextHopAddress, encryptedPayload));
 			// Now, we are indirectly connected to the target node. 
 			// Authenticate to that node.
 			authSessionIds[i] = authenticate(hops[i].hostkey, i);
@@ -157,8 +145,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 *            node)
 	 * @throws Exception
 	 */
-	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception {
-		this(destAddr, destHostkey, config, config.hopCount, idCounter++);
+	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception {
+		this(m, destAddr, destHostkey, config, config.hopCount, idCounter++);
 	}
 
 
@@ -176,9 +164,9 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 *            node)
 	 * @throws Exception
 	 */
-	public OnionConnectingSocket(InetSocketAddress destAddr, byte[] destHostkey, Config config, int externalID)
+	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, Config config, int externalID)
 			throws Exception {
-		this(destAddr, destHostkey, config, config.hopCount, externalID);
+		this(m, destAddr, destHostkey, config, config.hopCount, externalID);
 
 	}
 	
@@ -215,42 +203,33 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 */
 	public short authenticate(byte[] hopHostkey, int numLayers) throws Exception {
 
+		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
+		DataOutputStream outGoingData = new DataOutputStream(outgoingDataBAOS);
 		OnionAuthSessionHS1 hs1;
 
-		ctlDataBuf.clear();
-
-		ctlDataBuf.putInt(MAGIC_SEQ_CONNECTION_START);
-		ctlDataBuf.putInt(VERSION);
+		outGoingData.writeInt(MAGIC_SEQ_CONNECTION_START);
+		outGoingData.writeInt(VERSION);
 
 		// put own public key into packet
-		ctlDataBuf.putShort((short) config.getHostkey().length);
-		ctlDataBuf.put(config.getHostkey());
+		byte[] hostkey = Util.getHostkeyBytes(config.hostkey);
+		outGoingData.writeInt(hostkey.length);
+		outGoingData.write(hostkey);
 
 		// get hs1 from onionAuth and send it to remote peer
-		hs1 = config.getOnionAuthAPISocket().AUTHSESSIONSTART(
+		hs1 = Main.getOaas().AUTHSESSIONSTART(
 				new OnionAuthSessionStartMessage(apiRequestCounter++, Util.getHostkeyObject(hopHostkey)));
-		ctlDataBuf.putShort((short) hs1.getPayload().length);
-		ctlDataBuf.put(hs1.getPayload());
+		outGoingData.writeInt(hs1.getPayload().length);
+		outGoingData.write(hs1.getPayload());
 
-		// we need to send the size before the encrypted packets itself because we
-		// don't know the sizes that OnionAuth produces, even if
-		// they should be always the same
-		byte[] encryptedPayload = encrypt(ctlDataBuf.array(), numLayers);
-		dos.writeShort(encryptedPayload.length);
-		dos.write(encryptedPayload);
-		dos.flush();
 
-		ctlDataBuf.clear();
+		byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), numLayers);
+		m.writeControl(new OnionMessage(nextHopMId,nextHopAddress,encryptedPayload));
 
 		// read incoming hs2 into buffer. We need to know the length of hs2
-		dis.readFully(ctlDataBuf.array());
-		ctlDataBuf.put(decrypt(ctlDataBuf.array(), numLayers));
-		byte[] hs2payload = new byte[ctlDataBuf.getShort()];
-		dis.readFully(hs2payload);
-
-		ctlDataBuf.clear();
-
-		config.getOnionAuthAPISocket().AUTHSESSIONINCOMINGHS2(
+		OnionMessage incomingMessage = m.read(nextHopMId, nextHopAddress);
+		byte[] hs2payload = decrypt(incomingMessage.data, numLayers);
+		
+		Main.getOaas().AUTHSESSIONINCOMINGHS2(
 				new OnionAuthSessionIncomingHS2(hs1.getSessionID(), apiRequestCounter++, hs2payload));
 
 		return (short) hs1.getSessionID();
@@ -265,12 +244,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 */
 	public void sendData(boolean isRealData, byte[] data) throws Exception
 	{
-		ByteBuffer buffer = ByteBuffer.allocate(data.length + 3);
-		buffer.put(isRealData ? MSG_DATA : MSG_COVER);
-		buffer.putShort((short)data.length);
-		buffer.put(data);
+		byte[] payload = new byte[data.length + 1];
+		payload[0] = isRealData ? MSG_DATA : MSG_COVER;
 		
-		encryptAndPackAndSendUdpMessage(buffer.array(), nextHopDatagramChannel);
+		m.writeData(new OnionMessage(nextHopMId, nextHopAddress, encrypt(payload)));		
 	}
 	
 	public void sendRealData(byte[] data) throws Exception
@@ -287,49 +264,32 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 
 
 	public void destroy() throws Exception {
-		unregisterChannel();
-		
 		byte[] plainMsg = {MSG_DESTROY_TUNNEL};
 		// send the message iteratively to all hops,
 		// starting at the farthest one
 		for (int i = authSessionIds.length; i > 0; i--) {
 			byte[] encryptedMsg = encrypt(plainMsg, i);
-			dos.writeShort(encryptedMsg.length);
-			dos.write(encryptedMsg);
-			dos.flush();
+			m.writeControl(new OnionMessage(nextHopMId, nextHopAddress, encryptedMsg));
 		}
+		m.unregisterID(nextHopMId, nextHopAddress);
 	}
 
-	public void registerChannel(Selector selector) throws Exception {
-		nextHopSocketChannel.register(selector, SelectionKey.OP_READ, this);
-		udpHandler = new UdpHandler();
-		nextHopDatagramChannel.register(selector, SelectionKey.OP_READ, udpHandler);
-	}
 
-	public void unregisterChannel() throws Exception {
-		nextHopSocketChannel.close();
-		nextHopDatagramChannel.close();
-	}
+	public void getAndProcessNextDataMessage() throws Exception {
 
-	@Override
-	public boolean handle() throws IOException {
-		// TODO Handle TCP data
-		return false;
-	}
-
-	protected class UdpHandler implements Main.Attachable {
-
-		@Override
-		public boolean handle() throws Exception {
-
-			// decrypt data
-			byte[] payload = decryptAndUnpackNextUdpMessage(nextHopDatagramChannel);
+		
+		OnionMessage incomingMessage = m.read(nextHopMId, nextHopAddress);
+		// decrypt data
+		byte[] payload = decrypt(incomingMessage.data);
+		
+		if(payload[0] == MSG_COVER)
+			//ignore cover traffic
+			return;
+		
+		Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, payload));
 			
-			// check if data is valid (non-cover), if so, send it to CM via API
-			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, payload));
-			
-			return false;
-		}
-
+		return;
 	}
+
+
 }

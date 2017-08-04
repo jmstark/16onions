@@ -36,7 +36,7 @@ import com.voidphone.api.Config;
  * Base class for OnionConnectingSocket and OnionListenerSocket
  * 
  */
-public abstract class OnionBaseSocket implements Main.Attachable
+public abstract class OnionBaseSocket
 {
 
 	public final static int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
@@ -52,7 +52,6 @@ public abstract class OnionBaseSocket implements Main.Attachable
 	public final int externalID;
 	protected static int idCounter = 1;
 	protected int authApiId;
-	protected short mId;
 	protected Multiplexer m;
 
 	
@@ -65,15 +64,14 @@ public abstract class OnionBaseSocket implements Main.Attachable
 	protected ByteBuffer ctlDataBuf = ByteBuffer.allocate(CONTROL_PACKET_SIZE);
 	protected ByteBuffer voipDataBuf = ByteBuffer.allocate(DATA_PACKET_SIZE);
 	
-	public OnionBaseSocket(Multiplexer m, short multiplexerId)
+	public OnionBaseSocket(Multiplexer m)
 	{
-		this(m, multiplexerId, idCounter++);
+		this(m, idCounter++);
 	}
 	
-	public OnionBaseSocket(Multiplexer m, short multiplexerId, int tunnelID)
+	public OnionBaseSocket(Multiplexer m, int tunnelID)
 	{
 		this.m = m;
-		this.mId = multiplexerId;
 		externalID = tunnelID;
 	}
 	
@@ -90,8 +88,11 @@ public abstract class OnionBaseSocket implements Main.Attachable
 			throw new Exception("Negative number of layers");
 		
 		if(numLayers == 0)
+		{
+			//TODO: unencrypted packets need to be padded and contain size. Handle this here.
 			return payload;
-
+		}
+			
 		// Make a byte array containing the sessionIds in reverse order,
 		// so that each hop can "peel off" one layer
 		DataOutputStream sessionIds = new DataOutputStream(new ByteArrayOutputStream());

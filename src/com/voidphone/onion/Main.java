@@ -59,6 +59,8 @@ public class Main {
 		final Multiplexer multiplexer;
 		final ByteBuffer readBuffer;
 
+		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress,config.onionAuthAPIPort));
+		ras = new RpsApiSocket(new InetSocketAddress(config.rpsAPIAddress,config.rpsAPIPort));
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
 		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(config.onionDataPort));
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
