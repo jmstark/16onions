@@ -16,11 +16,16 @@
  */
 package mockups.auth;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -28,6 +33,9 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import util.Misc;
+import static util.Misc.toBase64;
+import util.SecurityHelper;
 
 public class PartialSessionImpl implements PartialSession {
 
@@ -36,6 +44,8 @@ public class PartialSessionImpl implements PartialSession {
     protected static final int KEY_SIZE = 128 / 8; //size in bytes
     protected final byte[] ourKeyBytes;
     protected final Random random;
+    private static final Logger logger = Logger.
+            getLogger("mockups.auth.Session");
 
     public PartialSessionImpl() {
         random = new Random();
@@ -73,8 +83,24 @@ public class PartialSessionImpl implements PartialSession {
     protected static class SessionImpl extends PartialSessionImpl implements
             Session {
 
-        private static final String CIPHER_TRANSFORMATION = "AES/CBC/PKCS5Padding";
+        private static final String CIPHER_TRANSFORMATION = "AES/CBC/NoPadding";
+        private static final Cipher ivCipher;
+        private static final short MAGIC = (short) 34884;
+        private static final int MAX_BLOCK_SIZE = 20 * 1024;
         protected final SecretKeySpec spec;
+
+        static {
+            byte[] iv = "1234567890ABCDEF".getBytes(Charset.forName("US-ASCII"));
+            String IV_TRANSFORMATION = "AES/ECB/NoPadding";
+            try {
+                ivCipher = Cipher.getInstance(IV_TRANSFORMATION);
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
+                Logger.getLogger(PartialSessionImpl.class.getName()).
+                        log(Level.SEVERE, null, ex);
+                throw new RuntimeException();
+            }
+
+        }
 
         private SessionImpl(PartialSessionImpl partial, Key otherKey) {
             super(partial);
@@ -101,55 +127,131 @@ public class PartialSessionImpl implements PartialSession {
 
         }
 
+        protected String getKeyHash() {
+            return toBase64(SecurityHelper.hash(spec.getEncoded()));
+        }
+
         @Override
-        public byte[] encrypt(byte[] data) {
-            Cipher cipher;
-            IvParameterSpec ivSpec;
+        public int getMaxBlockSize() {
+            // max size - iv size - MAGIC - size
+            return MAX_BLOCK_SIZE - KEY_SIZE - 2 - 2;
+        }
+
+        private byte[] encryptIV(byte[] iv) throws IllegalBlockSizeException {
+            try {
+                ivCipher.init(Cipher.ENCRYPT_MODE, spec);
+            } catch (InvalidKeyException ex) {
+                throw new RuntimeException(ex); // this should not happen
+            }
+            byte[] output = null;
+            try {
+                output = ivCipher.doFinal(iv);
+            } catch (BadPaddingException ex) {
+                throw new RuntimeException(ex); //this should not happen
+            }
+            return output;
+        }
+
+        private byte[] decryptIV(byte[] iv) throws IllegalBlockSizeException {
+            try {
+                ivCipher.init(Cipher.DECRYPT_MODE, spec);
+            } catch (InvalidKeyException ex) {
+                throw new RuntimeException(ex); // this should not happen
+            }
+            byte[] output = null;
+            try {
+                output = ivCipher.doFinal(iv);
+            } catch (BadPaddingException ex) {
+                throw new RuntimeException(ex); //this should not happen
+            }
+            return output;
+        }
+
+        private String hash(byte[] input) {
+            return toBase64(SecurityHelper.hash(input));
+        }
+
+        @Override
+        public byte[] encrypt(boolean isCipher, byte[] data) throws
+                IllegalBlockSizeException {
             byte[] iv;
-            iv = new byte[KEY_SIZE];
-            random.nextBytes(iv);
+            byte[] block;
+            IvParameterSpec ivSpec;
+            Cipher cipher;
+
+            logger.log(Level.FINER, "Asked to encrypt data: {0} with key: {1}",
+                    new Object[]{hash(data), getKeyHash()});
+            if (isCipher) {
+                if (data.length != MAX_BLOCK_SIZE) {
+                    throw new IllegalBlockSizeException();
+                }
+                iv = Arrays.copyOf(data, KEY_SIZE);
+                block = Arrays.copyOfRange(data, KEY_SIZE, data.length);
+            } else {
+                if (MAX_BLOCK_SIZE < data.length + KEY_SIZE + 2 + 2) {
+                    throw new IllegalBlockSizeException();
+                }
+                iv = new byte[KEY_SIZE];
+                random.nextBytes(iv);
+                ByteBuffer buf = ByteBuffer.allocate(MAX_BLOCK_SIZE - iv.length);
+                assert (buf.hasArray());
+                buf.putShort(MAGIC);
+                buf.putShort((short) data.length);
+                buf.put(data);
+                buf.flip(); //not strictly needed, but to keep up with practise
+                block = buf.array();
+            }
+            iv = encryptIV(iv);
             ivSpec = new IvParameterSpec(iv);
 
             try {
                 cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
             } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
-                throw new RuntimeException(); //AES CBC has to be available
+                throw new RuntimeException(); //AES CBC w Padding has to be available
             }
             try {
                 cipher.init(Cipher.ENCRYPT_MODE, spec, ivSpec);
             } catch (InvalidKeyException | InvalidAlgorithmParameterException ex) {
                 throw new RuntimeException(); // this should not happen
             }
-            int outputSize = cipher.getOutputSize(data.length);
-            outputSize += iv.length;
-            byte[] output;
-            output = Arrays.copyOf(iv, outputSize);
+
+            //then use the resulting IV to encrypt data
+            byte[] enc = null;
             try {
-                cipher.doFinal(data, 0, data.length, output, iv.length);
-            } catch (ShortBufferException | IllegalBlockSizeException |
-                    BadPaddingException ex) {
+                enc = cipher.doFinal(block);
+            } catch (BadPaddingException
+                    | IllegalBlockSizeException ex) {
                 //ShortBufferException: we made sure that the buffer is long enough
-                //IllegalBlockSizeException: cipher spec takes care of padding
-                //BadPaddingException: cipher spec takes care of padding
+                //IllegalBlockSizeException: our block is always *1024 bytes
+                //BadPaddingException: we are not decrypting here
                 throw new RuntimeException();
             }
-            return output;
+            ByteBuffer out = ByteBuffer.allocate(MAX_BLOCK_SIZE);
+            out.put(iv);
+            out.put(enc);
+            out.flip();
+            logger.log(Level.FINER, "Encrypted to cipher: {0}",
+                    hash(out.array()));
+            return out.array();
         }
 
         @Override
-        public byte[] decrypt(byte[] data) throws ShortBufferException {
+        public EncryptDecryptBlock decrypt(byte[] data) throws
+                ShortBufferException {
             Cipher cipher;
             byte[] iv;
             byte[] output;
             IvParameterSpec ivSpec;
 
-            if (data.length <= KEY_SIZE) {
+            if (data.length != MAX_BLOCK_SIZE) {
                 throw new ShortBufferException();
             }
             //extract IV and initialize it
             iv = Arrays.copyOf(data, KEY_SIZE);
             ivSpec = new IvParameterSpec(iv);
 
+            logger.log(Level.FINER, "Asked to decrypt data: {0} with key: {1}",
+                    new Object[]{hash(data), getKeyHash()});
             try {
                 cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
             } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
@@ -166,8 +268,36 @@ public class PartialSessionImpl implements PartialSession {
                 //cipher spec takes care of padding
                 throw new RuntimeException();
             }
-            return output;
+            try {
+                iv = decryptIV(iv);
+            } catch (IllegalBlockSizeException ex) {
+                throw new RuntimeException(ex); //should not happen
+            }
+            logger.log(Level.FINER, "Decrypted to: {0}", hash(output));
+            ByteBuffer outBuffer;
+            outBuffer = ByteBuffer.allocate(MAX_BLOCK_SIZE);
+            outBuffer.put(iv);
+            outBuffer.put(output);
+            outBuffer.flip();
+            outBuffer.position(KEY_SIZE);
+            outBuffer.mark();
+            if (MAGIC != outBuffer.getShort()) {
+                return new EncryptDecryptBlock(true, outBuffer.array());
+            }
+            short size;
+            size = outBuffer.getShort();
+            if (getMaxBlockSize() < size) {
+                return new EncryptDecryptBlock(true, outBuffer.array());
+            }
+            outBuffer.position(outBuffer.position() + size);
+            //check if the remaining data is zeros or not
+            while (outBuffer.hasRemaining()) {
+                if (outBuffer.get() != 0) {
+                    return new EncryptDecryptBlock(true, outBuffer.array());
+                }
+            }
+            return new EncryptDecryptBlock(false,
+                    Arrays.copyOfRange(output, 4, size + 4));
         }
-
     }
 }

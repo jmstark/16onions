@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 totakura
+ * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,18 +16,22 @@
  */
 package tests.auth;
 
-import java.util.concurrent.Future;
-import protocol.MessageSizeExceededException;
-
 /**
+ * An instantiated Auth session.
  *
- * @author totakura
+ * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface Session extends AbstractSession {
+public interface AbstractSession {
 
-    public Future<byte[]> encrypt(boolean isCipher, byte[] payload) throws
-            MessageSizeExceededException;
+    /**
+     * Return the ID of this session
+     *
+     * @return the ID
+     */
+    public int getID();
 
-    public Future<DecryptedData> decrypt(byte[] payload) throws
-            MessageSizeExceededException;
+    /**
+     * Close this session
+     */
+    public void close();
 }

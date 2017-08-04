@@ -14,12 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package onionauth.api;
+package auth.api;
 
-import auth.api.OnionAuthSessionIncomingHS1;
+import auth.api.OnionAuthEncrypt;
 import java.nio.ByteBuffer;
-import java.security.KeyPair;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Random;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -30,46 +28,58 @@ import static org.junit.Assert.*;
 import protocol.Message;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
-import util.SecurityHelper;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public class OnionAuthSessionIncomingHS1Test {
-
+public class OnionAuthEncryptTest {
     static final ByteBuffer buffer = ByteBuffer.allocate(
             Protocol.MAX_MESSAGE_SIZE * 2);
-    static final KeyPair keyPair = util.SecurityHelper.generateRSAKeyPair(2048);
-    static final long requestID;
     static final byte[] payload;
+    static final int[] sessions;
+    static final long requestID;
 
     static {
         Random rand = new Random();
-        requestID = util.MyRandom.randUInt();
         payload = new byte[rand.nextInt(32000)];
         rand.nextBytes(payload);
+        sessions = new int[rand.nextInt(100)];
+        for (int index = 0; index < sessions.length; index++) {
+            sessions[index] = rand.nextInt(Message.UINT16_MAX + 1);
+        }
+        requestID = util.MyRandom.randUInt();
     }
-    private OnionAuthSessionIncomingHS1 message;
+    private final OnionAuthEncrypt message;
 
-    public OnionAuthSessionIncomingHS1Test() throws MessageSizeExceededException {
-        message = new OnionAuthSessionIncomingHS1(requestID,
-                (RSAPublicKey) keyPair.getPublic(), payload);
+    public OnionAuthEncryptTest() throws MessageSizeExceededException {
+        message = new OnionAuthEncrypt(requestID, sessions, payload);
     }
 
     /**
-     * Test of getSourceKey method, of class OnionAuthSessionIncomingHS1.
+     * Test of getId method, of class OnionAuthEncrypt.
      */
     @Test
-    public void testGetSourceKey() {
-        System.out.println("getSourceKey");
-        RSAPublicKey expResult = (RSAPublicKey) keyPair.getPublic();
-        RSAPublicKey result = message.getSourceKey();
+    public void testGetId() {
+        System.out.println("getId");
+        long expResult = requestID;
+        long result = message.getRequestID();
         assertEquals(expResult, result);
     }
 
     /**
-     * Test of getPayload method, of class OnionAuthSessionIncomingHS1.
+     * Test of getSessions method, of class OnionAuthEncrypt.
+     */
+    @Test
+    public void testGetSessions() {
+        System.out.println("getSessions");
+        int[] expResult = sessions;
+        int[] result = message.getSessions();
+        assertArrayEquals(expResult, result);
+    }
+
+    /**
+     * Test of getPayload method, of class OnionAuthEncrypt.
      */
     @Test
     public void testGetPayload() {
@@ -80,7 +90,7 @@ public class OnionAuthSessionIncomingHS1Test {
     }
 
     /**
-     * Test of send method, of class OnionAuthSessionIncomingHS1.
+     * Test of send method, of class OnionAuthEncrypt.
      */
     @Test
     public void testSend() {
@@ -90,7 +100,7 @@ public class OnionAuthSessionIncomingHS1Test {
     }
 
     /**
-     * Test of parse method, of class OnionAuthSessionIncomingHS1.
+     * Test of parse method, of class OnionAuthEncrypt.
      */
     @Test
     public void testParse() throws Exception {
@@ -98,8 +108,9 @@ public class OnionAuthSessionIncomingHS1Test {
         testSend();
         buffer.flip();
         buffer.position(4);
-        OnionAuthSessionIncomingHS1 result = OnionAuthSessionIncomingHS1.parse(
-                buffer);
-        assertEquals(message, result);
+        OnionAuthEncrypt expResult = message;
+        OnionAuthEncrypt result = OnionAuthEncrypt.parse(buffer);
+        assertEquals(expResult, result);
     }
+
 }

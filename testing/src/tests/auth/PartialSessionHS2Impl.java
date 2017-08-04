@@ -30,7 +30,7 @@ public class PartialSessionHS2Impl extends AbstractPartialSessionImpl {
     }
 
     /**
-     * Create Session without further interaction
+     * Create AbstractSession without further interaction
      *
      * @param diffiePayload
      * @return session
@@ -39,6 +39,6 @@ public class PartialSessionHS2Impl extends AbstractPartialSessionImpl {
     @Override
     public Session completeSession(byte[] diffiePayload) throws
             MessageSizeExceededException {
-        return this;
+        return new SessionImpl(id, connection);
     }
 }

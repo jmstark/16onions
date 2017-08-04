@@ -17,6 +17,7 @@
 package mockups.auth;
 
 import java.util.Random;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.ShortBufferException;
 import mockups.auth.PartialSessionImpl.SessionImpl;
 import org.junit.After;
@@ -35,6 +36,7 @@ public class PartialSessionImplTest {
     private PartialSessionImpl pa, pb;
     private SessionImpl a, b;
     private static final Random random = new Random();
+    private int maxBlockSize;
 
     public PartialSessionImplTest() {
     }
@@ -53,6 +55,7 @@ public class PartialSessionImplTest {
         pb = new PartialSessionImpl();
         a = (SessionImpl) pa.completeSession(pb.getOurKeyHalf());
         b = (SessionImpl) pb.completeSession(pa.getOurKeyHalf());
+        maxBlockSize = a.getMaxBlockSize();
     }
 
     @After
@@ -93,20 +96,24 @@ public class PartialSessionImplTest {
     }
 
     private byte[] doSingleEncryptDecrypt(byte[] input) throws
-            ShortBufferException {
-        byte[] cyphertext = a.encrypt(input);
-        return b.decrypt(cyphertext);
+            ShortBufferException, IllegalBlockSizeException {
+        byte[] cyphertext = a.encrypt(false, input);
+        EncryptDecryptBlock block = b.decrypt(cyphertext);
+        assertFalse(block.isCipher());
+        return block.getPayload();
     }
 
     /**
      * Test a single session encryption and decryption
      */
     @Test
-    public void testSingleEncryptDecrypt() throws ShortBufferException {
+    public void testSingleEncryptDecrypt() throws ShortBufferException,
+            IllegalBlockSizeException {
         byte[] expected;
         int count = 0;
+        System.out.println("testSingleEncryptDecrypt");
         do {
-            expected = new byte[random.nextInt(64000)];
+            expected = new byte[random.nextInt(maxBlockSize)];
             random.nextBytes(expected);
             assertArrayEquals(expected, doSingleEncryptDecrypt(expected));
         } while (count++ < 200);
@@ -122,7 +129,7 @@ public class PartialSessionImplTest {
     }
 
     private byte[] doLayerEncryptDecrypt(byte[] data, int length) throws
-            ShortBufferException {
+            ShortBufferException, IllegalBlockSizeException {
         int index;
         PartialSessionImpl[] partialSessions = generatePartialSessions(
                 length * 2);
@@ -136,21 +143,34 @@ public class PartialSessionImplTest {
             decryptSessions[length - index - 1] = pb.completeSession(pa.
                     getOurKeyHalf());
         }
+        boolean plaintext = true;
         for (Session session : encryptSessions) {
-            data = session.encrypt(data);
+            if (plaintext) {
+                data = session.encrypt(false, data);
+                plaintext = false;
+            } else
+                data = session.encrypt(true, data);
         }
+        EncryptDecryptBlock block = null;
         for (Session session : decryptSessions) {
-            data = session.decrypt(data);
+            if (block != null) {
+                assertTrue(block.isCipher());
+                data = block.getPayload();
+            }
+            block = session.decrypt(data);
         }
-        return data;
+        assertFalse(block.isCipher());
+        return block.getPayload();
     }
 
     @Test
-    public void testLayerEncryptDecrypt() throws ShortBufferException {
+    public void testLayerEncryptDecrypt() throws ShortBufferException,
+            IllegalBlockSizeException {
         byte[] data;
         int count = 0;
+        System.out.println("testLayerEncryptDecrypt");
         do {
-            data = new byte[random.nextInt(64000)];
+            data = new byte[random.nextInt(maxBlockSize)];
             random.nextBytes(data);
             assertArrayEquals(data, doLayerEncryptDecrypt(data,
                     random.nextInt(38) + 2));

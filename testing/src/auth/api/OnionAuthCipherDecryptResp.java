@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 totakura
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,8 @@
 package auth.api;
 
 import java.nio.ByteBuffer;
-import java.security.InvalidKeyException;
-import java.security.interfaces.RSAPublicKey;
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import protocol.Message;
@@ -30,57 +28,63 @@ import protocol.Protocol;
 
 /**
  *
- * @author Sree Harsha Totakura <sreeharsha@totakura.in>
+ * @author totakura
  */
 @EqualsAndHashCode(callSuper = true)
-public class OnionAuthSessionIncomingHS1 extends OnionAuthApiMessage {
+public class OnionAuthCipherDecryptResp extends OnionAuthApiMessage {
 
-    @Getter private final byte[] payload;
+    /**
+     * Is the decrypted message still a cipher or plaintext
+     */
+    @Getter private final boolean isCipher;
     @Getter private final long requestID;
+    @Getter private final byte[] payload;
 
-    public OnionAuthSessionIncomingHS1(long requestID, byte[] payload) throws
-            MessageSizeExceededException {
-        this.addHeader(Protocol.MessageType.API_AUTH_SESSION_INCOMING_HS1);
-        this.size += 4; //reserved
+    public OnionAuthCipherDecryptResp(boolean isCipher,
+            long requestID,
+            byte[] payload) throws MessageSizeExceededException {
+        super.addHeader(Protocol.MessageType.API_AUTH_CIPHER_DECRYPT_RESP);
         assert (requestID <= Message.UINT32_MAX);
+        size += 4; //reserved + cipher flag
+        this.isCipher = isCipher;
+        size += 4;
         this.requestID = requestID;
-        this.size += 4;
-        this.payload = payload;
-        this.size += payload.length;
-
-        if (this.size > Protocol.MAX_MESSAGE_SIZE) {
+        size += payload.length;
+        if (Protocol.MAX_MESSAGE_SIZE < size) {
             throw new MessageSizeExceededException();
         }
+        this.payload = payload;
     }
 
-    @Override
     public void send(ByteBuffer out) {
         super.send(out);
-        this.sendEmptyBytes(out, 4); //reserved 4 bytes
+        super.sendEmptyBytes(out, 3);
+        out.put((byte) (isCipher ? 1 : 0));
         out.putInt((int) requestID);
         out.put(payload);
     }
 
-    public static OnionAuthSessionIncomingHS1 parse(ByteBuffer buf)
+    public static OnionAuthCipherDecryptResp parse(ByteBuffer buf)
             throws MessageParserException {
+        boolean isCipher;
         long requestID;
         byte[] payload;
 
-        if (buf.remaining() <= 12) {
-            throw new MessageParserException(
-                    "Message format not recognized");
+        if (buf.remaining() < 8) {
+            throw new MessageParserException("Message size too small to parse");
         }
-        buf.getInt();//read out reserved 4  bytes
+        buf.position(buf.position() + 3);
+        isCipher = (buf.get() & (byte) 1) == 1;
         requestID = Message.unsignedLongFromInt(buf.getInt());
         payload = new byte[buf.remaining()];
         buf.get(payload);
 
-        OnionAuthSessionIncomingHS1 message;
+        OnionAuthCipherDecryptResp message = null;
         try {
-            message = new OnionAuthSessionIncomingHS1(requestID, payload);
+            message = new OnionAuthCipherDecryptResp(isCipher, requestID, payload);
         } catch (MessageSizeExceededException ex) {
-            throw new RuntimeException(
-                    "Message size exceeded. The protocol.parser should have caught this");
+            Logger.getLogger(OnionAuthCipherDecryptResp.class.getName()).log(Level.SEVERE, null, ex);
+            assert (false);
         }
         return message;
     }

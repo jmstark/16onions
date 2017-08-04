@@ -16,11 +16,11 @@
  */
 package tests.auth;
 
-import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.logging.Logger;
 import protocol.MessageSizeExceededException;
 
 /**
@@ -29,6 +29,7 @@ import protocol.MessageSizeExceededException;
  */
 public class TestController {
 
+    private static final Logger logger = Logger.getLogger("tests.auth");
     private final Context context1;
     private final ScheduledExecutorService scheduledExecutor;
     private final Context context2;
@@ -55,8 +56,8 @@ public class TestController {
             partial1 = future.get();
         }
         {
-            Future<PartialSession> future = context2.deriveSession(pub1,
-                    partial1.getDiffiePayload(), null);
+            Future<PartialSession> future
+                    = context2.deriveSession(partial1.getDiffiePayload(), null);
             partial2 = future.get();
         }
         Session session1;
@@ -70,16 +71,29 @@ public class TestController {
         String cleartext = "Hello World";
         byte[] encrypted;
         {
-            Future<byte[]> future = tunnel1.encrypt(cleartext.getBytes(), null);
+            Future<byte[]> future = tunnel1.layerEncrypt(cleartext.getBytes(), null);
             encrypted = future.get();
         }
         byte[] decrypted;
         {
-            Future<byte[]> future = tunnel2.decrypt(encrypted, null);
+            Future<byte[]> future = tunnel2.layerDecrypt(encrypted, null);
             decrypted = future.get();
         }
         String decryptedText = new String(decrypted);
-        System.out.println("Decrypted: " + decryptedText);
+        logger.info("Decrypted: " + decryptedText);
+        {
+            Future<byte[]> future = session1.encrypt(false, cleartext.getBytes());
+            encrypted = future.get();
+        }
+        {
+            Future<DecryptedData> future = session2.decrypt(encrypted);
+            decrypted = future.get().getPayload();
+            if (future.get().isCipher()) {
+                logger.warning("Payload should be decrypted here");
+            } else {
+                logger.info("Decrypted: " + new String(decrypted));
+            }
+        }
 
         Tunnel t1, t2;
         {
@@ -93,8 +107,7 @@ public class TestController {
             for (index = 0; index < fA.length; index++) {
                 fA[index] = context2.startSession(pub1, null);
                 PartialSession pa = fA[index].get();
-                fB[index] = context1.deriveSession(pub2,
-                        pa.getDiffiePayload(), null);
+                fB[index] = context1.deriveSession(pa.getDiffiePayload(), null);
                 PartialSession pb = fB[index].get();
                 A[index] = pa.completeSession(pb.getDiffiePayload());
                 B[index] = pb.completeSession(pa.getDiffiePayload());
@@ -109,21 +122,21 @@ public class TestController {
         {
             byte[] data = tunnelEncrypt(t1, "hello world".getBytes());
             data = tunnelDecrypt(t2, data);
-            System.out.println("Decrypted: " + new String(data));
+            logger.info("Decrypted: " + new String(data));
         }
     }
 
     private byte[] tunnelEncrypt(Tunnel tunnel, byte[] data) throws
             MessageSizeExceededException, InterruptedException,
             ExecutionException {
-        Future<byte[]> f = tunnel.encrypt(data, null);
+        Future<byte[]> f = tunnel.layerEncrypt(data, null);
         return f.get();
     }
 
     private byte[] tunnelDecrypt(Tunnel tunnel, byte[] data) throws
             MessageSizeExceededException, InterruptedException,
             ExecutionException {
-        Future<byte[]> f = tunnel.decrypt(data, null);
+        Future<byte[]> f = tunnel.layerDecrypt(data, null);
         return f.get();
     }
 }

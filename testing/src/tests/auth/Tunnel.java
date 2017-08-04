@@ -23,7 +23,7 @@ import protocol.MessageSizeExceededException;
 /**
  * A tunnel formed by chaining multiple sessions.
  *
- * Session chaining is done by addHop and removeHop methods.
+ * AbstractSession chaining is done by addHop and removeHop methods.
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
@@ -46,26 +46,26 @@ public interface Tunnel {
     public boolean removeHop(Session session);
 
     /**
-     * Layer encrypt the given payload.
+     * Layer layerEncrypt the given payload.
      *
      * @param payload the data to be encrypted with the chained sessions
      * @param handler completion handler which receives the encrypted payload
      * @return future object
      * @throws protocol.MessageSizeExceededException
      */
-    public Future<byte[]> encrypt(byte[] payload,
+    public Future<byte[]> layerEncrypt(byte[] payload,
             CompletionHandler<byte[], ? extends Object> handler) throws
             MessageSizeExceededException;
 
     /**
-     * Layer decrypt the given payload.
+     * Layer layerDecrypt the given payload.
      *
      * @param payload the data to be decrypted with chained sessions.
      * @param handler completion handler which receives the decrypted payload
      * @return future object
      * @throws protocol.MessageSizeExceededException
      */
-    public Future<byte[]> decrypt(byte[] payload,
+    public Future<byte[]> layerDecrypt(byte[] payload,
             CompletionHandler<byte[], ? extends Object> handler) throws
             MessageSizeExceededException;
 }

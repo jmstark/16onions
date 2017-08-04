@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 totakura
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,32 +16,56 @@
  */
 package tests.auth;
 
-import auth.api.OnionAuthClose;
+import auth.api.OnionAuthCipherDecrypt;
+import auth.api.OnionAuthCipherEncrypt;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.Future;
 import protocol.Connection;
+import protocol.MessageSizeExceededException;
 
 /**
- * Class for fully instantiated sessions.
+ *
+ * @author totakura
  */
-public class SessionImpl implements Session {
+class SessionImpl extends AbstractSessionImpl implements Session {
 
-    protected final int id;
-    protected final Connection connection;
+    private static final Map<Long, FutureImpl> requestMap = new HashMap(3000);
 
     public SessionImpl(int id, Connection connection) {
-        super();
-        this.id = id;
-        this.connection = connection;
+        super(id, connection);
+    }
+
+    public static FutureImpl getFuture(long requestID) throws
+            NoSuchElementException {
+        if (!requestMap.containsKey(requestID)) {
+            return null;
+        }
+        return requestMap.remove(requestID);
     }
 
     @Override
-    public int getID() {
-        return this.id;
+    public Future<byte[]> encrypt(boolean isCipher, byte[] payload) throws MessageSizeExceededException {
+        FutureImpl future;
+        OnionAuthCipherEncrypt request;
+        request = new OnionAuthCipherEncrypt(isCipher, RequestID.get(), id,
+                payload);
+        future = new FutureImpl(null, null);
+        requestMap.put(request.getRequestID(), future);
+        connection.sendMsg(request);
+        return future;
     }
 
     @Override
-    public void close() {
-        OnionAuthClose message;
-        message = new OnionAuthClose(id);
-        connection.sendMsg(message);
+    public Future<DecryptedData> decrypt(byte[] payload) throws MessageSizeExceededException {
+        FutureImpl future;
+        OnionAuthCipherDecrypt request;
+        request = new OnionAuthCipherDecrypt(RequestID.get(), id, payload);
+        future = new FutureImpl(null, null);
+        requestMap.put(request.getRequestID(), future);
+        connection.sendMsg(request);
+        return future;
     }
+
 }

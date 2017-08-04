@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Sree Harsha Totakura <sreeharsha@totakura.in>
+ * Copyright (C) 2017 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,28 +14,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package tests.auth;
+package mockups.auth;
 
-import protocol.Connection;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  *
  * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public abstract class AbstractPartialSessionImpl extends AbstractSessionImpl
-        implements
-        PartialSession {
-
-    private final byte[] payload;
-
-    public AbstractPartialSessionImpl(int id, byte[] payload,
-            Connection connection) {
-        super(id, connection);
-        this.payload = payload;
-    }
-
-    @Override
-    public byte[] getDiffiePayload() {
-        return this.payload;
+public class TestByteBuffer {
+    public static void main(String[] args) {
+        int size = 4 * 1024;
+        ByteBuffer buf = ByteBuffer.allocate(4 * 1024);
+        buf.putShort((short) 108);
+        buf.flip();
+        byte[] data = buf.array();
+        if (data.length == size);
+        assert (data.length == ((Arrays.copyOf(data, 20)).length
+                + (Arrays.copyOfRange(data, 20, data.length).length)));
+        System.out.println("Value: " + (byte) 255);
     }
 }

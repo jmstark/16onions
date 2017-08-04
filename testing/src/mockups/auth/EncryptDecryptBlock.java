@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 totakura
+ * Copyright (C) 2017 Sree Harsha Totakura <sreeharsha@totakura.in>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,20 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package tests.auth;
+package mockups.auth;
 
-import java.util.concurrent.Future;
-import protocol.MessageSizeExceededException;
+import lombok.Data;
+
 
 /**
  *
- * @author totakura
+ * @author Sree Harsha Totakura <sreeharsha@totakura.in>
  */
-public interface Session extends AbstractSession {
-
-    public Future<byte[]> encrypt(boolean isCipher, byte[] payload) throws
-            MessageSizeExceededException;
-
-    public Future<DecryptedData> decrypt(byte[] payload) throws
-            MessageSizeExceededException;
+@Data
+public class EncryptDecryptBlock {
+    private final boolean isCipher;
+    private final byte[] payload;
 }
