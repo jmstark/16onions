@@ -28,7 +28,7 @@ import java.util.Arrays;
 public class OnionMessage {
 	public static final int ONION_HEADER_SIZE = 2;
 	public static final boolean CONTROL_MESSAGE = true;
-	public static final boolean DATA_MESSAGE = true;
+	public static final boolean DATA_MESSAGE = false;
 
 	/**
 	 * the ID of the message
