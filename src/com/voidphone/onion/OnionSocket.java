@@ -83,6 +83,14 @@ public class OnionSocket {
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
+	/**
+	 * This function is called whenever a previously unknown address initiates a connection
+	 * to this peer. The function tries to establish an onion connection and then processes
+	 * and/or forwards all the traffic. It does only return after the tunnel has been destroyed or broken. 
+	 * @param m
+	 * @param id
+	 * @param addr
+	 */
 	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) {
 		try {
 			OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
@@ -92,7 +100,7 @@ public class OnionSocket {
 				tunnelDestroyed = incomingSocket.getAndProcessNextMessage();
 			}
 		} catch (Exception e) {
-			// The tunnel got interrupted and is now destroyed
+			// The tunnel has broken
 			e.printStackTrace();
 		}
 	}

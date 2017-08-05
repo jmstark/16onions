@@ -219,7 +219,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			
 			//Merge multiplexer reads for previous and next hops.
 			//Writes are unaffected, so we'll use previousAndNextHopReadMId
-			//for reading for claritys sake, even though it is the same as one of the write IDs.
+			//for reading for clarity's sake, even though it is the same as one of the write IDs.
 			m.merge(previousHopWriteMId, previousHopAddress, nextHopWriteMId, nextHopAddress);
 			//From this point on, all reads with previousAndNextHopReadMId can come from both directions.
 		}
