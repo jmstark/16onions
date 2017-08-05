@@ -18,20 +18,11 @@
  */
 package com.voidphone.onion;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Random;
 
-import com.sun.xml.internal.bind.v2.model.core.MapPropertyInfo;
 import com.voidphone.api.Config;
+
 
 /**
  * Base class for OnionConnectingSocket and OnionListenerSocket
@@ -40,16 +31,16 @@ import com.voidphone.api.Config;
 public abstract class OnionBaseSocket
 {
 
-	public final static int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
-	public final static int VERSION = 1;
+	protected final int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
+	protected final int VERSION = 1;
 	protected final byte MSG_BUILD_TUNNEL = 0xb;
+	protected final short MSG_INCOMING_TUNNEL = 0x1;
 	protected final byte MSG_DESTROY_TUNNEL = 0xe;
-	public final static byte MSG_DATA = 0xd;
+	protected final byte MSG_DATA = 0xd;
 	protected final byte MSG_COVER = 0xc;
 	protected int[] authSessionIds;
 	protected Config config;
-	public final int externalID;
-	protected static int idCounter = 1;
+	public int externalID;
 	protected int authApiId;
 	protected Multiplexer m;
 
@@ -59,7 +50,7 @@ public abstract class OnionBaseSocket
 	
 	public OnionBaseSocket(Multiplexer m)
 	{
-		this(m, idCounter++);
+		this(m, new Random().nextInt());
 	}
 	
 	public OnionBaseSocket(Multiplexer m, int tunnelID)
@@ -97,76 +88,7 @@ public abstract class OnionBaseSocket
 	}
 	
 	
-	/**
-	 * Encrypts payload with the given number of layers, 0 layers = no encryption.
-	 * 
-	 * @param numLayers
-	 * @return encrypted payload (or plaintext if numLayers == 0)
-	 * @throws Exception 
-	 */
-	protected byte[] encrypt(byte[] payload, int numLayers) throws Exception
-	{
-		if(numLayers < 0)
-			throw new Exception("Negative number of layers");
-		
-		if(numLayers == 0)
-		{
-			//unencrypted packets need to be padded and contain size as int
-			return padData(payload);
-		}
-			
-		// Make a byte array containing the sessionIds in reverse order,
-		// so that each hop can "peel off" one layer
-		DataOutputStream sessionIds = new DataOutputStream(new ByteArrayOutputStream());
-		for(int i=0; i < numLayers; i++)
-		{
-			sessionIds.writeLong(authSessionIds[numLayers - i - 1]);
-		}
-		sessionIds.flush();
-		
-		//TODO: send the data to OnionAuth API and get encrypted data back.
-		//Needed:
-		//the byte[] or short[] inside sessionIds; payload
 
-		return null;
-	}
-	
-	/**
-	 * Decrypts payload with the given number of layers, 0 layers = no decryption.
-	 * 
-	 * @param encryptedPayload
-	 * @param numLayers number of encryption layers to remove.
-	 * @return the decrypted payload.
-	 * @throws Exception
-	 */
-	protected byte[] decrypt(byte[] encryptedPayload, int numLayers) throws Exception
-	{
-		if(numLayers < 0)
-			throw new Exception("Negative number of layers");
-		
-		if(numLayers == 0)
-		{
-			//unencrypted packets are padded and contain size as int
-			return unpadData(encryptedPayload);
-		}
-			
-		// Make a byte array containing the sessionIds in reverse order,
-		// because they were encrypted in that order and onionAuth expects
-		// them like that
-		DataOutputStream sessionIds = new DataOutputStream(new ByteArrayOutputStream());
-		for(int i=0; i < numLayers; i++)
-		{
-			sessionIds.writeLong(authSessionIds[numLayers - i - 1]);
-		}
-		sessionIds.flush();
-		
-		//TODO: send the data to OnionAuth API and get decrypted data back.
-		//Needed:
-		//the byte[] or short[] inside sessionIds; payload
-
-		return null;
-			
-	}
 	
 	protected abstract byte[] encrypt(byte[] payload) throws Exception;
 	

@@ -19,27 +19,18 @@
 package com.voidphone.onion;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.Random;
 import com.voidphone.api.Config;
-import com.voidphone.api.OnionApiSocket;
-import com.voidphone.api.OnionAuthApiSocket;
 import com.voidphone.api.OnionPeer;
 import com.voidphone.general.Util;
+
+import auth.api.OnionAuthDecryptResp;
+import auth.api.OnionAuthEncryptResp;
 import auth.api.OnionAuthSessionHS1;
 import auth.api.OnionAuthSessionIncomingHS2;
-import auth.api.OnionAuthSessionStartMessage;
-import onion.api.OnionTunnelIncomingMessage;
 
 
 /**
@@ -130,6 +121,16 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		}
 
 		nextHopAddress = hops[0].address;
+		
+		//Signal to the last hop, that it is the target so it can signal an incoming tunnel to the CM
+		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
+		DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
+		outgoingData.writeShort(MSG_INCOMING_TUNNEL);
+		outgoingData.writeInt(externalID);
+		m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encrypt(outgoingDataBAOS.toByteArray())));
+		
+		//Inform our CM, that the requested tunnel is ready.
+		Main.getOas().ONIONTUNNELREADY(Main.getOas().newOnionTunnelReadyMessage(externalID, destHostkey));
 	}
 	
 	
@@ -148,7 +149,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception {
-		this(m, destAddr, destHostkey, config, config.hopCount, idCounter++);
+		this(m, destAddr, destHostkey, config, config.hopCount, new Random().nextInt());
 	}
 
 
@@ -180,7 +181,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	protected byte[] encrypt(byte[] payload) throws Exception {
-		return super.encrypt(payload, authSessionIds.length);
+		return encrypt(payload, authSessionIds.length);
 	}
 
 	/**
@@ -190,10 +191,80 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	protected byte[] decrypt(byte[] payload) throws Exception {
-		return super.decrypt(payload, authSessionIds.length);
+		return decrypt(payload, authSessionIds.length);
 	}
 	
+	/**
+	 * Encrypts payload with the given number of layers, 0 layers = no encryption.
+	 * This method is only used during authentication phase, after that only
+	 * encrypt(byte[]) is used.
+	 * 
+	 * @param numLayers
+	 * @return encrypted payload (or plaintext if numLayers == 0)
+	 * @throws Exception 
+	 */
+	protected byte[] encrypt(byte[] payload, int numLayers) throws Exception
+	{
+		if(numLayers < 0)
+			throw new Exception("Negative number of layers");
+		
+		if(numLayers == 0)
+		{
+			//unencrypted packets need to be padded and contain size as int
+			return padData(payload);
+		}
+			
+		// Make an array containing the sessionIds in reverse order,
+		// so that each hop can "peel off" one layer
+		int[] neededSessionIds = new int[numLayers];
+		for(int i=0; i < numLayers; i++)
+		{
+			neededSessionIds[i] = authSessionIds[numLayers-1-i];
+		}
+		
+		//send the data to OnionAuth API and get encrypted data back.
+		OnionAuthEncryptResp response = 
+				Main.getOaas().AUTHLAYERENCRYPT(Main.getOaas().newOnionAuthEncrypt(authApiId, neededSessionIds, payload));
 
+		return response.getPayload();
+	}
+	
+	/**
+	 * Decrypts payload with the given number of layers, 0 layers = no decryption.
+	 * This method is only used during authentication phase, after that only
+	 * decrypt(byte[]) is used.
+	 * 
+	 * @param encryptedPayload
+	 * @param numLayers number of encryption layers to remove.
+	 * @return the decrypted payload.
+	 * @throws Exception
+	 */
+	protected byte[] decrypt(byte[] encryptedPayload, int numLayers) throws Exception
+	{
+		if(numLayers < 0)
+			throw new Exception("Negative number of layers");
+		
+		if(numLayers == 0)
+		{
+			//unencrypted packets are padded and contain size as int
+			return unpadData(encryptedPayload);
+		}
+			
+		// Make an array containing the sessionIds in reverse order,
+		// because they were encrypted in that order and onionAuth expects
+		// them like that
+		int[] neededSessionIds = new int[numLayers];
+		for(int i=0; i < numLayers; i++)
+		{
+			neededSessionIds[i] = authSessionIds[numLayers-1-i];
+		}
+		
+		//send the data to OnionAuth API and get decrypted data back.
+		OnionAuthDecryptResp response = 
+			Main.getOaas().AUTHLAYERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, authSessionIds, encryptedPayload));
+		
+		return response.getPayload();
+	}
 
 	/**
 	 * Authenticates via OnionAuth. Encrypts with numLayers (0 = no encryption).
@@ -217,6 +288,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 				Main.getOaas().newOnionAuthSessionStartMessage(apiRequestCounter++, Util.getHostkeyObject(hopHostkey)));
 		outGoingData.writeInt(hs1.getPayload().length);
 		outGoingData.write(hs1.getPayload());
+		outGoingData.writeInt(Util.getHostkeyBytes(config.hostkey).length);
+		outGoingData.write(Util.getHostkeyBytes(config.hostkey));
 
 
 		byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), numLayers);
@@ -286,7 +359,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			//ignore cover traffic
 			return;
 		
-		Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, payload));
+		Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(externalID, Arrays.copyOfRange(payload, 1, payload.length)));
 			
 		return;
 	}

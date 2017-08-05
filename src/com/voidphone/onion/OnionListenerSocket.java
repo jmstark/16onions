@@ -19,30 +19,23 @@
 package com.voidphone.onion;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 
-import com.voidphone.api.Config;
-import com.voidphone.api.OnionAuthApiSocket;
-import com.voidphone.general.General;
-import com.voidphone.general.Util;
-
+import auth.api.OnionAuthCipherDecryptResp;
+import auth.api.OnionAuthCipherEncryptResp;
 import auth.api.OnionAuthSessionHS2;
-import auth.api.OnionAuthSessionIncomingHS1;
+
 
 /**
  * Main application runs a TCP server socket. There, when it receives a new
- * connection, it then constructs an OnionServerSocket, passing the new TCP
- * socket to the constructor. Then it should send a TUNNEL_READY API message.
+ * connection, it then constructs an OnionListenerSocket, passing the neccessary
+ * connection info (multiplexer, address, mID) to the constructor. 
+ * Then it should send a TUNNEL_READY API message.
  * 
  */
 public class OnionListenerSocket extends OnionBaseSocket {
@@ -59,6 +52,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	protected short previousAndNextHopReadMId;
 	protected short previousHopWriteMId;
 	protected short nextHopWriteMId;
+	protected byte[] srcHostkey;
 
 
 
@@ -78,7 +72,11 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	protected byte[] encrypt(byte[] payload) throws Exception {
-		return super.encrypt(payload, 1);
+		OnionAuthCipherEncryptResp response = 
+				Main.getOaas().AUTHCIPHERENCRYPT(Main.getOaas().
+						newOnionAuthEncrypt(authApiId, authSessionIds[0],nextHopAddress != null,payload));
+		
+		return response.getPayload();		
 	}
 
 	/**
@@ -88,7 +86,9 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	protected byte[] decrypt(byte[] payload) throws Exception {
-		return super.decrypt(payload, 1);
+		OnionAuthCipherDecryptResp response = 
+				Main.getOaas().AUTHCIPHERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, authSessionIds[0], payload));
+		return response.getPayload();
 	}
 
 	/**
@@ -113,6 +113,8 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		// read incoming hs1
 		byte[] hs1Payload = new byte[incomingDataBuf.getInt()];
 		incomingDataBuf.get(hs1Payload);
+		srcHostkey = new byte[incomingDataBuf.getInt()];
+		incomingDataBuf.get(srcHostkey);
 
 
 		// get hs2 from onionAuth and send it back to remote peer
@@ -130,19 +132,8 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	}
 
 	/**
-	 * This function is used to build and destroy tunnels. Building/destroying is
-	 * done iteratively. A control message only consists of message type, address
-	 * length (4 or 6, depending on IP version), IP address and port number (same
-	 * port number for TCP and UDP). The function receives the message, and if the
-	 * next hop is already known the message gets forwarded there, if not, the next
-	 * hop is constructed.
+	 * Fetches the next available message and processes and/or forwards it accordingly.
 	 * 
-	 * @throws IOException
-	 */
-	
-	
-	
-	/**
 	 * @return Only true, if the tunnel has been destroyed and cannot be reused
 	 * @throws Exception
 	 */
@@ -190,7 +181,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 				//ignore cover traffic
 				return false;
 			
-			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, payload));
+			Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(externalID, Arrays.copyOfRange(payload, 1, payload.length)));
 			return false;
 		}
 		
@@ -222,6 +213,12 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			//for reading for clarity's sake, even though it is the same as one of the write IDs.
 			m.merge(previousHopWriteMId, previousHopAddress, nextHopWriteMId, nextHopAddress);
 			//From this point on, all reads with previousAndNextHopReadMId can come from both directions.
+		}
+		else if(messageType == MSG_INCOMING_TUNNEL)
+		{
+			//Signal to our CM a new incoming tunnel
+			externalID = buffer.getInt();
+			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, srcHostkey));
 		}
 		return false;
 
