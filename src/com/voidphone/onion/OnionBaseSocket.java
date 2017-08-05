@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Random;
 
 import com.sun.xml.internal.bind.v2.model.core.MapPropertyInfo;
 import com.voidphone.api.Config;
@@ -45,9 +46,7 @@ public abstract class OnionBaseSocket
 	protected final byte MSG_DESTROY_TUNNEL = 0xe;
 	public final static byte MSG_DATA = 0xd;
 	protected final byte MSG_COVER = 0xc;
-	protected final int CONTROL_PACKET_SIZE = 8192;
-	protected final int DATA_PACKET_SIZE = 65536 / 2;
-	protected long[] authSessionIds;
+	protected int[] authSessionIds;
 	protected Config config;
 	public final int externalID;
 	protected static int idCounter = 1;
@@ -55,14 +54,8 @@ public abstract class OnionBaseSocket
 	protected Multiplexer m;
 
 	
-	protected static long apiRequestCounter = 1;
+	protected static int apiRequestCounter = 1;
 	
-	
-	// buffers are used to construct packets before encrypting/decrypting 
-	// and sending/receiving them via dos or dis.
-	// Using them makes sure that always same-sized packets are sent and received.
-	protected ByteBuffer ctlDataBuf = ByteBuffer.allocate(CONTROL_PACKET_SIZE);
-	protected ByteBuffer voipDataBuf = ByteBuffer.allocate(DATA_PACKET_SIZE);
 	
 	public OnionBaseSocket(Multiplexer m)
 	{
@@ -74,6 +67,35 @@ public abstract class OnionBaseSocket
 		this.m = m;
 		externalID = tunnelID;
 	}
+	
+	/**
+	 * Pads data to the standard packet size and adds a size int at beginning
+	 */
+	protected byte[] padData(byte[] payload)
+	{
+		ByteBuffer output = ByteBuffer.allocate(Main.getConfig().onionSize);
+		output.putInt(payload.length);
+		output.put(payload);
+		byte[] randomPadding = new byte[output.remaining()];
+		new Random().nextBytes(randomPadding);
+		output.put(randomPadding);
+		return output.array();
+	}
+	
+	/**
+	 * Removes padding and size int and returns only the actual data
+	 * @param paddedPayload
+	 * @return the payload
+	 */
+	protected byte[] unpadData(byte[] paddedPayload)
+	{
+		ByteBuffer buffer = ByteBuffer.wrap(paddedPayload);
+		int actualSize = buffer.getInt();
+		byte[] payload = new byte[actualSize];
+		buffer.get(payload);
+		return payload;
+	}
+	
 	
 	/**
 	 * Encrypts payload with the given number of layers, 0 layers = no encryption.
@@ -89,8 +111,8 @@ public abstract class OnionBaseSocket
 		
 		if(numLayers == 0)
 		{
-			//TODO: unencrypted packets need to be padded and contain size. Handle this here.
-			return payload;
+			//unencrypted packets need to be padded and contain size as int
+			return padData(payload);
 		}
 			
 		// Make a byte array containing the sessionIds in reverse order,
@@ -123,8 +145,11 @@ public abstract class OnionBaseSocket
 			throw new Exception("Negative number of layers");
 		
 		if(numLayers == 0)
-			return encryptedPayload;
-
+		{
+			//unencrypted packets are padded and contain size as int
+			return unpadData(encryptedPayload);
+		}
+			
 		// Make a byte array containing the sessionIds in reverse order,
 		// because they were encrypted in that order and onionAuth expects
 		// them like that
@@ -146,25 +171,5 @@ public abstract class OnionBaseSocket
 	protected abstract byte[] encrypt(byte[] payload) throws Exception;
 	
 	protected abstract byte[] decrypt(byte[] payload) throws Exception;
-	
-	protected byte[] decryptAndUnpackNextUdpMessage(DatagramChannel src) throws Exception
-	{
-		voipDataBuf.clear();
-		src.receive(voipDataBuf);
-		short size = voipDataBuf.getShort();
-		byte[] encryptedData = new byte[size];
-		voipDataBuf.get(encryptedData);
-		byte[] decryptedData = decrypt(encryptedData);
-		return decryptedData;
-	}
-	
-	protected void encryptAndPackAndSendUdpMessage(byte[] payload, DatagramChannel dst) throws Exception
-	{
-		byte[] encryptedData = encrypt(payload);
-		voipDataBuf.clear();
-		voipDataBuf.putShort((short) encryptedData.length);
-		voipDataBuf.put(encryptedData);
-		dst.write(voipDataBuf);
-	}
 	
 }

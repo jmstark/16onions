@@ -46,33 +46,28 @@ import auth.api.OnionAuthSessionIncomingHS1;
  * 
  */
 public class OnionListenerSocket extends OnionBaseSocket {
-	protected DataInputStream previousHopDis;
-	protected DataOutputStream previousHopDos;
-	protected DatagramChannel previousHopUdp;
-	protected PreviousHopUdpHandler previousHopUdpHandler = new PreviousHopUdpHandler();
-	protected DataInputStream nextHopDis;
-	protected DataOutputStream nextHopDos;
-	protected DatagramChannel nextHopUdp;
-	protected NextHopUdpHandler nextHopUdpHandler = new NextHopUdpHandler();
 	protected InetSocketAddress previousHopAddress;
 	protected InetSocketAddress nextHopAddress;
-	protected short previousHopMId;
+	
+	/* Multiplexer IDs to read and write to/from previous/next hops.
+	 * For reading from whichever hop has sent a message to us, 
+	 * we need to merge both read IDs.
+	 * This doesn't affect writes, as we know to whom we want to send.
+	 * Because of this, we keep read and write IDs for clarity's sake
+	 * separate, even though they actually might be the same.
+	 */
+	protected short previousAndNextHopReadMId;
+	protected short previousHopWriteMId;
+	protected short nextHopWriteMId;
 
 
 
-	public OnionListenerSocket(InetSocketAddress previousHopAddress, Multiplexer m, short multiplexerId) throws IOException {
+
+	public OnionListenerSocket(InetSocketAddress previousHopAddress, Multiplexer m, short multiplexerId) throws Exception {
 		super(m);
-		previousHopMId = multiplexerId;
-		this.config = Main.getConfig();
-		/*previousHopDis = new DataInputStream(previousHopSocket.getInputStream());
-		previousHopDos = new DataOutputStream(previousHopSocket.getOutputStream());
-		// bind UDP socket to the same local and remote port as TCP
-		previousHopUdp = DatagramChannel.open().bind(previousHopSocket.getLocalSocketAddress())
-				.connect(previousHopSocket.getRemoteSocketAddress());
-		previousHopUdp.register(Main.getSelector(), SelectionKey.OP_READ, previousHopUdpHandler);
-		*/
+		previousAndNextHopReadMId = multiplexerId;
+		previousHopWriteMId = multiplexerId;
 		this.previousHopAddress = previousHopAddress;
-
 		authApiId = Main.getOaas().register();
 	}
 
@@ -105,19 +100,15 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * 
 	 * @throws IOException
 	 */
-	short authenticate() throws Exception {
+	int authenticate() throws Exception {
 		OnionAuthSessionHS2 hs2;
 
-		OnionMessage incomingMsg = m.read(previousHopMId, previousHopAddress);
+		OnionMessage incomingMsg = m.read(previousHopWriteMId, previousHopAddress);
 		
-		ByteBuffer incomingDataBuf = ByteBuffer.wrap(incomingMsg.data);
+		ByteBuffer incomingDataBuf = ByteBuffer.wrap(unpadData(incomingMsg.data));
 
 		if (incomingDataBuf.getInt() != MAGIC_SEQ_CONNECTION_START | incomingDataBuf.getInt() != VERSION)
 			throw new IOException("Tried to connect with non-onion node or wrong version node");
-
-		// read incoming hostkey
-		byte[] previousHopHostkey = new byte[incomingDataBuf.getInt()];
-		incomingDataBuf.get(previousHopHostkey);
 
 		// read incoming hs1
 		byte[] hs1Payload = new byte[incomingDataBuf.getInt()];
@@ -126,16 +117,16 @@ public class OnionListenerSocket extends OnionBaseSocket {
 
 		// get hs2 from onionAuth and send it back to remote peer
 		authSessionIds[0] = apiRequestCounter++;
-		hs2 = Main.getOaas().AUTHSESSIONINCOMINGHS1(new OnionAuthSessionIncomingHS1(authSessionIds[0],
-				Util.getHostkeyObject(previousHopHostkey), hs1Payload));
+		hs2 = Main.getOaas().AUTHSESSIONINCOMINGHS1(Main.getOaas().newOnionAuthSessionIncomingHS1(authSessionIds[0], hs1Payload));
+
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 		DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
 		outgoingData.writeInt(hs2.getPayload().length);
 		outgoingData.write(hs2.getPayload());
 		
-		m.writeControl(new OnionMessage(mId, previousHopAddress, outgoingDataBAOS.toByteArray()));
+		m.write(new OnionMessage(previousHopWriteMId, OnionMessage.CONTROL_MESSAGE, previousHopAddress, outgoingDataBAOS.toByteArray()));
 
-		return (short) hs2.getSessionID();
+		return hs2.getSessionID();
 	}
 
 	/**
@@ -148,121 +139,89 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * 
 	 * @throws IOException
 	 */
-	void processNextControlMessage() throws Exception {
-		ctlDataBuf.clear();
+	
+	
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	void getAndProcessNextMessage() throws Exception {
+		
+		//remove one layer of encryption. TODO: maybe it's from nextHopAddress?
+		OnionMessage incomingMessage = m.read(previousHopWriteMId, previousHopAddress);
+		byte[] payload;
 
-		// When invoking this method, the authentication has already
-		// succeeded, i.e. the data is encrypted irrespective of whether
-		// we need to forward it or it is for us.
-
-		byte[] encryptedData = new byte[previousHopDis.readShort()];
-		previousHopDis.readFully(encryptedData);
-		byte[] data = decrypt(encryptedData);
-
-		if (nextHopDos != null) {
-			// forward the data, now that we peeled off one layer of encryption.
-			nextHopDos.writeShort(data.length);
-			nextHopDos.write(data);
-			nextHopDos.flush();
-		}
-
-		else {
-			// the data is for us, we are (at least until now) the end of the tunnel
-			// and the data has no more encryption layers, i.e. it is now plaintext.
-			ctlDataBuf.put(data);
-			short msgType = ctlDataBuf.getShort();
-			if (msgType == MSG_BUILD_TUNNEL) {
-				// A request to add a new hop and forward all data to that.
-				// Unpack the hop address and then open the connection.
-				byte[] rawAddress = new byte[ctlDataBuf.getShort()];
-				ctlDataBuf.get(rawAddress);
-				InetAddress nextHopAddress = InetAddress.getByAddress(rawAddress);
-				short nextHopPort = ctlDataBuf.getShort();
-				Socket nextHopSocket = new Socket(nextHopAddress, nextHopPort);
-				nextHopDis = new DataInputStream(nextHopSocket.getInputStream());
-				nextHopDos = new DataOutputStream(nextHopSocket.getOutputStream());
-
-				// TODO: register also TCP channel of next hop,
-				// because Heartbeat-messages may come from the next hop (all other control
-				// messages go into the opposite direction, which is already bound in main()).
-				// nextHopSocket.getChannel().register(selector, SelectionKey.OP_READ,
-				// nextHopTcpHandler);
-
-				// bind UDP socket to the same local and remote port as TCP
-				nextHopUdp = DatagramChannel.open().bind(nextHopSocket.getLocalSocketAddress())
-						.connect(nextHopSocket.getRemoteSocketAddress());
-			} else if (msgType == MSG_DESTROY_TUNNEL) {
-				// tear down the tunnel, i.e. connections to next and previous hop.
-				if (nextHopDis != null)
-					nextHopDis.close();
-				if (nextHopDos != null)
-					nextHopDos.close();
-				if (nextHopUdp != null)
-					nextHopUdp.close();
-				if (previousHopDis != null)
-					previousHopDis.close();
-				if (previousHopDos != null)
-					previousHopDos.close();
-				if (previousHopUdp != null)
-					previousHopUdp.close();
+		
+		//The message is not for us, so forward it
+		if(nextHopAddress != null)
+		{
+			//Now we need to determine where it came from, so we can either de- or encrypt and then
+			//forward it into the right direction.
+			InetSocketAddress destinationAddress;
+			short destinationWriteMId;
+			
+			if(incomingMessage.address.equals(previousHopAddress))
+			{
+				payload = decrypt(incomingMessage.data);
+				destinationAddress = nextHopAddress;
+				destinationWriteMId = nextHopWriteMId;
 			}
-		}
-	}
-
-	@Override
-	public boolean handle() throws Exception {
-		if (authSessionIds == null) {
-			// not yet authenticated ->
-			// the incoming data must be the handshake
-			authSessionIds = new long[1];
-			authSessionIds[0] = authenticate();
-		} else {
-			processNextControlMessage();
-		}
-		return false;
-	}
-
-	protected class PreviousHopUdpHandler implements Main.Attachable {
-
-		@Override
-		public boolean handle() throws Exception {
-
-			// decrypt data
-			byte[] payload = decryptAndUnpackNextUdpMessage(previousHopUdp);
-
-			if (nextHopUdp == null) {
-				// check if data is valid (non-cover), if so, send it to CM via API
-				Main.getOas().newOnionTunnelIncomingMessage(externalID, payload);
+			else
+			{
+				payload = encrypt(incomingMessage.data);
+				destinationAddress = previousHopAddress;
+				destinationWriteMId = previousHopWriteMId;
 			}
-
-			else {
-				// forward to next hop
-				voipDataBuf.clear();
-				voipDataBuf.putShort((short) payload.length);
-				voipDataBuf.put(payload);
-				nextHopUdp.write(voipDataBuf);
-			}
-
-			return false;
+			
+			m.write(new OnionMessage(destinationWriteMId, incomingMessage.type, destinationAddress, payload));
+			return;
 		}
+				
+		//At this point it's clear that the message is for us and came from previous hop,
+		//thus we can decrypt and process it.
+		
+		payload = decrypt(incomingMessage.data);
+		
+		//In case it is a VOIP-data message
+		if(incomingMessage.type == OnionMessage.DATA_MESSAGE)
+		{
+			if(payload[0] != MSG_DATA)
+				//ignore cover traffic
+				return;
+			
+			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, payload));
+			return;
+		}
+		
+		//At this point we know it is a control message for us
+		ByteBuffer buffer = ByteBuffer.wrap(payload);
+		short messageType = buffer.getShort();
+		
+		if(messageType == MSG_DESTROY_TUNNEL)
+		{
+			m.unregisterID(nextHopWriteMId, nextHopAddress);
+			m.unregisterID(previousHopWriteMId, previousHopAddress);
+			//No need to unregister previousAndNextHopReadMId as it was the same value as one of the above.
+			nextHopAddress = null;
+			previousHopAddress = null;
+		}
+		else if(messageType == MSG_BUILD_TUNNEL)
+		{
+			byte[] rawAddress = new byte[buffer.get()];
+			buffer.get(rawAddress);
+			int port = buffer.getInt();
+			nextHopAddress = new InetSocketAddress(InetAddress.getByAddress(rawAddress),port);
+			m.registerAddress(nextHopAddress);
+			nextHopWriteMId = m.registerID(nextHopAddress);
+			
+			//Merge multiplexer reads for previous and next hops.
+			//Writes are unaffected, so we'll use previousAndNextHopReadMId
+			//for reading for claritys sake, even though it is the same as one of the write IDs.
+			m.merge(previousHopWriteMId, previousHopAddress, nextHopWriteMId, nextHopAddress);
+			//From this point on, all reads with previousAndNextHopReadMId can come from both directions.
+		}
+
 	}
 
-	protected class NextHopUdpHandler implements Main.Attachable {
-
-		@Override
-		public boolean handle() throws Exception {
-			// get payload from next hop
-			ByteBuffer size = ByteBuffer.allocate(2);
-			nextHopUdp.read(size);
-			byte[] payload = new byte[size.getShort()];
-			ByteBuffer payloadBuffer = ByteBuffer.wrap(payload);
-			nextHopUdp.read(payloadBuffer);
-
-			// encrypt and send it to previous hop
-			encryptAndPackAndSendUdpMessage(payload, previousHopUdp);
-
-			return false;
-		}
-
-	}
 }
