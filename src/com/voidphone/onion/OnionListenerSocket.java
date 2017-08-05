@@ -143,10 +143,10 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	
 	
 	/**
-	 * 
+	 * @return Only true, if the tunnel has been destroyed and cannot be reused
 	 * @throws Exception
 	 */
-	void getAndProcessNextMessage() throws Exception {
+	boolean getAndProcessNextMessage() throws Exception {
 		
 		//remove one layer of encryption. TODO: maybe it's from nextHopAddress?
 		OnionMessage incomingMessage = m.read(previousHopWriteMId, previousHopAddress);
@@ -175,7 +175,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			}
 			
 			m.write(new OnionMessage(destinationWriteMId, incomingMessage.type, destinationAddress, payload));
-			return;
+			return false;
 		}
 				
 		//At this point it's clear that the message is for us and came from previous hop,
@@ -188,10 +188,10 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		{
 			if(payload[0] != MSG_DATA)
 				//ignore cover traffic
-				return;
+				return false;
 			
 			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID, payload));
-			return;
+			return false;
 		}
 		
 		//At this point we know it is a control message for us
@@ -200,11 +200,13 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		if(messageType == MSG_DESTROY_TUNNEL)
 		{
-			m.unregisterID(nextHopWriteMId, nextHopAddress);
+			if(nextHopAddress != null)
+				m.unregisterID(nextHopWriteMId, nextHopAddress);
 			m.unregisterID(previousHopWriteMId, previousHopAddress);
 			//No need to unregister previousAndNextHopReadMId as it was the same value as one of the above.
 			nextHopAddress = null;
 			previousHopAddress = null;
+			return true;
 		}
 		else if(messageType == MSG_BUILD_TUNNEL)
 		{
@@ -221,6 +223,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			m.merge(previousHopWriteMId, previousHopAddress, nextHopWriteMId, nextHopAddress);
 			//From this point on, all reads with previousAndNextHopReadMId can come from both directions.
 		}
+		return false;
 
 	}
 

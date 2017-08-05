@@ -44,7 +44,7 @@ public class OnionSocket {
 	private ReentrantLock writeLock;
 
 	/**
-	 * Creates a OnionSocket.
+	 * Creates an OnionSocket.
 	 * 
 	 * @param m
 	 *            the multiplexer
@@ -83,67 +83,16 @@ public class OnionSocket {
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
-	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) throws Exception {
-		// TODO: handle new connection and do something reasonable
-		OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
-		incomingSocket.authenticate();
-
-		// TODO: the following can probably be removed
-		General.debug("newConnection");
-		int state = 0;
-		short nextId = 0;
-		OnionMessage message;
-		InetSocketAddress nextAddr = null;
-		boolean again = true;
+	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) {
 		try {
-			for (; again;) {
-				message = m.read(id, addr);
-				if (message == null) {
-					General.error("Timeout!");
-					break;
-				}
-				General.debug(Arrays.toString(message.data));
-				if (message.data[2] == -1) {
-					m.writeControl(new OnionMessage(id, addr, new byte[] { 3, 4, -1 }));
-					continue;
-				}
-				switch (state) {
-				case 0:
-					if (Arrays.equals(message.data, new byte[] { 0, 0, 1 })) {
-						state = 2;
-						break;
-					}
-					if (message.data[2] != 0) {
-						General.error("Wrong init message!");
-						again = false;
-					} else {
-						ByteBuffer buf = ByteBuffer.wrap(message.data);
-						nextAddr = new InetSocketAddress("127.0.0.1", buf.getShort());
-						General.info("New tunnel to " + nextAddr + "!");
-						m.registerAddress(nextAddr);
-						nextId = m.registerID(nextAddr);
-						state = 1;
-					}
-					break;
-				case 1:
-					General.info("Forward packet to next hop!");
-					m.writeControl(new OnionMessage(nextId, nextAddr, message.data));
-					if (Arrays.equals(message.data, new byte[] { 0, 0, 0 })) {
-						General.info("Tunnel closed!");
-						m.unregisterID(nextId, nextAddr);
-						return;
-					}
-					break;
-				case 2:
-					if (Arrays.equals(message.data, new byte[] { 0, 0, 0 })) {
-						General.info("Tunnel closed!");
-						return;
-					}
-				}
+			OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
+			incomingSocket.authenticate();
+			boolean tunnelDestroyed = false;
+			while (!tunnelDestroyed) {
+				tunnelDestroyed = incomingSocket.getAndProcessNextMessage();
 			}
-		} catch (IllegalAddressException | IllegalIDException | InterruptedException | IOException
-				| SizeLimitExceededException | TimeoutException e) {
-			// TODO Auto-generated catch block
+		} catch (Exception e) {
+			// The tunnel got interrupted and is now destroyed
 			e.printStackTrace();
 		}
 	}
