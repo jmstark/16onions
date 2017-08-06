@@ -48,15 +48,13 @@ public class Main {
 	private static @Getter Config config;
 	private static @Getter OnionApiSocket oas;
 	// TODO: How and where do we initialise oaas and ras and oas?
-	// And why do we have another OnionApiSocket in run()?
 	private static @Getter OnionAuthApiSocket oaas;
 	private static @Getter RpsApiSocket ras;
+	private static @Getter Multiplexer multiplexer;
 
 	private static void run() throws IOException {
 		final DatagramChannel dataChannel;
-		final OnionApiSocket onionApiSocket;
 		final AsynchronousServerSocketChannel onionServerSocket;
-		final Multiplexer multiplexer;
 		final ByteBuffer readBuffer;
 
 		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress, config.onionAuthAPIPort));
@@ -64,7 +62,8 @@ public class Main {
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
 		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(config.onionDataPort));
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
-		onionApiSocket = new OnionApiSocket(config.onionAPIPort);
+		//TODO: is this correct? Nothing more to do?
+		oas = new OnionApiSocket(config.onionAPIPort);
 
 		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
 		onionServerSocket = AsynchronousServerSocketChannel.open(config.group)

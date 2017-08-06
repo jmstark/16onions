@@ -36,6 +36,7 @@ import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
 
 public class OnionSocket {
+	//TODO: Move backup tunnels into this class, update currentIncomingTunnel
 	private InetSocketAddress address;
 	private AsynchronousSocketChannel channel;
 	private ByteBuffer readBuffer;
