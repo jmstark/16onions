@@ -117,7 +117,6 @@ class Context extends MessageHandler<Void> {
             {
                 OnionTunnelIncomingMessage message;
                 message = OnionTunnelIncomingMessage.parser(buf);
-                byte[] otherHostkeyBytes = message.getKeyEncoding();
                 logger.fine("Received a new incoming tunnel connection");
             }
                 return;

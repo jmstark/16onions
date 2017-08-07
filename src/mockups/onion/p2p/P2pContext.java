@@ -52,7 +52,7 @@ class P2pContext {
         connection.receive(new ConnectionReader());
     }
 
-    private <A, B> void notifyNewTunnel(RSAPublicKey key) {
+    private <A, B> void notifyNewTunnel() {
         Iterator<TunnelEventHandler> iterator = OnionApiServer.getAllHandlers();
         while (iterator.hasNext()) {
             TunnelEventHandler<A> handler = iterator.next();
@@ -61,7 +61,7 @@ class P2pContext {
             tunnel = new IncomingTunnel<>(context,
                     connection,
                     new TunnelDestroyHandler(handler));
-            handler.newIncomingTunnel(tunnel, key);
+            handler.newIncomingTunnel(tunnel);
             SimpleImmutableEntry entry = new SimpleImmutableEntry(handler,
                     tunnel);
             mappings.add(entry);
@@ -104,7 +104,7 @@ class P2pContext {
                     }
                     HelloMessage message;
                     message = HelloMessage.parse(buf);
-                    notifyNewTunnel(message.getHostkey());
+                    notifyNewTunnel();
                     state = State.STATE_VERIFIED;
                 }
                     return;

@@ -19,6 +19,7 @@ package mockups.onion.p2p;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.interfaces.RSAPublicKey;
+import lombok.EqualsAndHashCode;
 import protocol.MessageParserException;
 import protocol.MessageSizeExceededException;
 import protocol.Protocol;
@@ -28,55 +29,19 @@ import util.SecurityHelper;
  *
  * @author totakura
  */
+@EqualsAndHashCode(callSuper = true)
 public class HelloMessage extends OnionP2PMessage {
 
-    /**
-     * The hostkey of the sender of this message
-     */
-    private final RSAPublicKey hostkey;
+    private static HelloMessage hello = new HelloMessage();
 
-    public HelloMessage(RSAPublicKey hostkey) throws MessageSizeExceededException {
+    public HelloMessage() {
         this.addHeader(Protocol.MessageType.ONION_HELLO);
-        this.hostkey = hostkey;
-        this.size += SecurityHelper.encodeRSAPublicKey(hostkey).length;
-        if (this.size > Protocol.MAX_MESSAGE_SIZE) {
-            throw new MessageSizeExceededException();
-        }
     }
 
-    public RSAPublicKey getHostkey() {
-        return hostkey;
-    }
+    public static HelloMessage parse(ByteBuffer buf) throws
+            MessageParserException {
 
-    @Override
-    public void send(ByteBuffer out) {
-        byte[] enc;
-        super.send(out);
-        enc = SecurityHelper.encodeRSAPublicKey(hostkey);
-        out.put(enc);
-    }
-
-    public static HelloMessage parse(ByteBuffer buf) throws MessageParserException {
-        byte[] enc;
-        HelloMessage message;
-        RSAPublicKey hostkey;
-
-        if (0 == buf.remaining()) {
-            throw new MessageParserException("Encoded hostkey not present");
-        }
-        enc = new byte[buf.remaining()];
-        buf.get(enc);
-        try {
-            hostkey = SecurityHelper.getRSAPublicKeyFromEncoding(enc);
-        } catch (InvalidKeyException ex) {
-            throw new MessageParserException("Invalid encoding for a RSA public key");
-        }
-        try {
-            message = new HelloMessage(hostkey);
-        } catch (MessageSizeExceededException ex) {
-            throw new RuntimeException("This is a bug; please report");
-        }
-        return message;
+        return hello;
     }
 
 }

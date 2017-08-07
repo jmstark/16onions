@@ -109,14 +109,9 @@ class APIContextImpl extends MessageHandler<Void> implements APIContext,
     }
 
     @Override
-    public void newIncomingTunnel(Tunnel<Integer> tunnel, RSAPublicKey key) {
+    public void newIncomingTunnel(Tunnel<Integer> tunnel) {
         OnionTunnelIncomingMessage message;
-        try {
-            message = new OnionTunnelIncomingMessage(tunnel.getContext(),
-                    SecurityHelper.encodeRSAPublicKey(key));
-        } catch (MessageSizeExceededException ex) {
-            throw new RuntimeException("This is a bug; please report");
-        }
+        message = new OnionTunnelIncomingMessage(tunnel.getContext());
         synchronized (connection) {
             connection.sendMsg(message);
         }
