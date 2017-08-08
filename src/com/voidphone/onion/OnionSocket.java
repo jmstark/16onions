@@ -36,7 +36,7 @@ import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
 
 public class OnionSocket {
-	//TODO: Move backup tunnels into this class, update currentIncomingTunnel
+	// TODO: Move backup tunnels into this class, update currentIncomingTunnel
 	private InetSocketAddress address;
 	private AsynchronousSocketChannel channel;
 	private ByteBuffer readBuffer;
@@ -78,16 +78,18 @@ public class OnionSocket {
 		try {
 			future.get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS);
 		} catch (ExecutionException e) {
-			throw new IOException("connect failed");
+			throw new IOException(e.getCause().getMessage());
 		}
 		init(m, channel);
 		channel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
 	/**
-	 * This function is called whenever a previously unknown address initiates a connection
-	 * to this peer. The function tries to establish an onion connection and then processes
-	 * and/or forwards all the traffic. It does only return after the tunnel has been destroyed or broken. 
+	 * This function is called whenever a previously unknown address initiates a
+	 * connection to this peer. The function tries to establish an onion connection
+	 * and then processes and/or forwards all the traffic. It does only return after
+	 * the tunnel has been destroyed or broken.
+	 * 
 	 * @param m
 	 * @param id
 	 * @param addr

@@ -196,7 +196,7 @@ public class Helper {
 		}
 
 		protected void writeControl(short id, byte data[]) throws IOException {
-			OnionMessage message = new OnionMessage(id, null, data);
+			OnionMessage message = new OnionMessage(id, OnionMessage.CONTROL_MESSAGE, null, data);
 			message.serialize(buffer);
 			controlOnion.getOutputStream().write(buffer.array());
 		}
@@ -204,7 +204,7 @@ public class Helper {
 		protected byte[] readControl(short id) throws IOException {
 			int n = controlOnion.getInputStream().read(buffer.array());
 			buffer.position(n);
-			OnionMessage message = OnionMessage.parse(buffer, null);
+			OnionMessage message = OnionMessage.parse(buffer, OnionMessage.CONTROL_MESSAGE, null);
 			return message.data;
 		}
 
