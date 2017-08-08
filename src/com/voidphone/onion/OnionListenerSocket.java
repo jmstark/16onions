@@ -26,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import com.voidphone.general.General;
+
 import auth.api.OnionAuthCipherDecryptResp;
 import auth.api.OnionAuthCipherEncryptResp;
 import auth.api.OnionAuthSessionHS2;
@@ -128,6 +130,8 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		m.write(new OnionMessage(previousHopWriteMId, OnionMessage.CONTROL_MESSAGE, previousHopAddress, outgoingDataBAOS.toByteArray()));
 
+		General.info("Authentication with previous hop successfull");
+		
 		return hs2.getSessionID();
 	}
 
@@ -138,6 +142,8 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	boolean getAndProcessNextMessage() throws Exception {
+		
+		
 		
 		//remove one layer of encryption. TODO: maybe it's from nextHopAddress?
 		OnionMessage incomingMessage = m.read(previousHopWriteMId, previousHopAddress);
