@@ -1,6 +1,7 @@
 package com.voidphone.testing;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import com.voidphone.testing.Helper.RedirectBackupThread;
@@ -20,6 +21,7 @@ public class Test {
 				Helper.getPeerConfig(1).config.get("onion", "hostkey", String.class), "-p",
 				Helper.getPeerConfig(1).config.get("onion", "p2p_port", Integer.class).intValue() + "", "-t",
 				"127.0.0.1" };
+		System.out.println(Arrays.toString(parameter));
 		TestProcess test = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
 		rbt = new RedirectBackupThread(test.getOut(), -1);
 		rbt.start();
