@@ -21,6 +21,7 @@ package com.voidphone.onion;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
 import com.voidphone.api.OnionPeer;
@@ -302,10 +303,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 */
 	public void sendData(boolean isRealData, byte[] data) throws Exception
 	{
-		byte[] payload = new byte[data.length + 1];
-		payload[0] = isRealData ? MSG_DATA : MSG_COVER;
+		ByteBuffer payload = ByteBuffer.allocate(data.length + 1);
+		payload.put(MSG_DATA);
+		payload.put(data);
 		
-		m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encrypt(payload)));		
+		m.write(new OnionMessage(nextHopMId, OnionMessage.DATA_MESSAGE, nextHopAddress, encrypt(payload.array())));		
 	}
 	
 	/**
