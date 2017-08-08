@@ -142,8 +142,14 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		
 		
+		
 		//remove one layer of encryption. TODO: maybe it's from nextHopAddress?
 		OnionMessage incomingMessage = m.read(previousHopWriteMId, previousHopAddress);
+		
+		//handle time-out
+		if(incomingMessage == null)
+			return false;
+		
 		byte[] payload;
 
 		
@@ -160,12 +166,14 @@ public class OnionListenerSocket extends OnionBaseSocket {
 				payload = decrypt(incomingMessage.data);
 				destinationAddress = nextHopAddress;
 				destinationWriteMId = nextHopWriteMId;
+				General.info("forwarding message to next hop");
 			}
 			else
 			{
 				payload = encrypt(incomingMessage.data);
 				destinationAddress = previousHopAddress;
 				destinationWriteMId = previousHopWriteMId;
+				General.info("forwarding message to previous hop");
 			}
 			
 			m.write(new OnionMessage(destinationWriteMId, incomingMessage.type, destinationAddress, payload));
@@ -184,6 +192,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 				//ignore cover traffic
 				return false;
 			
+			General.info("MSG_DATA received: incoming data message");
 			Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(externalID, Arrays.copyOfRange(payload, 1, payload.length)));
 			return false;
 		}
@@ -194,6 +203,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		if(messageType == MSG_DESTROY_TUNNEL)
 		{
+			General.info("MSG_DESTROY_TUNNEL received");
 			if(nextHopAddress != null)
 				m.unregisterID(nextHopWriteMId, nextHopAddress);
 			m.unregisterID(previousHopWriteMId, previousHopAddress);
@@ -204,6 +214,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		}
 		else if(messageType == MSG_BUILD_TUNNEL)
 		{
+			General.info("MSG_BUILD_TUNNEL received");
 			byte[] rawAddress = new byte[buffer.get()];
 			buffer.get(rawAddress);
 			int port = buffer.getInt();
@@ -219,6 +230,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		}
 		else if(messageType == MSG_INCOMING_TUNNEL)
 		{
+			General.info("MSG_INCOMING_TUNNEL received");
 			//Signal to our CM a new incoming tunnel
 			externalID = buffer.getInt();
 			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(onionApiId));
