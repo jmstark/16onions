@@ -337,6 +337,33 @@ public class Multiplexer {
 	}
 
 	/**
+	 * Detaches a logical connection. This is like unregister, but it does not close
+	 * the OnionSocket when the ID is the last one.
+	 * 
+	 * @param id
+	 *            the ID of the connection
+	 * @param addr
+	 *            the address of the endpoint
+	 * @throws IllegalAddressException
+	 *             if the address is not registered
+	 * @throws IllegalIDException
+	 *             if the ID is not registered
+	 */
+	public void detachID(short id, InetSocketAddress addr) throws IllegalAddressException, IllegalIDException {
+		HashMap<Short, LinkedBlockingQueue<OnionMessage>> second;
+		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> triple;
+		triple = getFirst(addr);
+		triple.a.writeLock().lock();
+		second = triple.c;
+		if (!second.containsKey(id)) {
+			triple.a.writeLock().unlock();
+			throw new IllegalIDException();
+		}
+		second.remove(id);
+		triple.a.writeLock().unlock();
+	}
+
+	/**
 	 * Unregisters a logical connection.
 	 * 
 	 * @param id
