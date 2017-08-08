@@ -64,8 +64,10 @@ public class SecurityHelper {
             throw new RuntimeException(
                     "A provider for RSA not available; cannot continue.");
         }
-        String propertiesPath = System.getProperty("keystore.config.file",
-                "security.properties");
+//        String propertiesPath = System.getProperty("keystore.config.file",
+ //               "security.properties");
+        
+        String propertiesPath = "/home/josef/.keystore";
 
         Properties properties;
         properties = new Properties();
