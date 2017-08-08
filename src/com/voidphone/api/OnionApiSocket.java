@@ -122,8 +122,6 @@ public class OnionApiSocket extends ApiSocket {
 	 * 
 	 * @param id
 	 *            the ID of the connection
-	 * @param hostkey
-	 *            the Hostkey
 	 * @return the OnionTunnelIncomingMessage
 	 * @throws IllegalIDException
 	 *             if the ID is not registered
