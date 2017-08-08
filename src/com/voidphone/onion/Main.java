@@ -52,6 +52,12 @@ public class Main {
 	private static @Getter RpsApiSocket ras;
 	private static @Getter Multiplexer multiplexer;
 
+	
+	/**
+	 * Runs the Onion module.
+	 * 
+	 * @throws Exception
+	 */
 	private static void run() throws IOException {
 		final DatagramChannel dataChannel;
 		final AsynchronousServerSocketChannel onionServerSocket;
@@ -62,7 +68,6 @@ public class Main {
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
 		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(config.onionDataPort));
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
-		//TODO: is this correct? Nothing more to do?
 		oas = new OnionApiSocket(config.onionAPIPort);
 
 		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
@@ -103,57 +108,6 @@ public class Main {
 		}
 	}
 
-	/**
-	 * Runs the Onion module.
-	 * 
-	 * @throws Exception
-	 */
-	/*
-	 * private static void run() throws Exception { try { // socket for all incoming
-	 * UDP packets, // for OnionConnectingSocket as well as OnionListenerSocket
-	 * DatagramChannel udpChannel = DatagramChannel.open() .bind(new
-	 * InetSocketAddress("127.0.0.1", config.getOnionPort()));
-	 * 
-	 * selector = Selector.open(); General.info("Waiting for API connection on " +
-	 * config.getOnionApiPort() + "....."); SocketChannel onionApiSocket =
-	 * ServerSocketChannel.open() .bind(new InetSocketAddress("127.0.0.1",
-	 * config.getOnionApiPort())).accept();
-	 * General.debug("API connection successful");
-	 * General.info("Waiting for Onion connections on " + config.getOnionPort() +
-	 * "....."); ServerSocketChannel onionServerSocket = ServerSocketChannel.open()
-	 * .bind(new InetSocketAddress("127.0.0.1", config.getOnionPort()));
-	 * 
-	 * // for API requests oas = new OnionApiSocket(onionApiSocket, config);
-	 * onionApiSocket.configureBlocking(false); onionApiSocket.register(selector,
-	 * SelectionKey.OP_READ, oas);
-	 * 
-	 * // for incoming Onion connections onionServerSocket.configureBlocking(false);
-	 * onionServerSocket.register(selector, SelectionKey.OP_ACCEPT);
-	 * 
-	 * // wait for any socket getting ready while (selector.select() != 0) {
-	 * Iterator<SelectionKey> iterator = selector.selectedKeys().iterator(); while
-	 * (iterator.hasNext()) { SelectionKey key = iterator.next(); if
-	 * (key.isAcceptable()) { // OnionServerSocket got a connection request
-	 * General.debug("Onion connection requested....."); SocketChannel onionSocket =
-	 * onionServerSocket.accept(); General.debug("Onion connection successful"); //
-	 * create a new OnionListenerSocket ... OnionListenerSocket ols = new
-	 * OnionListenerSocket(onionSocket.socket(), config);
-	 * General.debug("Got connection from " + onionSocket.getRemoteAddress());
-	 * onionSocket.configureBlocking(false); // ... and add it to the selector
-	 * onionSocket.register(selector, SelectionKey.OP_READ, ols); } else if
-	 * (key.isReadable()) { // an OnionListenerSocket or the OnionAPISocket received
-	 * // data General.debug("Received packet"); // enable blocking key.cancel();
-	 * selector.selectNow(); key.channel().configureBlocking(true); // handle the
-	 * received data boolean again = ((Attachable) key.attachment()).handle(); if
-	 * (!again) { // the connection is still alive
-	 * key.channel().configureBlocking(false); key.channel().register(selector,
-	 * SelectionKey.OP_READ, key.attachment()); } } else {
-	 * General.fatal("Selector returns unknown key!"); } }
-	 * selector.selectedKeys().clear(); } } catch (IOException |
-	 * MessageParserException | ProtocolException e) { General.fatalException(e); }
-	 * }
-	 */
-
 	private static void parseArgs(String args[]) {
 		if (args.length < 2 || !"-c".equals(args[0])) {
 			System.out.println("Usage: java Main -c <path_to_config_file>");
@@ -162,14 +116,11 @@ public class Main {
 		try {
 			config = new Config(args[1]);
 		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			General.fatalException(e);
 		} catch (InvalidFileFormatException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			General.fatalException(e);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			General.fatalException(e);
 		}
 	}
 
