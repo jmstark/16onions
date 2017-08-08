@@ -101,8 +101,13 @@ public class Config {
 		group = AsynchronousChannelGroup.withFixedThreadPool(max(1, cores - 1), threadFactory);
 
 		// Onion hostname and port are separate config lines
-		onionAddress = getString(configFile, "onion", "p2p_hostname");
-		onionPort = (short) getInteger(configFile, "onion", "p2p_port");
+//		onionAddress = getString(configFile, "onion", "p2p_hostname");
+//		onionPort = (short) getInteger(configFile, "onion", "p2p_port");
+		String onionAddressAndPort = getString(configFile, "onion", "listen_address");
+		colonPos = onionAddressAndPort.lastIndexOf(':');
+		onionAddress = onionAddressAndPort.substring(0, colonPos);
+		onionPort = (short) Integer.parseInt(onionAddressAndPort.substring(colonPos + 1));
+		
 		onionDataPort = (short) getInteger(configFile, "onion", "p2p_data_port");
 
 		hopCount = getInteger(configFile, "onion", "hopcount");
