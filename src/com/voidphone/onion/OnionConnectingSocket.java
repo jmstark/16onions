@@ -357,6 +357,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	public void getAndProcessNextDataMessage() throws Exception {
 		
 		OnionMessage incomingMessage = m.read(nextHopMId, nextHopAddress);
+		
+		//Handle timeouts
+		if(incomingMessage == null)
+			return;
+		
 		// decrypt data
 		byte[] payload = decrypt(incomingMessage.data);
 		
