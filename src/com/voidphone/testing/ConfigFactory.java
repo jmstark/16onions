@@ -51,8 +51,7 @@ public class ConfigFactory {
 		config.add("rps", "api_address", nextPort());
 		config.add("rps", "listen_address", nextPort());
 		config.add("onion", "api_address", nextPort());
-		config.add("onion", "listen_address", this.port);
-		this.port++;
+		config.add("onion", "listen_address", nextPort());
 		config.add("onion", "api_timeout", 3000);
 		config.add("onion", "cache_size", 10);
 		config.add("onion", "hopcount", 3);
