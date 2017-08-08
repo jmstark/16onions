@@ -1,7 +1,6 @@
 package com.voidphone.testing;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 
 import com.voidphone.testing.Helper.RedirectBackupThread;

@@ -128,14 +128,9 @@ public class OnionApiSocket extends ApiSocket {
 	 * @throws IllegalIDException
 	 *             if the ID is not registered
 	 */
-	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(int id, byte hostkey[]) throws IllegalIDException {
+	public OnionTunnelIncomingMessage newOnionTunnelIncomingMessage(int id) throws IllegalIDException {
 		isRegistered(id);
-		try {
-			return new OnionTunnelIncomingMessage((long) id, hostkey);
-		} catch (MessageSizeExceededException e) {
-			General.fatalException(e);
-			return null;
-		}
+		return new OnionTunnelIncomingMessage((long) id);
 	}
 
 	/**
