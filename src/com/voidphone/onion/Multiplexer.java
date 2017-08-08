@@ -98,8 +98,11 @@ public class Multiplexer {
 	 *             if the operation was interrupted
 	 * @throws IOException
 	 *             if an I/O-error occurs
+	 * @throws SizeLimitExceededException
+	 *             if the payload size is larger than the packet size
 	 */
-	public void write(OnionMessage message) throws IllegalAddressException, InterruptedException, IOException {
+	public void write(OnionMessage message)
+			throws IllegalAddressException, InterruptedException, IOException, SizeLimitExceededException {
 		if (message.type == OnionMessage.CONTROL_MESSAGE) {
 			getOnionSocket(message.address).send(message);
 		} else {

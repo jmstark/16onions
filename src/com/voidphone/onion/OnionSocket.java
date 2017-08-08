@@ -107,7 +107,7 @@ public class OnionSocket {
 		}
 	}
 
-	public void send(OnionMessage message) throws InterruptedException, IOException {
+	public void send(OnionMessage message) throws InterruptedException, IOException, SizeLimitExceededException {
 		if (!channel.isOpen()) {
 			throw new IOException("Socket is closed!");
 		}

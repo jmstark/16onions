@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.Random;
 
 import com.voidphone.general.General;
+import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.onion.OnionMessage;
 
 public class Helper {
@@ -195,7 +196,7 @@ public class Helper {
 			this.controlOnion = sock;
 		}
 
-		protected void writeControl(short id, byte data[]) throws IOException {
+		protected void writeControl(short id, byte data[]) throws IOException, SizeLimitExceededException {
 			OnionMessage message = new OnionMessage(id, OnionMessage.CONTROL_MESSAGE, null, data);
 			message.serialize(buffer);
 			controlOnion.getOutputStream().write(buffer.array());

@@ -22,6 +22,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import com.voidphone.general.SizeLimitExceededException;
+
 /**
  * Represents a message sent to/received from another Hop.
  */
@@ -39,10 +41,6 @@ public class OnionMessage {
 	 */
 	public final InetSocketAddress address;
 	/**
-	 * the size of the payload
-	 */
-	public final int size;
-	/**
 	 * the payload of the message
 	 */
 	public final byte data[];
@@ -58,15 +56,12 @@ public class OnionMessage {
 	 *            ID of the logical connection
 	 * @param addr
 	 *            address of the destination of the logical connection
-	 * @param size
-	 *            the size of the payload
 	 * @param data
 	 *            payload
 	 */
-	public OnionMessage(short id, boolean type, InetSocketAddress addr, int size, byte[] data) {
+	public OnionMessage(short id, boolean type, InetSocketAddress addr, byte[] data) {
 		this.id = id;
 		this.address = addr;
-		this.size = size;
 		this.data = data;
 		this.type = type;
 	}
@@ -87,7 +82,7 @@ public class OnionMessage {
 		byte data[] = new byte[size];
 		buf.get(data);
 		buf.clear();
-		return new OnionMessage(id, type, addr, size, data);
+		return new OnionMessage(id, type, addr, data);
 	}
 
 	/**
@@ -95,9 +90,15 @@ public class OnionMessage {
 	 * 
 	 * @param buf
 	 *            the buffer
+	 * @throws SizeLimitExceededException
+	 *             if the payload size is larger than the packet size
 	 */
-	public void serialize(ByteBuffer buf) {
+	public void serialize(ByteBuffer buf) throws SizeLimitExceededException {
 		buf.clear();
+		if (data.length > Main.getConfig().onionSize) {
+			throw new SizeLimitExceededException("The payload is larger than the packet size!");
+		}
+		buf.putShort((short) data.length);
 		buf.putShort(id);
 		buf.put(data);
 		buf.clear();
