@@ -28,7 +28,7 @@ import com.voidphone.general.SizeLimitExceededException;
  * Represents a message sent to/received from another Hop.
  */
 public class OnionMessage {
-	public static final int ONION_HEADER_SIZE = 2;
+	public static final int ONION_HEADER_SIZE = 4;
 	public static final boolean CONTROL_MESSAGE = true;
 	public static final boolean DATA_MESSAGE = false;
 
@@ -95,7 +95,7 @@ public class OnionMessage {
 	 */
 	public void serialize(ByteBuffer buf) throws SizeLimitExceededException {
 		buf.clear();
-		if (data.length > Main.getConfig().onionSize) {
+		if (data.length >= Main.getConfig().onionSize - ONION_HEADER_SIZE) {
 			throw new SizeLimitExceededException("The payload is larger than the packet size!");
 		}
 		buf.putShort((short) data.length);

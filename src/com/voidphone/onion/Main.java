@@ -52,7 +52,6 @@ public class Main {
 	private static @Getter RpsApiSocket ras;
 	private static @Getter Multiplexer multiplexer;
 
-	
 	/**
 	 * Runs the Onion module.
 	 * 
@@ -72,7 +71,7 @@ public class Main {
 
 		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
 		onionServerSocket = AsynchronousServerSocketChannel.open(config.group)
-				.bind(new InetSocketAddress(config.onionPort));
+				.bind(new InetSocketAddress(config.onionAddress, config.onionPort));
 		onionServerSocket.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
 			public void completed(AsynchronousSocketChannel channel, Void none) {
