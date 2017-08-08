@@ -54,7 +54,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	protected short previousAndNextHopReadMId;
 	protected short previousHopWriteMId;
 	protected short nextHopWriteMId;
-	protected byte[] srcHostkey;
+
 
 
 
@@ -115,10 +115,8 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		// read incoming hs1
 		byte[] hs1Payload = new byte[incomingDataBuf.getInt()];
 		incomingDataBuf.get(hs1Payload);
-		srcHostkey = new byte[incomingDataBuf.getInt()];
-		incomingDataBuf.get(srcHostkey);
-
-
+		
+		
 		// get hs2 from onionAuth and send it back to remote peer
 		authSessionIds[0] = apiRequestCounter++;
 		hs2 = Main.getOaas().AUTHSESSIONINCOMINGHS1(Main.getOaas().newOnionAuthSessionIncomingHS1(authSessionIds[0], hs1Payload));

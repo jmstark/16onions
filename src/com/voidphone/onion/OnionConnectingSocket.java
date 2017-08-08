@@ -311,9 +311,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 				Main.getOaas().newOnionAuthSessionStartMessage(authApiId, Util.getHostkeyObject(hopHostkey)));
 		outGoingData.writeInt(hs1.getPayload().length);
 		outGoingData.write(hs1.getPayload());
-		outGoingData.writeInt(Util.getHostkeyBytes(Main.getConfig().hostkey).length);
-		outGoingData.write(Util.getHostkeyBytes(Main.getConfig().hostkey));
-
 
 		byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), numLayers);
 		m.write(new OnionMessage(nextHopMId,OnionMessage.CONTROL_MESSAGE, nextHopAddress,encryptedPayload));
