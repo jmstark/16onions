@@ -25,12 +25,14 @@ import java.util.Arrays;
 import java.util.Random;
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionPeer;
+import com.voidphone.general.NoRpsPeerException;
 import com.voidphone.general.Util;
 
 import auth.api.OnionAuthDecryptResp;
 import auth.api.OnionAuthEncryptResp;
 import auth.api.OnionAuthSessionHS1;
 import auth.api.OnionAuthSessionIncomingHS2;
+import rps.api.RpsPeerMessage;
 
 
 /**
@@ -79,9 +81,14 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 
 		// Fill up an array with intermediate hops and the target node
 		OnionPeer[] hops = new OnionPeer[hopCount + 1];
+		RpsPeerMessage rpsMsg;
 		for (int i = 0; i < hopCount; i++) {
-			hops[i] = new OnionPeer(Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId)));
+			rpsMsg = Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId));
+			if(rpsMsg == null)
+				throw new NoRpsPeerException();
+			hops[i] = new OnionPeer(rpsMsg);
 		}
+		
 		// If end node is unspecified, use another random node
 		if (destAddr == null || destHostkey == null)
 			hops[hopCount] = new OnionPeer(Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId)));

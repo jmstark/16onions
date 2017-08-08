@@ -198,7 +198,12 @@ public class OnionApiSocket extends ApiSocket {
 			while(true)
 				currentConnectingTunnel.getAndProcessNextDataMessage();
 		} catch (Exception e) {
-			e.printStackTrace();
+			General.fatalException(e);
+			try {
+				ONIONERROR(newOnionErrorMessage(currentConnectingTunnel != null ? currentConnectingTunnel.externalID : 0, otbm.getType()));
+			} catch (IllegalIDException e1) {
+				General.fatalException(e1);
+			}
 		}
 	}
 
