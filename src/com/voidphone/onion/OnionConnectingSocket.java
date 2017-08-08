@@ -106,6 +106,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 
 		General.info("Authenticated to first hop");
 		
+		nextHopAddress = hops[0].address;
+		
 		// Establish forwardings (if any)
 		for (int i = 1; i < hops.length; i++) {
 			// Send forwarding request to node i-1 ->
@@ -135,8 +137,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			
 
 		}
-
-		nextHopAddress = hops[0].address;
 		
 		//Signal to the last hop, that it is the target so it can signal an incoming tunnel to the CM
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
