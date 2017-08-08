@@ -37,7 +37,7 @@ public class ConfigFactory {
 		this.port = port;
 		this.name = name;
 		this.config = new Wini();
-		config.add("?", "hostkey", "");
+		config.add("onion", "hostkey", "");
 		if (bootstrapper == null) {
 			bootstrapper = nextPort();
 			config.add("gossip", "listen_address", bootstrapper);
@@ -56,10 +56,10 @@ public class ConfigFactory {
 		config.add("onion", "cache_size", 10);
 		config.add("onion", "hopcount", 3);
 		config.add("onion", "p2p_hostname", "xxx");
-		config.add("onion", "p2p_port", port);
-		port++;
-		config.add("onion", "p2p_data_port", port);
-		port++;
+		config.add("onion", "p2p_port", this.port);
+		this.port++;
+		config.add("onion", "p2p_data_port", this.port);
+		this.port++;
 		config.add("onion", "p2p_timeout", 5000);
 		config.add("onion", "p2p_packetsize", 3);
 		config.add("auth", "api_address", nextPort());
@@ -77,7 +77,7 @@ public class ConfigFactory {
 		if (new ProcessBuilder(cmd).start().waitFor() != 0) {
 			General.fatal("Hostkey generation failed!");
 		}
-		config.put("?", "hostkey", hostkeyPath);
+		config.put("onion", "hostkey", hostkeyPath);
 
 		config.store(configPath.toFile());
 		return configPath.toString();
