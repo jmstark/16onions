@@ -221,7 +221,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		{
 			//Signal to our CM a new incoming tunnel
 			externalID = buffer.getInt();
-			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(externalID));
+			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(onionApiId));
 		}
 		return false;
 

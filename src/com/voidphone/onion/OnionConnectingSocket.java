@@ -23,7 +23,6 @@ import java.io.DataOutputStream;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Random;
-import com.voidphone.api.Config;
 import com.voidphone.api.OnionPeer;
 import com.voidphone.general.General;
 import com.voidphone.general.NoRpsPeerException;
@@ -72,7 +71,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		this.destHostkey = destHostkey;
 		authSessionIds = new int[hopCount + 1];
 		rpsApiId = Main.getRas().register();
-		authApiId = Main.getOaas().register();
 
 		// Fill up an array with intermediate hops and the target node
 		OnionPeer[] hops = new OnionPeer[hopCount + 1];
@@ -143,7 +141,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		General.info("Signaled tunnel end to last hop");
 		
 		//Inform our CM, that the requested tunnel is ready.
-		Main.getOas().ONIONTUNNELREADY(Main.getOas().newOnionTunnelReadyMessage(externalID, destHostkey));
+		Main.getOas().ONIONTUNNELREADY(Main.getOas().newOnionTunnelReadyMessage(onionApiId, destHostkey));
 		
 		General.info("Signalled successfull tunnel build to CM");
 	}
@@ -215,8 +213,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		//send the data to OnionAuth API and get encrypted data back.
 		OnionAuthEncryptResp response = 
 				Main.getOaas().AUTHLAYERENCRYPT(Main.getOaas().newOnionAuthEncrypt(authApiId, neededSessionIds, payload));
-		
-		General.info("");
+
 
 		return response.getPayload();
 	}

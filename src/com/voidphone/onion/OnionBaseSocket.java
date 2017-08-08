@@ -18,8 +18,9 @@
  */
 package com.voidphone.onion;
 
-import java.nio.ByteBuffer;
 import java.util.Random;
+
+import com.voidphone.general.SizeLimitExceededException;
 
 
 /**
@@ -39,21 +40,24 @@ public abstract class OnionBaseSocket
 	protected int[] authSessionIds;
 	public int externalID;
 	protected int authApiId;
+	protected int onionApiId;
 	protected Multiplexer m;
 
 	
 	protected static int apiRequestCounter = 1;
 	
 	
-	public OnionBaseSocket(Multiplexer m)
+	public OnionBaseSocket(Multiplexer m) throws SizeLimitExceededException
 	{
 		this(m, new Random().nextInt());
 	}
 	
-	public OnionBaseSocket(Multiplexer m, int tunnelID)
+	public OnionBaseSocket(Multiplexer m, int tunnelID) throws SizeLimitExceededException
 	{
 		this.m = m;
 		externalID = tunnelID;
+		authApiId = Main.getOaas().register();
+		onionApiId = Main.getOas().register();
 	}
 	
 	
