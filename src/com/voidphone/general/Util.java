@@ -19,18 +19,13 @@
 package com.voidphone.general;
 
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
 
 import util.SecurityHelper;
 
 public class Util {
-	
-	public static RSAPublicKey getHostkeyObject(byte[] hostkeyBytes)
-	{
+
+	public static RSAPublicKey getHostkeyObject(byte[] hostkeyBytes) {
 		try {
 			return SecurityHelper.getRSAPublicKeyFromEncoding(hostkeyBytes);
 		} catch (InvalidKeyException e) {
@@ -39,9 +34,8 @@ public class Util {
 			return null;
 		}
 	}
-	
-	public static byte[] getHostkeyBytes(RSAPublicKey hostkeyObject)
-	{
+
+	public static byte[] getHostkeyBytes(RSAPublicKey hostkeyObject) {
 		return SecurityHelper.encodeRSAPublicKey(hostkeyObject);
 	}
 

@@ -21,21 +21,17 @@ package com.voidphone.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.sun.corba.se.spi.ior.ObjectKeyTemplate;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
-import com.voidphone.general.Util;
 import com.voidphone.onion.Main;
 import com.voidphone.onion.OnionConnectingSocket;
 import com.voidphone.onion.OnionListenerSocket;
 
-import lombok.Setter;
 import onion.api.OnionCoverMessage;
 import onion.api.OnionErrorMessage;
 import onion.api.OnionTunnelBuildMessage;
@@ -83,7 +79,8 @@ public class OnionApiSocket extends ApiSocket {
 	 * @throws Exception
 	 */
 	public void prepareNextTunnel() throws Exception {
-		nextConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination, destinationHostkey, config, currentConnectingTunnel.externalID);
+		nextConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination, destinationHostkey,
+				config, currentConnectingTunnel.externalID);
 	}
 
 	/**
@@ -190,17 +187,19 @@ public class OnionApiSocket extends ApiSocket {
 		try {
 			tunnelDestination = otbm.getAddress();
 			destinationHostkey = otbm.getEncoding();
-			
+
 			// build the tunnel
-			currentConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination, destinationHostkey, config);
-			
-			//the tunnel handler
-			while(true)
+			currentConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination,
+					destinationHostkey, config);
+
+			// the tunnel handler
+			while (true)
 				currentConnectingTunnel.getAndProcessNextDataMessage();
 		} catch (Exception e) {
 			General.fatalException(e);
 			try {
-				ONIONERROR(newOnionErrorMessage(currentConnectingTunnel != null ? currentConnectingTunnel.externalID : 0, otbm.getType()));
+				ONIONERROR(newOnionErrorMessage(
+						currentConnectingTunnel != null ? currentConnectingTunnel.externalID : 0, otbm.getType()));
 			} catch (IllegalIDException e1) {
 				General.fatalException(e1);
 			}
@@ -246,7 +245,7 @@ public class OnionApiSocket extends ApiSocket {
 			}
 		}
 		// TODO: check for destruction request of OnionListenerSocket
-		//TODO: thread-safe destruction
+		// TODO: thread-safe destruction
 	}
 
 	/**
@@ -258,9 +257,9 @@ public class OnionApiSocket extends ApiSocket {
 	 *            the connection to which the packet will be sent
 	 */
 	public void ONIONTUNNELINCOMING(OnionTunnelIncomingMessage otim) {
-		//Only send the message to CM, if the incoming tunnel
-		//is not a periodic replacement of an existing tunnel.
-		if(currentIncomingTunnel == null || currentIncomingTunnel.externalID != otim.getTunnelID())
+		// Only send the message to CM, if the incoming tunnel
+		// is not a periodic replacement of an existing tunnel.
+		if (currentIncomingTunnel == null || currentIncomingTunnel.externalID != otim.getTunnelID())
 			connection.sendMsg(otim);
 	}
 
