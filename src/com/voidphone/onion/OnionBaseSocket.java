@@ -39,7 +39,6 @@ public abstract class OnionBaseSocket
 	protected final byte MSG_DATA = 0xd;
 	protected final byte MSG_COVER = 0xc;
 	protected int[] authSessionIds;
-	protected Config config;
 	public int externalID;
 	protected int authApiId;
 	protected Multiplexer m;

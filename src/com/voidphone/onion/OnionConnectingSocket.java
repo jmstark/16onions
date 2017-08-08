@@ -68,10 +68,9 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 *            second constructor which assigns a new ID.
 	 * @throws Exception
 	 */
-	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, 
-			Config config, int hopCount, int externalID) throws Exception {
+	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, int externalID) throws Exception {
 		super(m, externalID);
-		this.config = config;
+		int hopCount = Main.getConfig().hopCount;
 		this.destAddr = destAddr;
 		this.destHostkey = destHostkey;
 		authSessionIds = new int[hopCount + 1];
@@ -149,7 +148,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception {
-		this(m, destAddr, destHostkey, config, config.hopCount, new Random().nextInt());
+		this(m, destAddr, destHostkey, new Random().nextInt());
 	}
 
 
@@ -169,7 +168,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 */
 	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, Config config, int externalID)
 			throws Exception {
-		this(m, destAddr, destHostkey, config, config.hopCount, externalID);
+		this(m, destAddr, destHostkey, externalID);
 
 	}
 	
@@ -288,8 +287,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 				Main.getOaas().newOnionAuthSessionStartMessage(apiRequestCounter++, Util.getHostkeyObject(hopHostkey)));
 		outGoingData.writeInt(hs1.getPayload().length);
 		outGoingData.write(hs1.getPayload());
-		outGoingData.writeInt(Util.getHostkeyBytes(config.hostkey).length);
-		outGoingData.write(Util.getHostkeyBytes(config.hostkey));
+		outGoingData.writeInt(Util.getHostkeyBytes(Main.getConfig().hostkey).length);
+		outGoingData.write(Util.getHostkeyBytes(Main.getConfig().hostkey));
 
 
 		byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), numLayers);
