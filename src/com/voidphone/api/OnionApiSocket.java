@@ -184,6 +184,9 @@ public class OnionApiSocket extends ApiSocket {
 			// build the tunnel
 			currentConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination,
 					destinationHostkey);
+			
+			
+			
 
 			// the tunnel handler
 			while (true)

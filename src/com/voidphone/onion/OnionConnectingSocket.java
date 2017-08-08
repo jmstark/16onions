@@ -20,12 +20,14 @@ package com.voidphone.onion;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
 import com.voidphone.api.OnionPeer;
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.NoRpsPeerException;
 import com.voidphone.general.Util;
 
@@ -46,6 +48,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	protected InetSocketAddress nextHopAddress;
 	protected int rpsApiId;
 	protected short nextHopMId;
+	protected OnionPeer[] hops;
+	OnionAuthSessionHS1 hs1;
 
 
 	/**
@@ -74,7 +78,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		rpsApiId = Main.getRas().register();
 
 		// Fill up an array with intermediate hops and the target node
-		OnionPeer[] hops = new OnionPeer[hopCount + 1];
+		hops = new OnionPeer[hopCount + 1];
 		RpsPeerMessage rpsMsg;
 		for (int i = 0; i < hopCount; i++) {
 			rpsMsg = Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId));
@@ -94,11 +98,21 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		// Connect to first hop - all other connections are forwarded over this hop
 		m.registerAddress(hops[0].address);
 		nextHopMId = m.registerID(hops[0].address);
-		
+
+		constructTunnel();
+	}
+	
+	/**
+	 * This method must be called after the constructor has returned
+	 * @throws Exception 
+	 */
+	public void constructTunnel() throws Exception
+	{
 		General.info("Connected to first hop");
 		
-		// Bind UDP socket to the same local port as the TCP socket so so we can correlate
-		authSessionIds[0] = authenticate(hops[0].hostkey, 0);
+
+		beginAuthentication(hops[0].hostkey, 0);
+		authSessionIds[0] = finishAuthentication(hops[0].hostkey, 0);
 
 		General.info("Authenticated to first hop");
 		
@@ -125,7 +139,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			
 			// Now, we are indirectly connected to the target node. 
 			// Authenticate to that node.
-			authSessionIds[i] = authenticate(hops[i].hostkey, i);
+			beginAuthentication(hops[i].hostkey, i);
+			authSessionIds[i] = finishAuthentication(hops[i].hostkey, i);
 			
 			General.info("authenticated to hop " + i);
 			
@@ -256,20 +271,12 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		return response.getPayload();
 	}
 
-	/**
-	 * Authenticates via OnionAuth. Encrypts with numLayers (0 = no encryption).
-	 * 
-	 * @param hopHostkey the hostkey of the hop with which we want to authenticate
-	 * @param numLayers the number of layers needed for that hop
-	 * @return session ID for OnionAuth API - necessary for de-/encryption
-	 * @throws Exception
-	 */
-	public int authenticate(byte[] hopHostkey, int numLayers) throws Exception {
-
+	
+	public void beginAuthentication(byte[] hopHostkey, int numLayers) throws Exception
+	{
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 		DataOutputStream outGoingData = new DataOutputStream(outgoingDataBAOS);
-		OnionAuthSessionHS1 hs1;
-
+		
 		outGoingData.writeInt(MAGIC_SEQ_CONNECTION_START);
 		outGoingData.writeInt(VERSION);
 
@@ -282,7 +289,21 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 
 		byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), numLayers);
 		m.write(new OnionMessage(nextHopMId,OnionMessage.CONTROL_MESSAGE, nextHopAddress,encryptedPayload));
+	}
+	
+	
+	/**
+	 * Authenticates via OnionAuth. Encrypts with numLayers (0 = no encryption).
+	 * 
+	 * @param hopHostkey the hostkey of the hop with which we want to authenticate
+	 * @param numLayers the number of layers needed for that hop
+	 * @return session ID for OnionAuth API - necessary for de-/encryption
+	 * @throws Exception
+	 */
+	public int finishAuthentication(byte[] hopHostkey, int numLayers) throws Exception {
 
+
+		
 		// read incoming hs2 into buffer. We need to know the length of hs2
 		OnionMessage incomingMessage = m.read(nextHopMId, nextHopAddress);
 		byte[] hs2payload = decrypt(incomingMessage.data, numLayers);
