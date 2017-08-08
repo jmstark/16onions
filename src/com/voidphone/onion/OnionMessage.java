@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import com.voidphone.general.General;
 import com.voidphone.general.SizeLimitExceededException;
 
 /**
@@ -95,7 +96,8 @@ public class OnionMessage {
 	 */
 	public void serialize(ByteBuffer buf) throws SizeLimitExceededException {
 		buf.clear();
-		if (data.length >= Main.getConfig().onionSize - ONION_HEADER_SIZE) {
+		General.debug("Data size: " + data.length);
+		if (data.length > Main.getConfig().onionSize - ONION_HEADER_SIZE) {
 			throw new SizeLimitExceededException("The payload is larger than the packet size!");
 		}
 		buf.putShort((short) data.length);
