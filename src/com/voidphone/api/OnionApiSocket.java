@@ -80,7 +80,7 @@ public class OnionApiSocket extends ApiSocket {
 	 */
 	public void prepareNextTunnel() throws Exception {
 		nextConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination, destinationHostkey,
-				config, currentConnectingTunnel.externalID);
+				currentConnectingTunnel.externalID);
 	}
 
 	/**
@@ -183,7 +183,7 @@ public class OnionApiSocket extends ApiSocket {
 
 			// build the tunnel
 			currentConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination,
-					destinationHostkey, config);
+					destinationHostkey);
 
 			// the tunnel handler
 			while (true)

@@ -37,7 +37,6 @@ import auth.api.OnionAuthSessionHS2;
  * Main application runs a TCP server socket. There, when it receives a new
  * connection, it then constructs an OnionListenerSocket, passing the neccessary
  * connection info (multiplexer, address, mID) to the constructor. 
- * Then it should send a TUNNEL_READY API message.
  * 
  */
 public class OnionListenerSocket extends OnionBaseSocket {
@@ -108,7 +107,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 
 		OnionMessage incomingMsg = m.read(previousHopWriteMId, previousHopAddress);
 		
-		ByteBuffer incomingDataBuf = ByteBuffer.wrap(unpadData(incomingMsg.data));
+		ByteBuffer incomingDataBuf = ByteBuffer.wrap(incomingMsg.data);
 
 		if (incomingDataBuf.getInt() != MAGIC_SEQ_CONNECTION_START | incomingDataBuf.getInt() != VERSION)
 			throw new IOException("Tried to connect with non-onion node or wrong version node");

@@ -37,8 +37,7 @@ import rps.api.RpsPeerMessage;
 
 /**
  * When the main application wants to build a tunnel to some node, it creates an
- * instance of this class, passing destination address and hostkey and the
- * hopcount to the constructor.
+ * instance of this class.
  */
 public class OnionConnectingSocket extends OnionBaseSocket {
 
@@ -52,19 +51,16 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	/**
 	 * Constructor
 	 * 
-	 * @param destAddr
-	 *            the address of the target node (i.e. the last hop)
-	 * @param destHostkey
-	 *            the hostkey of the target node
-	 * @param config
-	 *            configuration
-	 * @param hopCount
-	 *            the number of intermediate hops (excluding our node and the target
-	 *            node)
+	 * Construct a new OnionConnectingSocket to the specified target (destAddr and destHostkey) or
+	 * a random node if destAddr or destHostkey are null.
+	 * 
+	 * @param m The multiplexer over which we communicate with other peers
+	 * @param destAddr the address of the target node (i.e. the last hop)
+	 * @param destHostkey the hostkey of the target node (i.e. the last hop)
 	 * @param externalID
 	 *            Other modules use this ID to refer to this tunnel (backup tunnels
 	 *            with the same end destination must get the same ID, therefore this
-	 *            input parameter) If building a backup tunnel, use this constructor
+	 *            input parameter). When building a backup tunnel, use this constructor
 	 *            with the same ID as the existing main tunnel, otherwise use the
 	 *            second constructor which assigns a new ID.
 	 * @throws Exception
@@ -154,48 +150,21 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	
 	
 	/**
+	 * Alternative constructor - a new externalID is assigned implicitely
 	 * 
-	 * 
-	 * @param destAddr
-	 *            the address of the target node (i.e. the last hop)
-	 * @param destHostkey
-	 *            the hostkey of the target node
-	 * @param config
-	 *            configuration
-	 * @param hopCount
-	 *            the number of intermediate hops (excluding our node and the target
-	 *            node)
+	 * @param m The multiplexer over which we communicate with other peers
+	 * @param destAddr the address of the target node (i.e. the last hop)
+	 * @param destHostkey the hostkey of the target node (i.e. the last hop)
 	 * @throws Exception
 	 */
-	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, Config config) throws Exception {
+	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey) throws Exception {
 		this(m, destAddr, destHostkey, new Random().nextInt());
 	}
 
-
-	/**
-	 * 
-	 * 
-	 * @param destAddr
-	 *            the address of the target node (i.e. the last hop)
-	 * @param destHostkey
-	 *            the hostkey of the target node
-	 * @param config
-	 *            configuration
-	 * @param hopCount
-	 *            the number of intermediate hops (excluding our node and the target
-	 *            node)
-	 * @throws Exception
-	 */
-	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, Config config, int externalID)
-			throws Exception {
-		this(m, destAddr, destHostkey, externalID);
-
-	}
-	
 	
 	/**
 	 * Encrypts payload for end hop.
-	 * 
+	 * @param payload the plaintext payload
 	 * @return encrypted payload
 	 * @throws Exception
 	 */
@@ -206,6 +175,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	/**
 	 * Decrypts payload of end hop.
 	 * 
+	 * @param payload the encrypted payload
 	 * @return Decrypted payload
 	 * @throws Exception
 	 */
@@ -218,7 +188,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * This method is only used during authentication phase, after that only
 	 * encrypt(byte[]) is used.
 	 * 
-	 * @param numLayers
+	 * @param payload the payload which will be encrypted
+	 * @param numLayers number of encryption layers to apply. 0 = no encryption.
 	 * @return encrypted payload (or plaintext if numLayers == 0)
 	 * @throws Exception 
 	 */
@@ -229,8 +200,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		
 		if(numLayers == 0)
 		{
-			//unencrypted packets need to be padded and contain size as int
-			return padData(payload);
+			//unencrypted packet
+			return payload;
 		}
 			
 		// Make an array containing the sessionIds in reverse order,
@@ -256,7 +227,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * decrypt(byte[]) is used.
 	 * 
 	 * @param encryptedPayload
-	 * @param numLayers number of encryption layers to remove.
+	 * @param numLayers number of encryption layers to remove. 0 = no decryption.
 	 * @return the decrypted payload.
 	 * @throws Exception
 	 */
@@ -267,8 +238,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		
 		if(numLayers == 0)
 		{
-			//unencrypted packets are padded and contain size as int
-			return unpadData(encryptedPayload);
+			//unencrypted packet
+			return encryptedPayload;
 		}
 			
 		// Make an array containing the sessionIds in reverse order,
@@ -290,9 +261,9 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	/**
 	 * Authenticates via OnionAuth. Encrypts with numLayers (0 = no encryption).
 	 * 
-	 * @param hopHostkey
-	 * @param numLayers
-	 * @return sessionID
+	 * @param hopHostkey the hostkey of the hop with which we want to authenticate
+	 * @param numLayers the number of layers needed for that hop
+	 * @return session ID for OnionAuth API - necessary for de-/encryption
 	 * @throws Exception
 	 */
 	public int authenticate(byte[] hopHostkey, int numLayers) throws Exception {
@@ -328,8 +299,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	
 	/**
 	 * Sends data through the tunnel, be it real VOIP or cover traffic.
-	 * @param isRealData
-	 * @param data
+	 * @param isRealData indicates if the data is real data or not (-> cover traffic)
+	 * @param data the payload
 	 * @throws Exception 
 	 */
 	public void sendData(boolean isRealData, byte[] data) throws Exception
@@ -340,11 +311,21 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encrypt(payload)));		
 	}
 	
+	/**
+	 * Sends (real) VOIP-data
+	 * @param data the payload
+	 * @throws Exception
+	 */
 	public void sendRealData(byte[] data) throws Exception
 	{
 		sendData(true,data);
 	}
 	
+	/**
+	 * Sends fake/ cover traffic of the specified size
+	 * @param size size of the cover traffic to generate
+	 * @throws Exception
+	 */
 	public void sendCoverData(int size) throws Exception
 	{
 		byte[] rndData = new byte[size];
@@ -352,7 +333,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		sendData(false, rndData);
 	}
 
-
+	/**
+	 * Sends a request to destroy the tunnel to all hops and tears the tunnel down.
+	 * @throws Exception
+	 */
 	public void destroy() throws Exception {
 		byte[] plainMsg = {MSG_DESTROY_TUNNEL};
 		// send the message iteratively to all hops,
@@ -369,6 +353,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	}
 
 
+	/**
+	 * Gets the next UDP-message and processes it accordingly, depending on wheter it's real or cover traffic.
+	 * @throws Exception
+	 */
 	public void getAndProcessNextDataMessage() throws Exception {
 		
 		OnionMessage incomingMessage = m.read(nextHopMId, nextHopAddress);

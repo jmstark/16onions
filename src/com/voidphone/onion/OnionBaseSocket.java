@@ -56,36 +56,6 @@ public abstract class OnionBaseSocket
 		externalID = tunnelID;
 	}
 	
-	/**
-	 * Pads data to the standard packet size and adds a size int at beginning
-	 */
-	protected byte[] padData(byte[] payload)
-	{
-		ByteBuffer output = ByteBuffer.allocate(Main.getConfig().onionSize);
-		output.putInt(payload.length);
-		output.put(payload);
-		byte[] randomPadding = new byte[output.remaining()];
-		new Random().nextBytes(randomPadding);
-		output.put(randomPadding);
-		return output.array();
-	}
-	
-	/**
-	 * Removes padding and size int and returns only the actual data
-	 * @param paddedPayload
-	 * @return the payload
-	 */
-	protected byte[] unpadData(byte[] paddedPayload)
-	{
-		ByteBuffer buffer = ByteBuffer.wrap(paddedPayload);
-		int actualSize = buffer.getInt();
-		byte[] payload = new byte[actualSize];
-		buffer.get(payload);
-		return payload;
-	}
-	
-	
-
 	
 	protected abstract byte[] encrypt(byte[] payload) throws Exception;
 	
