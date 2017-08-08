@@ -119,9 +119,9 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		
 		// get hs2 from onionAuth and send it back to remote peer
-		authSessionIds[0] = apiRequestCounter++;
-		hs2 = Main.getOaas().AUTHSESSIONINCOMINGHS1(Main.getOaas().newOnionAuthSessionIncomingHS1(authSessionIds[0], hs1Payload));
-
+		hs2 = Main.getOaas().AUTHSESSIONINCOMINGHS1(Main.getOaas().newOnionAuthSessionIncomingHS1(authApiId, hs1Payload));
+		authSessionIds[0] = hs2.getSessionID();
+		
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 		DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
 		outgoingData.writeInt(hs2.getPayload().length);

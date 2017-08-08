@@ -46,7 +46,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	protected byte[] destHostkey;
 	protected InetSocketAddress nextHopAddress;
 	protected int rpsApiId;
-	protected int authApiId;
 	protected short nextHopMId;
 
 
