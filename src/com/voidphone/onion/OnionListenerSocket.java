@@ -123,7 +123,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 		DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
-		outgoingData.writeInt(hs2.getPayload().length);
 		outgoingData.write(hs2.getPayload());
 		
 		m.write(new OnionMessage(previousHopWriteMId, OnionMessage.CONTROL_MESSAGE, previousHopAddress, outgoingDataBAOS.toByteArray()));
