@@ -87,7 +87,7 @@ public class OnionAuthApiSocket extends ApiSocket {
 		}
 	}
 
-	public OnionAuthSessionIncomingHS2 newOnionAuthSessionIncomingHS1(int id, int session, byte payload[])
+	public OnionAuthSessionIncomingHS2 newOnionAuthSessionIncomingHS2(int id, int session, byte payload[])
 			throws IllegalIDException {
 		getReadQueue(id);
 		try {
