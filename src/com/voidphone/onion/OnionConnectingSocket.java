@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Random;
 import com.voidphone.api.Config;
 import com.voidphone.api.OnionPeer;
+import com.voidphone.general.General;
 import com.voidphone.general.NoRpsPeerException;
 import com.voidphone.general.Util;
 
@@ -99,9 +100,13 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		m.registerAddress(hops[0].address);
 		nextHopMId = m.registerID(hops[0].address);
 		
+		General.info("Connected to first hop");
+		
 		// Bind UDP socket to the same local port as the TCP socket so so we can correlate
 		authSessionIds[0] = authenticate(hops[0].hostkey, 0);
 
+		General.info("Authenticated to first hop");
+		
 		// Establish forwardings (if any)
 		for (int i = 1; i < hops.length; i++) {
 			// Send forwarding request to node i-1 ->
@@ -120,9 +125,15 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), i);
 
 			m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encryptedPayload));
+			
+			General.info("Sent tunnel building request to hop " + (i-1) );
+			
 			// Now, we are indirectly connected to the target node. 
 			// Authenticate to that node.
 			authSessionIds[i] = authenticate(hops[i].hostkey, i);
+			
+			General.info("authenticated to hop " + i);
+			
 
 		}
 
@@ -135,8 +146,12 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		outgoingData.writeInt(externalID);
 		m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encrypt(outgoingDataBAOS.toByteArray())));
 		
+		General.info("Signaled tunnel end to last hop");
+		
 		//Inform our CM, that the requested tunnel is ready.
 		Main.getOas().ONIONTUNNELREADY(Main.getOas().newOnionTunnelReadyMessage(externalID, destHostkey));
+		
+		General.info("Signalled successfull tunnel build to CM");
 	}
 	
 	
@@ -231,6 +246,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		//send the data to OnionAuth API and get encrypted data back.
 		OnionAuthEncryptResp response = 
 				Main.getOaas().AUTHLAYERENCRYPT(Main.getOaas().newOnionAuthEncrypt(authApiId, neededSessionIds, payload));
+		
+		General.info("");
 
 		return response.getPayload();
 	}
@@ -290,8 +307,9 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		outGoingData.writeInt(VERSION);
 
 		// get hs1 from onionAuth and send it to remote peer
+
 		hs1 = Main.getOaas().AUTHSESSIONSTART(
-				Main.getOaas().newOnionAuthSessionStartMessage(apiRequestCounter++, Util.getHostkeyObject(hopHostkey)));
+				Main.getOaas().newOnionAuthSessionStartMessage(authApiId, Util.getHostkeyObject(hopHostkey)));
 		outGoingData.writeInt(hs1.getPayload().length);
 		outGoingData.write(hs1.getPayload());
 		outGoingData.writeInt(Util.getHostkeyBytes(Main.getConfig().hostkey).length);
@@ -305,8 +323,9 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		OnionMessage incomingMessage = m.read(nextHopMId, nextHopAddress);
 		byte[] hs2payload = decrypt(incomingMessage.data, numLayers);
 		
+		
 		Main.getOaas().AUTHSESSIONINCOMINGHS2(
-				new OnionAuthSessionIncomingHS2(hs1.getSessionID(), apiRequestCounter++, hs2payload));
+				Main.getOaas().newOnionAuthSessionIncomingHS2(authApiId, hs1.getSessionID(), hs2payload));
 
 		return hs1.getSessionID();
 	}
