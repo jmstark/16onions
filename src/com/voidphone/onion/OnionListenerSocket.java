@@ -65,6 +65,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		previousHopWriteMId = multiplexerId;
 		this.previousHopAddress = previousHopAddress;
 		authApiId = Main.getOaas().register();
+		authSessionIds = new int[1];
 	}
 
 	/**
