@@ -32,7 +32,6 @@ import com.voidphone.general.Util;
 import auth.api.OnionAuthDecryptResp;
 import auth.api.OnionAuthEncryptResp;
 import auth.api.OnionAuthSessionHS1;
-import auth.api.OnionAuthSessionIncomingHS2;
 import rps.api.RpsPeerMessage;
 
 

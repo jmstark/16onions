@@ -21,8 +21,6 @@ package com.voidphone.onion;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import com.voidphone.api.Config;
-
 
 /**
  * Base class for OnionConnectingSocket and OnionListenerSocket
