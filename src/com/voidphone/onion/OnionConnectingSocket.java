@@ -95,6 +95,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		else
 			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
 
+		nextHopAddress = hops[0].address;
+		
 		// Connect to first hop - all other connections are forwarded over this hop
 		m.registerAddress(hops[0].address);
 		nextHopMId = m.registerID(hops[0].address);
@@ -105,8 +107,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		authSessionIds[0] = authenticate(hops[0].hostkey, 0);
 
 		General.info("Authenticated to first hop");
-		
-		nextHopAddress = hops[0].address;
 		
 		// Establish forwardings (if any)
 		for (int i = 1; i < hops.length; i++) {
