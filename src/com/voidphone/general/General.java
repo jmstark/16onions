@@ -32,19 +32,18 @@ public class General {
 
 	public static void debug(String s) {
 		if (debug) {
-			System.out.println("[" + (System.nanoTime() - debugTimer)
-					+ "] DEBUG: " + s);
+			System.out.println("[" + (System.nanoTime() - debugTimer) + "] DEBUG: " + s);
 		}
 	}
-	
+
 	public static void info(String s) {
 		System.out.println("INFO: " + s);
 	}
-	
+
 	public static void warning(String s) {
 		System.err.println("WARNING: " + s);
 	}
-	
+
 	public static void error(String s) {
 		System.err.println("ERROR: " + s);
 	}

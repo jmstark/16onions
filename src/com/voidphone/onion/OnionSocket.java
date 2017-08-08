@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -153,7 +152,6 @@ public class OnionSocket {
 				close();
 				return;
 			}
-			General.debug(Arrays.toString(readBuffer.array()));
 			OnionMessage message = OnionMessage.parse(readBuffer, OnionMessage.CONTROL_MESSAGE, address);
 			try {
 				multiplexer.getReadQueue(message.id, message.address).offer(message);

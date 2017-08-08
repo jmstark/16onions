@@ -39,6 +39,10 @@ public class OnionMessage {
 	 */
 	public final InetSocketAddress address;
 	/**
+	 * the size of the payload
+	 */
+	public final int size;
+	/**
 	 * the payload of the message
 	 */
 	public final byte data[];
@@ -54,12 +58,15 @@ public class OnionMessage {
 	 *            ID of the logical connection
 	 * @param addr
 	 *            address of the destination of the logical connection
+	 * @param size
+	 *            the size of the payload
 	 * @param data
 	 *            payload
 	 */
-	public OnionMessage(short id, boolean type, InetSocketAddress addr, byte[] data) {
+	public OnionMessage(short id, boolean type, InetSocketAddress addr, int size, byte[] data) {
 		this.id = id;
 		this.address = addr;
+		this.size = size;
 		this.data = data;
 		this.type = type;
 	}
@@ -74,17 +81,13 @@ public class OnionMessage {
 	 * @return the OnionMessage
 	 */
 	public static OnionMessage parse(ByteBuffer buf, boolean type, InetSocketAddress addr) {
-		OnionMessage message = null;
-		int size = buf.capacity() - ONION_HEADER_SIZE;
-		buf.flip();
-		if (buf.remaining() == size + ONION_HEADER_SIZE) {
-			short id = buf.getShort();
-			byte data[] = new byte[size];
-			buf.get(data);
-			message = new OnionMessage(id, type, addr, data);
-		}
 		buf.clear();
-		return message;
+		int size = buf.getShort();
+		short id = buf.getShort();
+		byte data[] = new byte[size];
+		buf.get(data);
+		buf.clear();
+		return new OnionMessage(id, type, addr, size, data);
 	}
 
 	/**
@@ -97,7 +100,7 @@ public class OnionMessage {
 		buf.clear();
 		buf.putShort(id);
 		buf.put(data);
-		buf.flip();
+		buf.clear();
 	}
 
 	public String toString() {
