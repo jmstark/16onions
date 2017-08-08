@@ -74,13 +74,7 @@ public class P2PServiceImpl implements P2PService {
             tunnel = new TunnelImpl(context, connection);
             handler.tunnelCreated(tunnel, hostkey);
             disconnectHandler.setTunnel(tunnel);
-            try {
-                hello = new HelloMessage(hostkey);
-            } catch (MessageSizeExceededException ex) {
-                handler.tunnelCreatefailed(ex, address, hostkey);
-                connection.disconnect();
-                return;
-            }
+            hello = new HelloMessage();
             connection.sendMsg(hello);
             connection.receive(new TunnelDataHandler(tunnel, handler));
         }

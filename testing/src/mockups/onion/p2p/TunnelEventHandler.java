@@ -65,7 +65,7 @@ public interface TunnelEventHandler<A> {
      * @param tunnel the new incoming tunnel
      * @param key the public key of the other peer
      */
-    public void newIncomingTunnel(Tunnel<A> tunnel, RSAPublicKey key);
+    public void newIncomingTunnel(Tunnel<A> tunnel);
 
     /**
      * Function called for data that is received from the P2P connection.
