@@ -54,7 +54,7 @@ public class ConfigFactory {
 		config.add("onion", "listen_address", nextPort());
 		config.add("onion", "api_timeout", 3000);
 		config.add("onion", "cache_size", 10);
-		config.add("onion", "hopcount", 3);
+		config.add("onion", "hopcount", 0);
 		// config.add("onion", "p2p_hostname", "xxx");
 		// config.add("onion", "p2p_port", this.port);
 		// this.port++;

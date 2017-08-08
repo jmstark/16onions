@@ -20,13 +20,22 @@ public class Test {
 		String parameter[] = new String[] { "-c", Helper.getConfigPath(0), "-k",
 				Helper.getPeerConfig(1).config.get("onion", "hostkey", String.class), "-p",
 				onionListenAddress.substring(onionListenAddress.lastIndexOf(":") + 1) + "", "-t", "127.0.0.1" };
-		TestProcess test = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
-		rbt = new RedirectBackupThread(test.getOut(), -1);
+		TestProcess test0 = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
+		rbt = new RedirectBackupThread(test0.getOut(), 5);
+		rbt.start();
+
+		onionListenAddress = Helper.getPeerConfig(0).config.get("onion", "listen_address", String.class);
+		parameter = new String[] { "-c", Helper.getConfigPath(1), "-k",
+				Helper.getPeerConfig(0).config.get("onion", "hostkey", String.class), "-p",
+				onionListenAddress.substring(onionListenAddress.lastIndexOf(":") + 1) + "", "-t", "127.0.0.1" };
+		TestProcess test1 = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
+		rbt = new RedirectBackupThread(test1.getOut(), 15);
 		rbt.start();
 
 		Thread.sleep(60000);
 
-		test.terminate();
+		test0.terminate();
+		test1.terminate();
 	}
 
 	public static void newPeer(int i) throws IOException, InterruptedException {
