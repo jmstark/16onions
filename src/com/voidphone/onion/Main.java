@@ -27,6 +27,7 @@ import java.nio.channels.CompletionHandler;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.Selector;
 import java.security.InvalidKeyException;
+import java.util.concurrent.TimeoutException;
 
 import org.ini4j.InvalidFileFormatException;
 
@@ -88,6 +89,10 @@ public class Main {
 				} catch (IllegalAddressException e) {
 					General.warning("Got multiple TCP channel from one Hop!");
 					return;
+				} catch (InterruptedException e) {
+					General.fatalException(e);
+				} catch (TimeoutException e) {
+					General.warning("Remote hop did not send its port!");
 				}
 				General.info("Onion connection successful");
 			}
@@ -102,8 +107,10 @@ public class Main {
 			OnionMessage message = OnionMessage.parse(readBuffer, OnionMessage.DATA_MESSAGE, addr);
 			try {
 				multiplexer.getReadQueue(message.id, message.address).offer(message);
-			} catch (IllegalAddressException | IllegalIDException e) {
-				General.warning("Got packet with wrong address or ID!");
+			} catch (IllegalAddressException e) {
+				General.warning("Got packet with wrong address (" + message.address + ")!");
+			} catch (IllegalIDException e) {
+				General.warning("Got packet with illegal ID!");
 			}
 			readBuffer.clear();
 		}

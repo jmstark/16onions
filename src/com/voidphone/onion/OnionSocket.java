@@ -38,7 +38,7 @@ import com.voidphone.general.SizeLimitExceededException;
 
 public class OnionSocket {
 	// TODO: Move backup tunnels into this class, update currentIncomingTunnel
-	private InetSocketAddress address;
+	private final InetSocketAddress address;
 	private AsynchronousSocketChannel controlChannel;
 	private DatagramChannel dataChannel;
 	private ByteBuffer readBuffer;
@@ -57,22 +57,29 @@ public class OnionSocket {
 	 *             if there is an I/O-error
 	 * @throws IllegalAddressException
 	 *             if the address is already registered
+	 * @throws TimeoutException
+	 * @throws InterruptedException
 	 */
 	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch, DatagramChannel dch)
-			throws IOException, IllegalAddressException {
+			throws IOException, IllegalAddressException, InterruptedException, TimeoutException {
 		dataChannel = dch;
 		init(m, cch);
+		Future<Integer> future = controlChannel.read(readBuffer);
+		try {
+			if (future.get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS) <= 0) {
+				close();
+				throw new IOException("Reading of the remote port number failed!");
+			}
+		} catch (ExecutionException e) {
+			throw new IOException(e.getCause().getMessage());
+		}
+		OnionMessage msg = OnionMessage.parse(readBuffer, OnionMessage.CONTROL_MESSAGE,
+				(InetSocketAddress) cch.getRemoteAddress());
+		ByteBuffer buffer = ByteBuffer.wrap(msg.data);
+		int port = Short.toUnsignedInt(buffer.getShort());
+		this.address = new InetSocketAddress(msg.address.getAddress(), port);
 		m.registerAddress(address, this);
 		controlChannel.read(readBuffer, null, new ReadCompletionHandler());
-	}
-
-	private void init(Multiplexer m, AsynchronousSocketChannel ch) throws IOException, IllegalAddressException {
-		readBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
-		writeBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
-		this.multiplexer = m;
-		this.writeLock = new ReentrantLock();
-		this.controlChannel = ch;
-		this.address = (InetSocketAddress) controlChannel.getRemoteAddress();
 	}
 
 	public OnionSocket(Multiplexer m, InetSocketAddress caddr, DatagramChannel dch)
@@ -86,7 +93,23 @@ public class OnionSocket {
 			throw new IOException(e.getCause().getMessage());
 		}
 		init(m, controlChannel);
+		this.address = caddr;
+		ByteBuffer buffer = ByteBuffer.allocate(2);
+		buffer.putShort((short) dch.socket().getLocalPort());
+		try {
+			this.send(new OnionMessage((short) 0, OnionMessage.CONTROL_MESSAGE, caddr, buffer.array()));
+		} catch (SizeLimitExceededException e) {
+			General.fatalException(e);
+		}
 		controlChannel.read(readBuffer, null, new ReadCompletionHandler());
+	}
+
+	private void init(Multiplexer m, AsynchronousSocketChannel ch) throws IOException, IllegalAddressException {
+		readBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
+		writeBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
+		this.multiplexer = m;
+		this.writeLock = new ReentrantLock();
+		this.controlChannel = ch;
 	}
 
 	/**
@@ -105,14 +128,12 @@ public class OnionSocket {
 				OnionConnectingSocket currentConnectingTunnel = OnionApiSocket.detachedConnectingTunnel;
 				OnionApiSocket.detachedConnectingTunnel = null;
 				currentConnectingTunnel.constructTunnel(id, addr);
-				
+
 				// the tunnel handler
 				while (true)
 					currentConnectingTunnel.getAndProcessNextDataMessage();
 
-			} 
-			else 
-			{
+			} else {
 				OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
 				incomingSocket.authenticate();
 				boolean tunnelDestroyed = false;

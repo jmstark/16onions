@@ -84,7 +84,7 @@ public class ConfigFactory {
 	}
 
 	private String nextPort() {
-		if (port >= Short.MAX_VALUE) {
+		if (port >= 2 * Short.MAX_VALUE) {
 			General.fatal("Port is too large!");
 		}
 		String ret = "127.0.0.1:" + port;

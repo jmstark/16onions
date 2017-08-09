@@ -78,7 +78,7 @@ public class OnionMessage {
 	 */
 	public static OnionMessage parse(ByteBuffer buf, boolean type, InetSocketAddress addr) {
 		buf.clear();
-		int size = buf.getShort();
+		int size = Short.toUnsignedInt(buf.getShort());
 		short id = buf.getShort();
 		byte data[] = new byte[size];
 		buf.get(data);

@@ -57,7 +57,7 @@ public class Helper {
 		if (configs.toFile().exists()) {
 			General.fatal(configs.toString() + " exists. Please delete it.");
 		}
-		int port = new Random().nextInt(Short.MAX_VALUE - 1024) + 1024;
+		int port = new Random().nextInt(2 * Short.MAX_VALUE - 1024) + 1024;
 		if (number <= 0) {
 			throw new IllegalArgumentException("Number of peers is <= 0!");
 		}
@@ -102,7 +102,7 @@ public class Helper {
 		String addressAndPort = config.config.get("onion", "api_address", String.class);
 		int colonPos = addressAndPort.lastIndexOf(':');
 		return new InetSocketAddress(addressAndPort.substring(0, colonPos),
-				(short) Integer.parseInt(addressAndPort.substring(colonPos + 1)));
+				Integer.parseInt(addressAndPort.substring(colonPos + 1)));
 	}
 
 	public static Socket connectToAPI(RedirectBackupThread rbt, ConfigFactory config)

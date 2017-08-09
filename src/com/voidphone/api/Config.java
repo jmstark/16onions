@@ -46,17 +46,16 @@ public class Config {
 	public final int onionSize;
 	// address and port of the Onion Auth module API
 	public final String onionAuthAPIAddress;
-	public final short onionAuthAPIPort;
+	public final int onionAuthAPIPort;
 	// address and port of the RPS module API
 	public final String rpsAPIAddress;
-	public final short rpsAPIPort;
+	public final int rpsAPIPort;
 	// address and port of the Onion module API
 	public final String onionAPIAddress;
-	public final short onionAPIPort;
+	public final int onionAPIPort;
 	// address and port of the Onion P2P
 	public final String onionAddress;
-	public final short onionPort;
-	public final short onionDataPort;
+	public final int onionPort;
 	// hostkey of this peer
 	public final RSAPublicKey hostkey;
 	// Hop-count
@@ -79,19 +78,19 @@ public class Config {
 		String apiAddressAndPort = getString(configFile, "onion", "api_address");
 		int colonPos = apiAddressAndPort.lastIndexOf(':');
 		onionAPIAddress = apiAddressAndPort.substring(0, colonPos);
-		onionAPIPort = (short) Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
+		onionAPIPort = Integer.parseInt(apiAddressAndPort.substring(colonPos + 1));
 
 		// OnionAuth
 		String authAddressAndPort = getString(configFile, "auth", "api_address");
 		colonPos = authAddressAndPort.lastIndexOf(':');
 		onionAuthAPIAddress = apiAddressAndPort.substring(0, colonPos);
-		onionAuthAPIPort = (short) Integer.parseInt(authAddressAndPort.substring(colonPos + 1));
+		onionAuthAPIPort = Integer.parseInt(authAddressAndPort.substring(colonPos + 1));
 
 		// RPS
 		String rpsAddressAndPort = getString(configFile, "rps", "api_address");
 		colonPos = rpsAddressAndPort.lastIndexOf(':');
 		rpsAPIAddress = rpsAddressAndPort.substring(0, colonPos);
-		rpsAPIPort = (short) Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
+		rpsAPIPort = Integer.parseInt(rpsAddressAndPort.substring(colonPos + 1));
 
 		File file = new File(hostkeyPath);
 		hostkey = PEMParser.getPublicKeyFromPEM(file);
@@ -101,24 +100,17 @@ public class Config {
 		group = AsynchronousChannelGroup.withFixedThreadPool(max(1, cores - 1), threadFactory);
 
 		// Onion hostname and port are separate config lines
-//		onionAddress = getString(configFile, "onion", "p2p_hostname");
-//		onionPort = (short) getInteger(configFile, "onion", "p2p_port");
 		String onionAddressAndPort = getString(configFile, "onion", "listen_address");
 		colonPos = onionAddressAndPort.lastIndexOf(':');
 		onionAddress = onionAddressAndPort.substring(0, colonPos);
-		onionPort = (short) Integer.parseInt(onionAddressAndPort.substring(colonPos + 1));
-		
-		onionDataPort = (short) getInteger(configFile, "onion", "p2p_data_port");
+		onionPort = Integer.parseInt(onionAddressAndPort.substring(colonPos + 1));
 
 		hopCount = getInteger(configFile, "onion", "hopcount");
 		apiTimeout = getInteger(configFile, "onion", "api_timeout");
 		onionTimeout = getInteger(configFile, "onion", "p2p_timeout");
 		onionSize = getInteger(configFile, "onion", "p2p_packetsize");
 
-		General.debug("Hostkey: " + hostkeyPath + "; \nAPI will listen on " + onionAPIAddress + ", Port " + onionAPIPort
-				+ "; \nOnion P2P will listen on " + onionAddress + ", Port " + onionPort + ". \n"
-				+ "connecting to AUTH API on " + onionAuthAPIAddress + ":" + onionAuthAPIPort
-				+ "; \nconnecting to RPS API on " + rpsAPIAddress + ":" + rpsAPIPort);
+		General.debug("Hostkey: " + hostkeyPath);
 	}
 
 	private int getInteger(Wini configFile, String section, String option) {
