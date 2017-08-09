@@ -140,9 +140,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 */
 	boolean getAndProcessNextMessage() throws Exception {
 		
-		
-		
-		
 		//remove one layer of encryption. TODO: maybe it's from nextHopAddress?
 		OnionMessage incomingMessage = m.read(previousHopWriteMId, previousHopAddress);
 		

@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Random;
 import com.voidphone.api.OnionPeer;
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.NoRpsPeerException;
 import com.voidphone.general.Util;
@@ -99,8 +100,16 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		m.registerAddress(hops[0].address);
 		nextHopMId = m.registerID(hops[0].address);
 
+
+	}
+	
+	public void constructTunnel(short newNextHopMId, InetSocketAddress newNextHopAddress) throws Exception
+	{
+		nextHopMId = newNextHopMId;
+		nextHopAddress = newNextHopAddress;
 		constructTunnel();
 	}
+	
 	
 	/**
 	 * This method must be called after the constructor has returned
@@ -111,7 +120,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		General.info("Connected to first hop");
 		
 
-		beginAuthentication(hops[0].hostkey, 0);
+		//beginAuthentication(hops[0].hostkey, 0);
 		authSessionIds[0] = finishAuthentication(hops[0].hostkey, 0);
 
 		General.info("Authenticated to first hop");
@@ -160,6 +169,13 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		Main.getOas().ONIONTUNNELREADY(Main.getOas().newOnionTunnelReadyMessage(onionApiId, destHostkey));
 		
 		General.info("Signalled successfull tunnel build to CM");
+	}
+	
+	
+	public short detachId() throws IllegalAddressException, IllegalIDException
+	{
+		m.detachID(nextHopMId,nextHopAddress);
+		return nextHopMId;
 	}
 	
 	
@@ -274,6 +290,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	
 	public void beginAuthentication(byte[] hopHostkey, int numLayers) throws Exception
 	{
+		if(hopHostkey == null)
+			hopHostkey = hops[0].hostkey;
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 		DataOutputStream outGoingData = new DataOutputStream(outgoingDataBAOS);
 		

@@ -51,6 +51,8 @@ public class OnionApiSocket extends ApiSocket {
 	protected OnionConnectingSocket nextConnectingTunnel;
 	protected OnionListenerSocket currentIncomingTunnel;
 	protected InetSocketAddress tunnelDestination;
+	public static int newDetachedTunnelId;
+	public static OnionConnectingSocket detachedConnectingTunnel = null;
 	protected byte[] destinationHostkey;
 
 	private final ReentrantReadWriteLock lock;
@@ -184,11 +186,13 @@ public class OnionApiSocket extends ApiSocket {
 			// build the tunnel
 			currentConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination,
 					destinationHostkey);
-
-			// the tunnel handler
-			while (true)
-				currentConnectingTunnel.getAndProcessNextDataMessage();
-		} catch (Exception e) {
+			currentConnectingTunnel.beginAuthentication(null, 0);
+			newDetachedTunnelId = currentConnectingTunnel.detachId();
+			detachedConnectingTunnel = currentConnectingTunnel;
+			
+			return;
+		} 
+		catch (Exception e) {
 			General.fatalException(e);
 			try {
 				ONIONERROR(newOnionErrorMessage(

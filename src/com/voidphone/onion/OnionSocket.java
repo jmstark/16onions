@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.voidphone.api.OnionApiSocket;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
@@ -100,11 +101,24 @@ public class OnionSocket {
 	 */
 	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) {
 		try {
-			OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
-			incomingSocket.authenticate();
-			boolean tunnelDestroyed = false;
-			while (!tunnelDestroyed) {
-				tunnelDestroyed = incomingSocket.getAndProcessNextMessage();
+			if (OnionApiSocket.detachedConnectingTunnel != null && id == OnionApiSocket.newDetachedTunnelId) {
+				OnionConnectingSocket currentConnectingTunnel = OnionApiSocket.detachedConnectingTunnel;
+				OnionApiSocket.detachedConnectingTunnel = null;
+				currentConnectingTunnel.constructTunnel(id, addr);
+				
+				// the tunnel handler
+				while (true)
+					currentConnectingTunnel.getAndProcessNextDataMessage();
+
+			} 
+			else 
+			{
+				OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
+				incomingSocket.authenticate();
+				boolean tunnelDestroyed = false;
+				while (!tunnelDestroyed) {
+					tunnelDestroyed = incomingSocket.getAndProcessNextMessage();
+				}
 			}
 		} catch (Exception e) {
 			// The tunnel has broken
