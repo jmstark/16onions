@@ -20,7 +20,6 @@ package com.voidphone.onion;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -45,7 +44,6 @@ public class Multiplexer {
 	private final ReentrantReadWriteLock firstLock;
 	private final HashMap<InetSocketAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>> first;
 	private final SecureRandom random;
-	private final ByteBuffer writeBuffer;
 	private final DatagramChannel channel;
 
 	/**
@@ -60,7 +58,6 @@ public class Multiplexer {
 		random = new SecureRandom();
 		first = new HashMap<InetSocketAddress, Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>>();
 		firstLock = new ReentrantReadWriteLock(true);
-		writeBuffer = ByteBuffer.allocate(size + OnionMessage.ONION_HEADER_SIZE);
 		this.channel = channel;
 	}
 
@@ -103,17 +100,7 @@ public class Multiplexer {
 	 */
 	public void write(OnionMessage message)
 			throws IllegalAddressException, InterruptedException, IOException, SizeLimitExceededException {
-		if (message.type == OnionMessage.CONTROL_MESSAGE) {
-			getOnionSocket(message.address).send(message);
-		} else {
-			message.serialize(writeBuffer);
-			try {
-				channel.write(writeBuffer);
-			} catch (IOException e) {
-				General.fatalException(e);
-			}
-		}
-
+		getOnionSocket(message.address).send(message);
 	}
 
 	/**
@@ -243,7 +230,7 @@ public class Multiplexer {
 				firstLock.writeLock().unlock();
 				return sock;
 			}
-			sock = new OnionSocket(this, addr);
+			sock = new OnionSocket(this, addr, channel);
 		} catch (IllegalAddressException e) {
 			General.fatal("Address is not registered, but it must be!");
 		}

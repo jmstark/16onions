@@ -59,7 +59,7 @@ public class OnionAuthApiSocket extends ApiSocket {
 	private final Random random;
 
 	public OnionAuthApiSocket(InetSocketAddress addr) throws IOException {
-		super(addr);
+		super(addr, false);
 		random = new Random();
 		map = new HashMap<Integer, LinkedBlockingQueue<OnionAuthApiMessage>>();
 		lock = new ReentrantReadWriteLock(true);

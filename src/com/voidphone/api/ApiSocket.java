@@ -44,16 +44,41 @@ public abstract class ApiSocket {
 	protected AsynchronousSocketChannel channel;
 	protected Connection connection;
 
-	/**
-	 * Creates a new API socket and connects it to the specified IP address and port
-	 * number.
-	 * 
-	 * @param addr
-	 *            the IP-address and port number
-	 * @throws IOException
-	 *             if there is an I/O-error
-	 */
-	public ApiSocket(final InetSocketAddress addr) throws IOException {
+	private void listenForApi(final InetSocketAddress addr) throws IOException {
+		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open(Main.getConfig().group)
+				.bind(addr);
+		General.info("Waiting for API connection on " + addr + ".....");
+		listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+			@Override
+			public void completed(AsynchronousSocketChannel channel, Void none) {
+				connection = new Connection(channel, new DisconnectHandler<Void>(null) {
+					@Override
+					protected void handleDisconnect(Void none) {
+						General.fatal("Disconnect from API (" + addr + ")!");
+					}
+				});
+				connection.receive(new MessageHandler<Void>(null) {
+					@Override
+					public void parseMessage(ByteBuffer buf, MessageType type, Void none)
+							throws MessageParserException, ProtocolException {
+						receive(buf, type);
+					}
+				});
+				try {
+					General.info("Connected to API (" + ((InetSocketAddress) channel.getRemoteAddress()) + ")");
+				} catch (IOException e) {
+					General.fatalException(e);
+				}
+			}
+
+			@Override
+			public void failed(Throwable exception, Void none) {
+				General.fatal("Cannot connect to API (" + addr + ")!");
+			}
+		});
+	}
+
+	private void connectToApi(final InetSocketAddress addr) throws IOException {
 		channel = AsynchronousSocketChannel.open(Main.getConfig().group);
 		channel.connect(addr, channel, new CompletionHandler<Void, AsynchronousSocketChannel>() {
 			@Override
@@ -82,41 +107,22 @@ public abstract class ApiSocket {
 	}
 
 	/**
-	 * Listens for a new API connection.
+	 * Creates a new API socket and connects it to or waits for a connection on the
+	 * specified IP address and port number.
 	 * 
-	 * @param port
-	 *            the port to listen on
+	 * @param addr
+	 *            the IP-address and port number
+	 * @param listen
+	 *            should the API socket wait for incoming connections?
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public ApiSocket(int port) throws IOException {
-		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open(Main.getConfig().group)
-				.bind(new InetSocketAddress(port));
-		General.info("Waiting for API connection on " + port + ".....");
-		listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
-			@Override
-			public void completed(AsynchronousSocketChannel channel, Void none) {
-				connection = new Connection(channel, new DisconnectHandler<Void>(null) {
-					@Override
-					protected void handleDisconnect(Void none) {
-						General.fatal("Disconnect from API!");
-					}
-				});
-				connection.receive(new MessageHandler<Void>(null) {
-					@Override
-					public void parseMessage(ByteBuffer buf, MessageType type, Void none)
-							throws MessageParserException, ProtocolException {
-						receive(buf, type);
-					}
-				});
-				General.info("API connection successful");
-			}
-
-			@Override
-			public void failed(Throwable exception, Void none) {
-				General.fatal("Cannot connect to API!");
-			}
-		});
+	public ApiSocket(final InetSocketAddress addr, boolean listen) throws IOException {
+		if (listen) {
+			listenForApi(addr);
+		} else {
+			connectToApi(addr);
+		}
 	}
 
 	/**

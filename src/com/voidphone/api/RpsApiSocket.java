@@ -46,7 +46,7 @@ public class RpsApiSocket extends ApiSocket {
 	 *             if there is an I/O-error
 	 */
 	public RpsApiSocket(InetSocketAddress addr) throws IOException {
-		super(addr);
+		super(addr, false);
 		peerQueue = new LinkedBlockingQueue<RpsPeerMessage>(32);
 	}
 

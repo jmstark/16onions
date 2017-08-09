@@ -65,13 +65,15 @@ public class Main {
 		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress, config.onionAuthAPIPort));
 		ras = new RpsApiSocket(new InetSocketAddress(config.rpsAPIAddress, config.rpsAPIPort));
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
-		dataChannel = DatagramChannel.open().bind(new InetSocketAddress(config.onionDataPort));
+		InetSocketAddress dataAddress = new InetSocketAddress(config.onionAddress, config.onionPort);
+		General.info("Waiting for onion data packets on " + dataAddress + ".....");
+		dataChannel = DatagramChannel.open().bind(dataAddress);
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
-		oas = new OnionApiSocket(config.onionAPIPort);
+		oas = new OnionApiSocket(new InetSocketAddress(config.onionAPIAddress, config.onionAPIPort));
 
-		General.info("Waiting for Onion connections on " + config.onionPort + ".....");
-		onionServerSocket = AsynchronousServerSocketChannel.open(config.group)
-				.bind(new InetSocketAddress(config.onionAddress, config.onionPort));
+		InetSocketAddress controlAddress = new InetSocketAddress(config.onionAddress, config.onionPort);
+		General.info("Waiting for onion control connections on " + controlAddress + ".....");
+		onionServerSocket = AsynchronousServerSocketChannel.open(config.group).bind(controlAddress);
 		onionServerSocket.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
 			public void completed(AsynchronousSocketChannel channel, Void none) {
@@ -79,7 +81,7 @@ public class Main {
 				try {
 					General.debug("Got connection from " + (InetSocketAddress) channel.getRemoteAddress() + " to "
 							+ (InetSocketAddress) channel.getLocalAddress());
-					new OnionSocket(multiplexer, channel);
+					new OnionSocket(multiplexer, channel, dataChannel);
 				} catch (IOException e) {
 					General.error("I/O error!");
 					return;

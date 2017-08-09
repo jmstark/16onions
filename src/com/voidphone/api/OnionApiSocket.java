@@ -65,8 +65,8 @@ public class OnionApiSocket extends ApiSocket {
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public OnionApiSocket(int port) throws IOException {
-		super(port);
+	public OnionApiSocket(final InetSocketAddress addr) throws IOException {
+		super(addr, true);
 		random = new Random();
 		map = new HashMap<Integer, Void>();
 		lock = new ReentrantReadWriteLock(true);
@@ -184,9 +184,6 @@ public class OnionApiSocket extends ApiSocket {
 			// build the tunnel
 			currentConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination,
 					destinationHostkey);
-			
-			
-			
 
 			// the tunnel handler
 			while (true)
