@@ -190,7 +190,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 				return false;
 			
 			General.info("MSG_DATA received: incoming data message");
-			Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(externalID, Arrays.copyOfRange(payload, 1, payload.length)));
+			Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(onionApiId, Arrays.copyOfRange(payload, 1, payload.length)));
 			return false;
 		}
 		
