@@ -27,7 +27,6 @@ import java.nio.channels.CompletionHandler;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.Selector;
 import java.security.InvalidKeyException;
-import java.util.concurrent.TimeoutException;
 
 import org.ini4j.InvalidFileFormatException;
 
@@ -84,15 +83,8 @@ public class Main {
 							+ (InetSocketAddress) channel.getLocalAddress());
 					new OnionSocket(multiplexer, channel, dataChannel);
 				} catch (IOException e) {
-					General.error("I/O error!");
+					General.error("I/O error (" + e.getMessage() + ")!");
 					return;
-				} catch (IllegalAddressException e) {
-					General.warning("Got multiple TCP channel from one Hop!");
-					return;
-				} catch (InterruptedException e) {
-					General.fatalException(e);
-				} catch (TimeoutException e) {
-					General.warning("Remote hop did not send its port!");
 				}
 				General.info("Onion connection successful");
 			}

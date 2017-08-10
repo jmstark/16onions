@@ -60,51 +60,64 @@ public class OnionSocket {
 	 * @throws TimeoutException
 	 * @throws InterruptedException
 	 */
-	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch, DatagramChannel dch)
-			throws IOException, IllegalAddressException, InterruptedException, TimeoutException {
+	public OnionSocket(Multiplexer m, AsynchronousSocketChannel cch, DatagramChannel dch) throws IOException {
 		dataChannel = dch;
 		init(m, cch);
-		Future<Integer> future = controlChannel.read(readBuffer);
+		ByteBuffer buf = ByteBuffer.allocate(2);
+		Future<Integer> future = controlChannel.read(buf);
 		try {
-			if (future.get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS) <= 0) {
-				close();
-				throw new IOException("Reading of the remote port number failed!");
-			}
-		} catch (ExecutionException e) {
-			throw new IOException(e.getCause().getMessage());
+			do {
+				if (future.get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS) <= 0) {
+					close();
+					throw new IOException("Cannot read the remote port number!");
+				}
+			} while (buf.hasRemaining());
+		} catch (ExecutionException | InterruptedException | TimeoutException e) {
+			close();
+			throw new IOException("Cannot read the remote port number!");
 		}
-		OnionMessage msg = OnionMessage.parse(readBuffer, OnionMessage.CONTROL_MESSAGE,
-				(InetSocketAddress) cch.getRemoteAddress());
-		ByteBuffer buffer = ByteBuffer.wrap(msg.data);
-		int port = Short.toUnsignedInt(buffer.getShort());
-		this.address = new InetSocketAddress(msg.address.getAddress(), port);
-		m.registerAddress(address, this);
+		buf.flip();
+		int port = Short.toUnsignedInt(buf.getShort());
+		this.address = new InetSocketAddress(((InetSocketAddress) controlChannel.getRemoteAddress()).getAddress(),
+				port);
+		try {
+			m.registerAddress(address, this);
+		} catch (IllegalAddressException e) {
+			close();
+			throw new IOException("Address is already registered!");
+		}
 		controlChannel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
-	public OnionSocket(Multiplexer m, InetSocketAddress caddr, DatagramChannel dch)
-			throws IOException, IllegalAddressException, TimeoutException, InterruptedException {
+	public OnionSocket(Multiplexer m, InetSocketAddress caddr, DatagramChannel dch) throws IOException {
 		dataChannel = dch;
 		controlChannel = AsynchronousSocketChannel.open();
 		Future<Void> future = controlChannel.connect(caddr);
 		try {
 			future.get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS);
-		} catch (ExecutionException e) {
-			throw new IOException(e.getCause().getMessage());
+		} catch (ExecutionException | TimeoutException | InterruptedException e) {
+			throw new IOException("Cannot connect to " + caddr + "!");
 		}
 		init(m, controlChannel);
 		this.address = caddr;
-		ByteBuffer buffer = ByteBuffer.allocate(2);
-		buffer.putShort((short) dch.socket().getLocalPort());
-		try {
-			this.send(new OnionMessage((short) 0, OnionMessage.CONTROL_MESSAGE, caddr, buffer.array()));
-		} catch (SizeLimitExceededException e) {
-			General.fatalException(e);
+		ByteBuffer buf = ByteBuffer.allocate(2);
+		buf.putShort((short) dch.socket().getLocalPort());
+		buf.flip();
+		while (buf.hasRemaining()) {
+			try {
+				if (controlChannel.write(buf).get(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS) <= 0) {
+					close();
+					throw new IOException("Cannot send the local port number!");
+				}
+			} catch (ExecutionException | TimeoutException | InterruptedException e) {
+				close();
+				throw new IOException("Cannot send the local port number!");
+			}
 		}
 		controlChannel.read(readBuffer, null, new ReadCompletionHandler());
 	}
 
-	private void init(Multiplexer m, AsynchronousSocketChannel ch) throws IOException, IllegalAddressException {
+	private void init(Multiplexer m, AsynchronousSocketChannel ch) throws IOException {
 		readBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
 		writeBuffer = ByteBuffer.allocate(Main.getConfig().onionSize + OnionMessage.ONION_HEADER_SIZE);
 		this.multiplexer = m;
@@ -195,6 +208,10 @@ public class OnionSocket {
 			}
 			if (length <= 0) {
 				close();
+				return;
+			}
+			if (readBuffer.hasRemaining()) {
+				controlChannel.read(readBuffer, null, this);
 				return;
 			}
 			OnionMessage message = OnionMessage.parse(readBuffer, OnionMessage.CONTROL_MESSAGE, address);
