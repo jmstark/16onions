@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import com.voidphone.api.OnionApiSocket;
 import com.voidphone.general.General;
 
 import auth.api.OnionAuthCipherDecryptResp;
@@ -230,10 +231,18 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			General.info("MSG_INCOMING_TUNNEL received");
 			//Signal to our CM a new incoming tunnel
 			externalID = buffer.getInt();
+			//Main.getOas().setNewIncomingTunnel(this);
+			Main.getOas().addActiveTunnel(this);
 			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(onionApiId));
 		}
 		return false;
 
+	}
+
+	@Override
+	public void sendData(boolean isRealData, byte[] data) throws Exception {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

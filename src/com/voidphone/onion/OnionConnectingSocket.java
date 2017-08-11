@@ -165,6 +165,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		
 		General.info("Signaled tunnel end to last hop");
 		
+		Main.getOas().addActiveTunnel(this);
 		//Inform our CM, that the requested tunnel is ready.
 		Main.getOas().ONIONTUNNELREADY(Main.getOas().newOnionTunnelReadyMessage(onionApiId, destHostkey));
 		
@@ -340,35 +341,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @param data the payload
 	 * @throws Exception 
 	 */
-	public void sendData(boolean isRealData, byte[] data) throws Exception
+	@Override	
+	public void sendData(boolean isRealData, byte[] data) throws Exception	
 	{
-		ByteBuffer payload = ByteBuffer.allocate(data.length + 1);
-		payload.put(MSG_DATA);
-		payload.put(data);
-		
-		m.write(new OnionMessage(nextHopMId, OnionMessage.DATA_MESSAGE, nextHopAddress, encrypt(payload.array())));		
-	}
-	
-	/**
-	 * Sends (real) VOIP-data
-	 * @param data the payload
-	 * @throws Exception
-	 */
-	public void sendRealData(byte[] data) throws Exception
-	{
-		sendData(true,data);
-	}
-	
-	/**
-	 * Sends fake/ cover traffic of the specified size
-	 * @param size size of the cover traffic to generate
-	 * @throws Exception
-	 */
-	public void sendCoverData(int size) throws Exception
-	{
-		byte[] rndData = new byte[size];
-		new Random().nextBytes(rndData);
-		sendData(false, rndData);
+		sendData(isRealData, data, nextHopMId, nextHopAddress);
 	}
 
 	/**

@@ -18,6 +18,8 @@
  */
 package com.voidphone.onion;
 
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 import com.voidphone.general.SizeLimitExceededException;
@@ -43,6 +45,10 @@ public abstract class OnionBaseSocket
 	protected int onionApiId;
 	protected Multiplexer m;
 
+	public int getOnionApiId()
+	{
+		return onionApiId;
+	}
 	
 	protected static int apiRequestCounter = 1;
 	
@@ -60,6 +66,45 @@ public abstract class OnionBaseSocket
 		onionApiId = Main.getOas().register();
 	}
 	
+	/**
+	 * Sends (real) VOIP-data
+	 * @param data the payload
+	 * @throws Exception
+	 */
+	public void sendRealData(byte[] data) throws Exception
+	{
+		sendData(true,data);
+	}
+	
+	/**
+	 * Sends fake/ cover traffic of the specified size
+	 * @param size size of the cover traffic to generate
+	 * @throws Exception
+	 */
+	public void sendCoverData(int size) throws Exception
+	{
+		byte[] rndData = new byte[size];
+		new Random().nextBytes(rndData);
+		sendData(false, rndData);
+	}
+	
+	/**
+	 * Sends data through the tunnel, be it real VOIP or cover traffic.
+	 * @param isRealData indicates if the data is real data or not (-> cover traffic)
+	 * @param data the payload
+	 * @throws Exception 
+	 */
+	public void sendData(boolean isRealData, byte[] data, short targetHopMId, InetSocketAddress targetHopAddress) throws Exception
+	{
+		ByteBuffer payload = ByteBuffer.allocate(data.length + 1);
+		payload.put(MSG_DATA);
+		payload.put(data);
+		
+		m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress, encrypt(payload.array())));		
+	}
+	
+	
+	public abstract void sendData(boolean isRealData, byte[] data) throws Exception;
 	
 	protected abstract byte[] encrypt(byte[] payload) throws Exception;
 	

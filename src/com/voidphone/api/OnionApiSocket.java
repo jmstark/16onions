@@ -29,6 +29,7 @@ import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.onion.Main;
+import com.voidphone.onion.OnionBaseSocket;
 import com.voidphone.onion.OnionConnectingSocket;
 import com.voidphone.onion.OnionListenerSocket;
 
@@ -54,7 +55,7 @@ public class OnionApiSocket extends ApiSocket {
 	public static int newDetachedTunnelId;
 	public static OnionConnectingSocket detachedConnectingTunnel = null;
 	protected byte[] destinationHostkey;
-
+	private HashMap<Integer, OnionBaseSocket> activeTunnels;
 	private final ReentrantReadWriteLock lock;
 	private final HashMap<Integer, Void> map;
 	private final Random random;
@@ -71,8 +72,41 @@ public class OnionApiSocket extends ApiSocket {
 		super(addr, true);
 		random = new Random();
 		map = new HashMap<Integer, Void>();
+		activeTunnels = new HashMap<Integer, OnionBaseSocket>();
 		lock = new ReentrantReadWriteLock(true);
 	}
+	
+	
+	/**
+	 * Adds a tunnel to the map of currently active tunnels
+	 * @param tun
+	 */
+	public synchronized void addActiveTunnel(OnionBaseSocket tun)
+	{
+		activeTunnels.put(tun.getOnionApiId(), tun);
+	}
+	
+	/**
+	 * Removes a tunnel from the map of currently active tunnels
+	 * @param tun
+	 */
+	public synchronized void removeActiveTunnel(OnionBaseSocket tun)
+	{
+		activeTunnels.remove(tun.getOnionApiId());
+	}
+	
+	public OnionBaseSocket getActiveTunnelById(int id)
+	{
+		return activeTunnels.get(id);
+	}
+	
+	public synchronized OnionBaseSocket popActiveTunnelById(int id)
+	{
+		OnionBaseSocket result = activeTunnels.get(id);
+		activeTunnels.remove(id);
+		return result;
+	}
+	
 
 	/**
 	 * This function should be called shortly before a new round begins. It builds a
@@ -256,8 +290,15 @@ public class OnionApiSocket extends ApiSocket {
 	public void ONIONTUNNELINCOMING(OnionTunnelIncomingMessage otim) {
 		// Only send the message to CM, if the incoming tunnel
 		// is not a periodic replacement of an existing tunnel.
-		if (currentIncomingTunnel == null || currentIncomingTunnel.externalID != otim.getTunnelID())
+		if (currentIncomingTunnel == null || currentIncomingTunnel.getOnionApiId() != otim.getTunnelID())
+		{
 			connection.sendMsg(otim);
+		}
+	}
+	
+	public void setNewIncomingTunnel(OnionListenerSocket t)
+	{
+		currentIncomingTunnel = t;
 	}
 
 	/**
@@ -270,7 +311,16 @@ public class OnionApiSocket extends ApiSocket {
 	 */
 	private void ONIONTUNNELDATAOUTGOING(OnionTunnelDataMessage otdm) {
 		try {
-			currentConnectingTunnel.sendRealData(otdm.getData());
+			OnionBaseSocket targetTunnel = activeTunnels.get((int)otdm.getId());
+			if(targetTunnel != null)
+			{
+				General.info("Found correct tunnel for outgoing data packet.");
+				targetTunnel.sendRealData(otdm.getData());
+			}
+			else
+				General.error("No tunnel with given ID foundy: " + (int) otdm.getId());
+				
+
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
