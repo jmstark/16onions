@@ -240,9 +240,9 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	}
 
 	@Override
-	public void sendData(boolean isRealData, byte[] data) throws Exception {
-		// TODO Auto-generated method stub
-		
+	public void sendData(boolean isRealData, byte[] data) throws Exception 
+	{
+		sendData(isRealData, data, previousHopWriteMId, previousHopAddress);
 	}
 
 }

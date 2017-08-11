@@ -57,7 +57,8 @@ public class Helper {
 		if (configs.toFile().exists()) {
 			General.fatal(configs.toString() + " exists. Please delete it.");
 		}
-		int port = new Random().nextInt(2 * Short.MAX_VALUE - 1024) + 1024;
+		//Signed short workaround: Only ports up to Short.MAX_VALUE
+		int port = new Random().nextInt(/* 2 * */ Short.MAX_VALUE - 1024) + 1024;
 		if (number <= 0) {
 			throw new IllegalArgumentException("Number of peers is <= 0!");
 		}

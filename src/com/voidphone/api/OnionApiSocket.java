@@ -21,6 +21,7 @@ package com.voidphone.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -290,10 +291,10 @@ public class OnionApiSocket extends ApiSocket {
 	public void ONIONTUNNELINCOMING(OnionTunnelIncomingMessage otim) {
 		// Only send the message to CM, if the incoming tunnel
 		// is not a periodic replacement of an existing tunnel.
-		if (currentIncomingTunnel == null || currentIncomingTunnel.getOnionApiId() != otim.getTunnelID())
-		{
+		//if (currentIncomingTunnel == null || currentIncomingTunnel.getOnionApiId() != otim.getTunnelID())
+		//{
 			connection.sendMsg(otim);
-		}
+		//}
 	}
 	
 	public void setNewIncomingTunnel(OnionListenerSocket t)
@@ -310,12 +311,13 @@ public class OnionApiSocket extends ApiSocket {
 	 *            the connection from which the packet was received
 	 */
 	private void ONIONTUNNELDATAOUTGOING(OnionTunnelDataMessage otdm) {
+		General.info("Try sending " + Arrays.toString(otdm.getData()));
 		try {
 			OnionBaseSocket targetTunnel = activeTunnels.get((int)otdm.getId());
 			if(targetTunnel != null)
 			{
-				General.info("Found correct tunnel for outgoing data packet.");
 				targetTunnel.sendRealData(otdm.getData());
+				General.info("Sent data.");
 			}
 			else
 				General.error("No tunnel with given ID foundy: " + (int) otdm.getId());
@@ -337,6 +339,7 @@ public class OnionApiSocket extends ApiSocket {
 	 */
 	public void ONIONTUNNELDATAINCOMING(OnionTunnelDataMessage otdm) {
 		connection.sendMsg(otdm);
+		General.info("Got data: " + otdm.getData());
 	}
 
 	/**
