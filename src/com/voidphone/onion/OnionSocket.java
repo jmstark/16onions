@@ -183,8 +183,10 @@ public class OnionSocket {
 					throw new IOException("write failed!");
 				}
 			}
+			General.info("Sent control packet!");
 		} else {
 			dataChannel.send(writeBuffer, address);
+			General.info("Sent data packet!");
 		}
 		writeLock.unlock();
 	}
