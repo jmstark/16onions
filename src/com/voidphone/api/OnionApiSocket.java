@@ -317,7 +317,6 @@ public class OnionApiSocket extends ApiSocket {
 			if(targetTunnel != null)
 			{
 				targetTunnel.sendRealData(otdm.getData());
-				General.info("Sent data.");
 			}
 			else
 				General.error("No tunnel with given ID foundy: " + (int) otdm.getId());
@@ -339,7 +338,7 @@ public class OnionApiSocket extends ApiSocket {
 	 */
 	public void ONIONTUNNELDATAINCOMING(OnionTunnelDataMessage otdm) {
 		connection.sendMsg(otdm);
-		General.info("Got data: " + otdm.getData());
+		General.info("Got data: " + Arrays.toString(otdm.getData()));
 	}
 
 	/**
