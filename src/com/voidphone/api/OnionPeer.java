@@ -19,6 +19,7 @@
 package com.voidphone.api;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 import com.voidphone.general.Util;
 
@@ -45,5 +46,34 @@ public class OnionPeer {
 	{
 		this(rpsMsg.getAddress(),Util.getHostkeyBytes(rpsMsg.getHostkey()));
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((address == null) ? 0 : address.hashCode());
+		result = prime * result + Arrays.hashCode(hostkey);
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		OnionPeer other = (OnionPeer) obj;
+		if (address == null) {
+			if (other.address != null)
+				return false;
+		} else if (!address.equals(other.address))
+			return false;
+		if (!Arrays.equals(hostkey, other.hostkey))
+			return false;
+		return true;
+	}
+
 
 }

@@ -81,17 +81,30 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		// Fill up an array with intermediate hops and the target node
 		hops = new OnionPeer[hopCount + 1];
 		RpsPeerMessage rpsMsg;
-		for (int i = 0; i < hopCount; i++) {
+		// If end node is unspecified (null), use another random node
+		for (int i = 0, retries = 0; i < hopCount + (destAddr == null || destHostkey == null ? 1 : 0 ) ; i++) {
 			rpsMsg = Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId));
 			if(rpsMsg == null)
 				throw new NoRpsPeerException();
+			
+			if(Arrays.asList(hops).contains(new OnionPeer(rpsMsg)) || rpsMsg.getAddress().equals(destAddr))
+			{
+				retries++;
+				if(retries > 5)
+				{
+					General.error("Not enough RPS peers");
+					throw new NoRpsPeerException();
+				}
+				i--;
+				continue;
+			}
+				
 			hops[i] = new OnionPeer(rpsMsg);
 		}
 		
-		// If end node is unspecified, use another random node
-		if (destAddr == null || destHostkey == null)
-			hops[hopCount] = new OnionPeer(Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId)));
-		else
+		//if (destAddr == null || destHostkey == null)
+		//	hops[hopCount] = new OnionPeer(Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId)));
+		if (destAddr != null && destHostkey != null)
 			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
 
 		nextHopAddress = hops[0].address;
