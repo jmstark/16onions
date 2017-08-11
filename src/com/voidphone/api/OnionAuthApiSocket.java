@@ -30,6 +30,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
+import com.voidphone.general.OnionAuthErrorException;
 import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.onion.Main;
 
@@ -43,6 +44,7 @@ import auth.api.OnionAuthDecrypt;
 import auth.api.OnionAuthDecryptResp;
 import auth.api.OnionAuthEncrypt;
 import auth.api.OnionAuthEncryptResp;
+import auth.api.OnionAuthError;
 import auth.api.OnionAuthSessionHS1;
 import auth.api.OnionAuthSessionHS2;
 import auth.api.OnionAuthSessionIncomingHS1;
@@ -152,12 +154,18 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * @return the first handshake packet
 	 * @throws IllegalIDException
 	 * @throws InterruptedException
+	 * @throws OnionAuthErrorException
 	 */
 	public OnionAuthSessionHS1 AUTHSESSIONSTART(OnionAuthSessionStartMessage oassm)
-			throws InterruptedException, IllegalIDException {
+			throws InterruptedException, IllegalIDException, OnionAuthErrorException {
 		connection.sendMsg(oassm);
-		return (OnionAuthSessionHS1) getReadQueue((int) oassm.getRequestID()).poll(Main.getConfig().apiTimeout,
+		OnionAuthApiMessage msg = getReadQueue((int) oassm.getRequestID()).poll(Main.getConfig().apiTimeout,
 				TimeUnit.MILLISECONDS);
+		if (msg instanceof OnionAuthError) {
+			throw new OnionAuthErrorException();
+		} else {
+			return (OnionAuthSessionHS1) msg;
+		}
 	}
 
 	/**
@@ -167,12 +175,18 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * @return the second handshake packet
 	 * @throws IllegalIDException
 	 * @throws InterruptedException
+	 * @throws OnionAuthErrorException
 	 */
 	public OnionAuthSessionHS2 AUTHSESSIONINCOMINGHS1(OnionAuthSessionIncomingHS1 oasihs1)
-			throws InterruptedException, IllegalIDException {
+			throws InterruptedException, IllegalIDException, OnionAuthErrorException {
 		connection.sendMsg(oasihs1);
-		return (OnionAuthSessionHS2) getReadQueue((int) oasihs1.getRequestID()).poll(Main.getConfig().apiTimeout,
+		OnionAuthApiMessage msg = getReadQueue((int) oasihs1.getRequestID()).poll(Main.getConfig().apiTimeout,
 				TimeUnit.MILLISECONDS);
+		if (msg instanceof OnionAuthError) {
+			throw new OnionAuthErrorException();
+		} else {
+			return (OnionAuthSessionHS2) msg;
+		}
 	}
 
 	/**
@@ -191,12 +205,18 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * @return
 	 * @throws IllegalIDException
 	 * @throws InterruptedException
+	 * @throws OnionAuthErrorException
 	 */
 	public OnionAuthEncryptResp AUTHLAYERENCRYPT(OnionAuthEncrypt oalem)
-			throws InterruptedException, IllegalIDException {
+			throws InterruptedException, IllegalIDException, OnionAuthErrorException {
 		connection.sendMsg(oalem);
-		return (OnionAuthEncryptResp) getReadQueue((int) oalem.getRequestID()).poll(Main.getConfig().apiTimeout,
+		OnionAuthApiMessage msg = getReadQueue((int) oalem.getRequestID()).poll(Main.getConfig().apiTimeout,
 				TimeUnit.MILLISECONDS);
+		if (msg instanceof OnionAuthError) {
+			throw new OnionAuthErrorException();
+		} else {
+			return (OnionAuthEncryptResp) msg;
+		}
 	}
 
 	/**
@@ -206,12 +226,18 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * @return
 	 * @throws IllegalIDException
 	 * @throws InterruptedException
+	 * @throws OnionAuthErrorException
 	 */
 	public OnionAuthDecryptResp AUTHLAYERDECRYPT(OnionAuthDecrypt oaldm)
-			throws InterruptedException, IllegalIDException {
+			throws InterruptedException, IllegalIDException, OnionAuthErrorException {
 		connection.sendMsg(oaldm);
-		return (OnionAuthDecryptResp) getReadQueue((int) oaldm.getRequestID()).poll(Main.getConfig().apiTimeout,
+		OnionAuthApiMessage msg = getReadQueue((int) oaldm.getRequestID()).poll(Main.getConfig().apiTimeout,
 				TimeUnit.MILLISECONDS);
+		if (msg instanceof OnionAuthError) {
+			throw new OnionAuthErrorException();
+		} else {
+			return (OnionAuthDecryptResp) msg;
+		}
 	}
 
 	/**
@@ -221,12 +247,18 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * @return
 	 * @throws IllegalIDException
 	 * @throws InterruptedException
+	 * @throws OnionAuthErrorException
 	 */
 	public OnionAuthCipherEncryptResp AUTHCIPHERENCRYPT(OnionAuthCipherEncrypt oacem)
-			throws InterruptedException, IllegalIDException {
+			throws InterruptedException, IllegalIDException, OnionAuthErrorException {
 		connection.sendMsg(oacem);
-		return (OnionAuthCipherEncryptResp) getReadQueue((int) oacem.getRequestID()).poll(Main.getConfig().apiTimeout,
+		OnionAuthApiMessage msg = getReadQueue((int) oacem.getRequestID()).poll(Main.getConfig().apiTimeout,
 				TimeUnit.MILLISECONDS);
+		if (msg instanceof OnionAuthError) {
+			throw new OnionAuthErrorException();
+		} else {
+			return (OnionAuthCipherEncryptResp) msg;
+		}
 	}
 
 	/**
@@ -236,12 +268,18 @@ public class OnionAuthApiSocket extends ApiSocket {
 	 * @return
 	 * @throws IllegalIDException
 	 * @throws InterruptedException
+	 * @throws OnionAuthErrorException
 	 */
 	public OnionAuthCipherDecryptResp AUTHCIPHERDECRYPT(OnionAuthCipherDecrypt oacdm)
-			throws InterruptedException, IllegalIDException {
+			throws InterruptedException, IllegalIDException, OnionAuthErrorException {
 		connection.sendMsg(oacdm);
-		return (OnionAuthCipherDecryptResp) getReadQueue((int) oacdm.getRequestID()).poll(Main.getConfig().apiTimeout,
+		OnionAuthApiMessage msg = getReadQueue((int) oacdm.getRequestID()).poll(Main.getConfig().apiTimeout,
 				TimeUnit.MILLISECONDS);
+		if (msg instanceof OnionAuthError) {
+			throw new OnionAuthErrorException();
+		} else {
+			return (OnionAuthCipherDecryptResp) msg;
+		}
 	}
 
 	/**
@@ -303,6 +341,12 @@ public class OnionAuthApiSocket extends ApiSocket {
 		}
 		case API_AUTH_CIPHER_DECRYPT_RESP: {
 			OnionAuthCipherDecryptResp msg = OnionAuthCipherDecryptResp.parse(buffer);
+			id = (int) msg.getRequestID();
+			message = msg;
+			break;
+		}
+		case API_AUTH_ERROR: {
+			OnionAuthError msg = OnionAuthError.parse(buffer);
 			id = (int) msg.getRequestID();
 			message = msg;
 			break;
