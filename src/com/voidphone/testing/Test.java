@@ -8,35 +8,47 @@ import com.voidphone.testing.Helper.RedirectBackupThread;
 public class Test {
 
 	public static void main(String args[]) throws Exception {
-		RedirectBackupThread rbt;
 
-		Helper.generateConfig(3);
+		Helper.generateConfig(6);
 		newPeer(0);
 		newPeer(1);
 		newPeer(2);
+		newPeer(3);
+		newPeer(4);
+		newPeer(5);
 
 		Thread.sleep(60000);
 
-		String onionListenAddress = Helper.getPeerConfig(1).config.get("onion", "listen_address", String.class);
-		String parameter[] = new String[] { "-c", Helper.getConfigPath(0), "-k",
-				Helper.getPeerConfig(1).config.get("onion", "hostkey", String.class), "-p",
-				onionListenAddress.substring(onionListenAddress.lastIndexOf(":") + 1) + "", "-t", "127.0.0.1" };
-		TestProcess test0 = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
-		rbt = new RedirectBackupThread(test0.getOut(), 5);
-		rbt.start();
-
-		onionListenAddress = Helper.getPeerConfig(0).config.get("onion", "listen_address", String.class);
-		parameter = new String[] { "-c", Helper.getConfigPath(1), "-k",
-				Helper.getPeerConfig(0).config.get("onion", "hostkey", String.class), "-p",
-				onionListenAddress.substring(onionListenAddress.lastIndexOf(":") + 1) + "", "-t", "127.0.0.1", "-l" };
-		TestProcess test1 = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
-		rbt = new RedirectBackupThread(test1.getOut(), 15);
-		rbt.start();
+		newCM(1, 4);
+		newCM(3, 2);
+		newCM(5, 0);
 
 		Thread.sleep(60000);
+	}
 
-		test0.terminate();
-		test1.terminate();
+	public static void newCM(int i, int j) throws IOException {
+		RedirectBackupThread rbt;
+		String address;
+		String parameter[];
+		TestProcess test;
+
+		address = Helper.getPeerConfig(j).config.get("onion", "listen_address", String.class);
+		parameter = new String[] { "-c", Helper.getConfigPath(i), "-k",
+				Helper.getPeerConfig(j).config.get("onion", "hostkey", String.class), "-p",
+				address.substring(address.lastIndexOf(":") + 1) + "", "-t",
+				address.substring(0, address.lastIndexOf(":")) };
+		test = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
+		rbt = new RedirectBackupThread(test.getOut(), 5);
+		rbt.start();
+
+		address = Helper.getPeerConfig(i).config.get("onion", "listen_address", String.class);
+		parameter = new String[] { "-c", Helper.getConfigPath(j), "-k",
+				Helper.getPeerConfig(i).config.get("onion", "hostkey", String.class), "-p",
+				address.substring(address.lastIndexOf(":") + 1) + "", "-t",
+				address.substring(0, address.lastIndexOf(":")) };
+		test = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
+		rbt = new RedirectBackupThread(test.getOut(), 5);
+		rbt.start();
 	}
 
 	public static void newPeer(int i) throws IOException, InterruptedException {
