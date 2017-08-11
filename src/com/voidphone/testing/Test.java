@@ -10,9 +10,10 @@ public class Test {
 	public static void main(String args[]) throws Exception {
 		RedirectBackupThread rbt;
 
-		Helper.generateConfig(2);
+		Helper.generateConfig(3);
 		newPeer(0);
 		newPeer(1);
+		newPeer(2);
 
 		Thread.sleep(60000);
 
