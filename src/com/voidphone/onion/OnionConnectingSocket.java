@@ -142,16 +142,21 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			outgoingData.writeInt(hops[i].address.getPort());
 			byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), i);
 
+			General.info("Sending tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].address );
+			
 			m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encryptedPayload));
 			
-			General.info("Sent tunnel building request to hop " + (i-1) );
+			General.info("Sent tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].address );
 			
 			// Now, we are indirectly connected to the target node. 
 			// Authenticate to that node.
 			beginAuthentication(hops[i].hostkey, i);
+			
+			General.info("authenticating to hop " + i  + ", address: " + hops[i].address);
+			
 			authSessionIds[i] = finishAuthentication(hops[i].hostkey, i);
 			
-			General.info("authenticated to hop " + i);
+			General.info("authenticated to hop " + i  + ", address: " + hops[i].address);
 			
 
 		}
