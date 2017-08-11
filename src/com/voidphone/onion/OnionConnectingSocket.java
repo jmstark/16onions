@@ -130,13 +130,14 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 */
 	public void constructTunnel() throws Exception
 	{
-		General.info("Connected to first hop");
+		General.info("Connected to hop 0");
 		
+		General.info("authenticating to hop 0, address: " + hops[0].address);
 
 		//beginAuthentication(hops[0].hostkey, 0);
 		authSessionIds[0] = finishAuthentication(hops[0].hostkey, 0);
 
-		General.info("Authenticated to first hop");
+		General.info("authenticated to hop 0, address: " + hops[0].address);
 		
 		// Establish forwardings (if any)
 		for (int i = 1; i < hops.length; i++) {
@@ -301,7 +302,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		
 		//send the data to OnionAuth API and get decrypted data back.
 		OnionAuthDecryptResp response = 
-			Main.getOaas().AUTHLAYERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, authSessionIds, encryptedPayload));
+			Main.getOaas().AUTHLAYERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, neededSessionIds, encryptedPayload));
 		
 		return response.getPayload();
 	}

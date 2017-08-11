@@ -56,10 +56,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	protected short nextHopWriteMId;
 	protected boolean forwardedHandshakeCompleted = false;
 
-
-
-
-
 	public OnionListenerSocket(InetSocketAddress previousHopAddress, Multiplexer m, short multiplexerId) throws Exception {
 		super(m);
 		previousAndNextHopReadMId = multiplexerId;
@@ -76,6 +72,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	protected byte[] encrypt(byte[] payload) throws Exception {
+		General.info("Encrypting. isCipher = " + (nextHopAddress != null && forwardedHandshakeCompleted));
 		OnionAuthCipherEncryptResp response = 
 				Main.getOaas().AUTHCIPHERENCRYPT(Main.getOaas().
 						newOnionAuthEncrypt(authApiId, authSessionIds[0],nextHopAddress != null && forwardedHandshakeCompleted,payload));
