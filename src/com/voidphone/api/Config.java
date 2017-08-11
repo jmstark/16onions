@@ -35,6 +35,11 @@ import com.voidphone.general.General;
 
 import util.PEMParser;
 
+
+/**
+ * This class reads all neccesary config values from an INI-file.
+ *
+ */
 public class Config {
 	// group for asynchronous channels
 	public final AsynchronousChannelGroup group;

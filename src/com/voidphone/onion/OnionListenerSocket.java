@@ -72,7 +72,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	protected byte[] encrypt(byte[] payload) throws Exception {
-		General.info("Encrypting. isCipher = " + (nextHopAddress != null && forwardedHandshakeCompleted));
 		OnionAuthCipherEncryptResp response = 
 				Main.getOaas().AUTHCIPHERENCRYPT(Main.getOaas().
 						newOnionAuthEncrypt(authApiId, authSessionIds[0],nextHopAddress != null && forwardedHandshakeCompleted,payload));

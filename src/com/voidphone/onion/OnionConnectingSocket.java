@@ -90,7 +90,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			if(Arrays.asList(hops).contains(new OnionPeer(rpsMsg)) || rpsMsg.getAddress().equals(destAddr))
 			{
 				retries++;
-				if(retries > 5)
+				if(retries > 50)
 				{
 					General.error("Not enough RPS peers");
 					throw new NoRpsPeerException();
