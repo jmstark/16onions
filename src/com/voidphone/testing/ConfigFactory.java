@@ -52,7 +52,7 @@ public class ConfigFactory {
 		config.add("rps", "listen_address", nextPort());
 		config.add("onion", "api_address", nextPort());
 		config.add("onion", "listen_address", nextPort());
-		config.add("onion", "api_timeout", 200);
+		config.add("onion", "api_timeout", 1000);
 		config.add("onion", "cache_size", 10);
 		config.add("onion", "hopcount", 3);
 		// config.add("onion", "p2p_hostname", "xxx");
@@ -60,7 +60,7 @@ public class ConfigFactory {
 		// this.port++;
 		config.add("onion", "p2p_data_port", this.port);
 		this.port++;
-		config.add("onion", "p2p_timeout", 200);
+		config.add("onion", "p2p_timeout", 1000);
 		config.add("onion", "p2p_packetsize", 20 * 1024 + 4);
 		config.add("auth", "api_address", nextPort());
 		config.add("auth", "listen_address", nextPort());

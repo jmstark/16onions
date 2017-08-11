@@ -45,7 +45,7 @@ public class Test {
 		parameter = new String[] { "-c", Helper.getConfigPath(j), "-k",
 				Helper.getPeerConfig(i).config.get("onion", "hostkey", String.class), "-p",
 				address.substring(address.lastIndexOf(":") + 1) + "", "-t",
-				address.substring(0, address.lastIndexOf(":")) };
+				address.substring(0, address.lastIndexOf(":")), "-l" };
 		test = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
 		rbt = new RedirectBackupThread(test.getOut(), 5);
 		rbt.start();
