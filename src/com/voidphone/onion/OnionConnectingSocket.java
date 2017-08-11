@@ -386,7 +386,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			//ignore cover traffic
 			return;
 		
-		Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(externalID, Arrays.copyOfRange(payload, 1, payload.length)));
+		Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(onionApiId, Arrays.copyOfRange(payload, 1, payload.length)));
 			
 		return;
 	}
