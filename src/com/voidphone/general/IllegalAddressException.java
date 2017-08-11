@@ -18,6 +18,8 @@
  */
 package com.voidphone.general;
 
+import java.net.InetSocketAddress;
+
 /**
  * Signals that the requested address is illegal.
  */
@@ -27,7 +29,7 @@ public class IllegalAddressException extends Exception {
 	/**
 	 * Creates a new IllegalAddressException.
 	 */
-	public IllegalAddressException() {
-		super("Illegal address!");
+	public IllegalAddressException(InetSocketAddress addr) {
+		super("Illegal address (" + addr + ")!");
 	}
 }

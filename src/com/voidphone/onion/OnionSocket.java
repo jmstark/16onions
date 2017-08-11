@@ -80,11 +80,13 @@ public class OnionSocket {
 		int port = Short.toUnsignedInt(buf.getShort());
 		this.address = new InetSocketAddress(((InetSocketAddress) controlChannel.getRemoteAddress()).getAddress(),
 				port);
+		General.debug("Got connection from " + address + " to " + (InetSocketAddress) controlChannel.getLocalAddress());
 		try {
 			m.registerAddress(address, this);
 		} catch (IllegalAddressException e) {
 			close();
-			throw new IOException("Address is already registered!");
+			e.printStackTrace();
+			throw new IOException(e.getMessage());
 		}
 		controlChannel.read(readBuffer, null, new ReadCompletionHandler());
 	}

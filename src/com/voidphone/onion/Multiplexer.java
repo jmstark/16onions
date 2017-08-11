@@ -146,7 +146,7 @@ public class Multiplexer {
 		firstLock.readLock().lock();
 		if (!first.containsKey(addr)) {
 			firstLock.readLock().unlock();
-			throw new IllegalAddressException();
+			throw new IllegalAddressException(addr);
 		}
 		Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>> ret = first
 				.get(addr);
@@ -199,7 +199,7 @@ public class Multiplexer {
 		firstLock.writeLock().lock();
 		if (first.containsKey(addr)) {
 			firstLock.writeLock().unlock();
-			throw new IllegalAddressException();
+			throw new IllegalAddressException(addr);
 		}
 		first.put(addr,
 				new Triple<ReentrantReadWriteLock, OnionSocket, HashMap<Short, LinkedBlockingQueue<OnionMessage>>>(
@@ -317,7 +317,7 @@ public class Multiplexer {
 		firstLock.writeLock().lock();
 		if (!first.containsKey(addr)) {
 			firstLock.writeLock().unlock();
-			throw new IllegalAddressException();
+			throw new IllegalAddressException(addr);
 		}
 		first.remove(addr);
 		firstLock.writeLock().unlock();

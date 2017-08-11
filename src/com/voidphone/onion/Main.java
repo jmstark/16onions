@@ -40,9 +40,6 @@ import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
 
-import protocol.MessageParserException;
-import protocol.ProtocolException;
-
 public class Main {
 	private static @Getter Selector selector;
 	private static @Getter Config config;
@@ -79,8 +76,6 @@ public class Main {
 			public void completed(AsynchronousSocketChannel channel, Void none) {
 				onionServerSocket.accept(null, this);
 				try {
-					General.debug("Got connection from " + (InetSocketAddress) channel.getRemoteAddress() + " to "
-							+ (InetSocketAddress) channel.getLocalAddress());
 					new OnionSocket(multiplexer, channel, dataChannel);
 				} catch (IOException e) {
 					General.error("I/O error (" + e.getMessage() + ")!");
@@ -136,9 +131,5 @@ public class Main {
 		parseArgs(args);
 
 		run();
-	}
-
-	public static interface Attachable {
-		public boolean handle() throws Exception, IOException, MessageParserException, ProtocolException;
 	}
 }
