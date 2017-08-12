@@ -53,10 +53,9 @@ public class OnionApiSocket extends ApiSocket {
 	protected OnionConnectingSocket nextConnectingTunnel;
 	protected OnionListenerSocket currentIncomingTunnel;
 	protected InetSocketAddress tunnelDestination;
-	public static int newDetachedTunnelId;
-	public static OnionConnectingSocket detachedConnectingTunnel = null;
 	protected byte[] destinationHostkey;
 	private HashMap<Integer, OnionBaseSocket> activeTunnels;
+	private HashMap<Short, OnionConnectingSocket> detachedTunnels;
 	private final ReentrantReadWriteLock lock;
 	private final HashMap<Integer, Void> map;
 	private final Random random;
@@ -74,6 +73,7 @@ public class OnionApiSocket extends ApiSocket {
 		random = new Random();
 		map = new HashMap<Integer, Void>();
 		activeTunnels = new HashMap<Integer, OnionBaseSocket>();
+		detachedTunnels = new HashMap<Short, OnionConnectingSocket>();
 		lock = new ReentrantReadWriteLock(true);
 	}
 	
@@ -96,15 +96,45 @@ public class OnionApiSocket extends ApiSocket {
 		activeTunnels.remove(tun.getOnionApiId());
 	}
 	
-	public OnionBaseSocket getActiveTunnelById(int id)
+	public synchronized OnionBaseSocket getActiveTunnelById(int id)
 	{
 		return activeTunnels.get(id);
 	}
 	
-	public synchronized OnionBaseSocket popActiveTunnelById(int id)
+	public synchronized OnionBaseSocket getAndRemoveActiveTunnelById(int id)
 	{
 		OnionBaseSocket result = activeTunnels.get(id);
 		activeTunnels.remove(id);
+		return result;
+	}
+	
+	/**
+	 * Adds a tunnel to the map of currently detached tunnels
+	 * @param tun
+	 */
+	public synchronized void addDetachedTunnel(OnionConnectingSocket tun)
+	{
+		detachedTunnels.put(tun.getNextHopMId(), tun);
+	}
+	
+	/**
+	 * Removes a tunnel from the map of currently detached tunnels
+	 * @param tun
+	 */
+	public synchronized void removeDetachedTunnel(OnionConnectingSocket tun)
+	{
+		detachedTunnels.remove(tun.getNextHopMId());
+	}
+	
+	public synchronized OnionConnectingSocket getDetachedTunnelById(short id)
+	{
+		return detachedTunnels.get(id);
+	}
+	
+	public synchronized OnionConnectingSocket getAndRemoveDetachedTunnelById(short id)
+	{
+		OnionConnectingSocket result = detachedTunnels.get(id);
+		detachedTunnels.remove(id);
 		return result;
 	}
 	
@@ -222,8 +252,8 @@ public class OnionApiSocket extends ApiSocket {
 			currentConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination,
 					destinationHostkey);
 			currentConnectingTunnel.beginAuthentication(null, 0);
-			newDetachedTunnelId = currentConnectingTunnel.detachId();
-			detachedConnectingTunnel = currentConnectingTunnel;
+			currentConnectingTunnel.detachId();
+			addDetachedTunnel(currentConnectingTunnel);
 			
 			return;
 		} 

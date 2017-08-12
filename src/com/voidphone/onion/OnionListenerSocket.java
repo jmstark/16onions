@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import com.voidphone.api.OnionApiSocket;
 import com.voidphone.general.General;
 
 import auth.api.OnionAuthCipherDecryptResp;

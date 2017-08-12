@@ -20,12 +20,9 @@ package com.voidphone.onion;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
-import com.voidphone.api.OnionPeer;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
@@ -190,6 +187,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		General.info("Signalled successfull tunnel build to CM");
 	}
 	
+	
+	public short getNextHopMId()
+	{
+		return nextHopMId;
+	}
 	
 	public short detachId() throws IllegalAddressException, IllegalIDException
 	{
