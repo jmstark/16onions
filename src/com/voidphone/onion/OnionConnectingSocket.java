@@ -49,7 +49,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	protected InetSocketAddress nextHopAddress;
 	protected int rpsApiId;
 	protected short nextHopMId;
-	protected OnionPeer[] hops;
+	//Array holding all hops, including the tunnel end
+	protected RpsPeerMessage[] hops;
 	OnionAuthSessionHS1 hs1;
 
 
@@ -79,7 +80,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		rpsApiId = Main.getRas().register();
 
 		// Fill up an array with intermediate hops and the target node
-		hops = new OnionPeer[hopCount + 1];
+		hops = new RpsPeerMessage[hopCount + 1];
 		RpsPeerMessage rpsMsg;
 		// If end node is unspecified (null), use another random node
 		for (int i = 0, retries = 0; i < hopCount + (destAddr == null || destHostkey == null ? 1 : 0 ) ; i++) {
@@ -87,10 +88,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			if(rpsMsg == null)
 				throw new NoRpsPeerException();
 			
-			if(Arrays.asList(hops).contains(new OnionPeer(rpsMsg)) || rpsMsg.getAddress().equals(destAddr))
+			if(Arrays.asList(hops).contains(rpsMsg) || rpsMsg.getAddress().equals(destAddr))
 			{
 				retries++;
-				if(retries > 50)
+				if(retries > 10 * hopCount)
 				{
 					General.error("Not enough RPS peers");
 					throw new NoRpsPeerException();
@@ -99,19 +100,17 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 				continue;
 			}
 				
-			hops[i] = new OnionPeer(rpsMsg);
+			hops[i] = rpsMsg;
 		}
 		
-		//if (destAddr == null || destHostkey == null)
-		//	hops[hopCount] = new OnionPeer(Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId)));
 		if (destAddr != null && destHostkey != null)
-			hops[hopCount] = new OnionPeer(destAddr, destHostkey);
+			hops[hopCount] = new RpsPeerMessage(destAddr, Util.getHostkeyObject(destHostkey));
 
-		nextHopAddress = hops[0].address;
+		nextHopAddress = hops[0].getAddress();
 		
 		// Connect to first hop - all other connections are forwarded over this hop
-		m.registerAddress(hops[0].address);
-		nextHopMId = m.registerID(hops[0].address);
+		m.registerAddress(hops[0].getAddress());
+		nextHopMId = m.registerID(hops[0].getAddress());
 
 
 	}
@@ -132,12 +131,12 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	{
 		General.info("Connected to hop 0");
 		
-		General.info("authenticating to hop 0, address: " + hops[0].address);
+		General.info("authenticating to hop 0, address: " + hops[0].getAddress());
 
 		//beginAuthentication(hops[0].hostkey, 0);
-		authSessionIds[0] = finishAuthentication(hops[0].hostkey, 0);
+		authSessionIds[0] = finishAuthentication(Util.getHostkeyBytes(hops[0].getHostkey()), 0);
 
-		General.info("authenticated to hop 0, address: " + hops[0].address);
+		General.info("authenticated to hop 0, address: " + hops[0].getAddress());
 		
 		// Establish forwardings (if any)
 		for (int i = 1; i < hops.length; i++) {
@@ -150,27 +149,27 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
 			
 			outgoingData.writeShort(MSG_BUILD_TUNNEL);
-			byte[] rawAddress = hops[i].address.getAddress().getAddress();
+			byte[] rawAddress = hops[i].getAddress().getAddress().getAddress();
 			outgoingData.write((byte) rawAddress.length);
 			outgoingData.write(rawAddress);
-			outgoingData.writeInt(hops[i].address.getPort());
+			outgoingData.writeInt(hops[i].getAddress().getPort());
 			byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), i);
 
-			General.info("Sending tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].address );
+			General.info("Sending tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].getAddress() );
 			
 			m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encryptedPayload));
 			
-			General.info("Sent tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].address );
+			General.info("Sent tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].getAddress() );
 			
 			// Now, we are indirectly connected to the target node. 
 			// Authenticate to that node.
-			beginAuthentication(hops[i].hostkey, i);
+			beginAuthentication(Util.getHostkeyBytes(hops[i].getHostkey()), i);
 			
-			General.info("authenticating to hop " + i  + ", address: " + hops[i].address);
+			General.info("authenticating to hop " + i  + ", address: " + hops[i].getAddress());
 			
-			authSessionIds[i] = finishAuthentication(hops[i].hostkey, i);
+			authSessionIds[i] = finishAuthentication(Util.getHostkeyBytes(hops[i].getHostkey()), i);
 			
-			General.info("authenticated to hop " + i  + ", address: " + hops[i].address);
+			General.info("authenticated to hop " + i  + ", address: " + hops[i].getAddress());
 			
 
 		}
@@ -311,7 +310,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	public void beginAuthentication(byte[] hopHostkey, int numLayers) throws Exception
 	{
 		if(hopHostkey == null)
-			hopHostkey = hops[0].hostkey;
+			hopHostkey = Util.getHostkeyBytes(hops[0].getHostkey());
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 		DataOutputStream outGoingData = new DataOutputStream(outgoingDataBAOS);
 		
