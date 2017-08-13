@@ -50,6 +50,7 @@ public abstract class OnionBaseSocket
 	protected int onionApiId;
 	protected Multiplexer m;
 	protected int heartbeatRetries = 0;
+	protected boolean initiateDestruction = false;
 
 	public int getOnionApiId()
 	{
@@ -64,10 +65,9 @@ public abstract class OnionBaseSocket
 	}
 	
 	/**
-	 * Sends (real) VOIP-data
+	 * Sends (real) VOIP-data to the other tunnel end
 	 * @param data the payload
 	 * @throws TunnelCrashException 
-	 * @throws Exception
 	 */
 	public void sendRealData(byte[] data) throws TunnelCrashException  
 	{
@@ -75,10 +75,9 @@ public abstract class OnionBaseSocket
 	}
 	
 	/**
-	 * Sends fake/ cover traffic of the specified size
+	 * Sends fake/ cover traffic of the specified size to the other tunnel end
 	 * @param size size of the cover traffic to generate
 	 * @throws TunnelCrashException 
-	 * @throws Exception
 	 */
 	public void sendCoverData(int size) throws TunnelCrashException
 	{
@@ -88,11 +87,10 @@ public abstract class OnionBaseSocket
 	}
 	
 	/**
-	 * Sends data through the tunnel, be it real VOIP or cover traffic.
+	 * Sends data to the other tunnel end, be it real VOIP or cover traffic.
 	 * @param isRealData indicates if the data is real data or not (-> cover traffic)
 	 * @param data the payload
 	 * @throws TunnelCrashException 
-	 * @throws Exception 
 	 */
 	public void sendData(boolean isRealData, byte[] data, short targetHopMId, InetSocketAddress targetHopAddress) throws TunnelCrashException
 	{
@@ -109,7 +107,14 @@ public abstract class OnionBaseSocket
 		}		
 	}
 	
-	
+	/**
+	 * Sends a heartbeat message to the other tunnel end, which is expected to respond with 
+	 * some kind of data (e.g. cover traffic)
+	 * 
+	 * @param targetHopMId multiplexer id of target hop (previous or next)
+	 * @param targetHopAddress address of target hop  (previous or next)
+	 * @throws TunnelCrashException
+	 */
 	public void sendHeartbeat(short targetHopMId, InetSocketAddress targetHopAddress) throws TunnelCrashException {
 		try {
 			m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress,
@@ -122,11 +127,25 @@ public abstract class OnionBaseSocket
 	}
 
 	
-	
+	/**
+	 * sends and encrypts data to the other tunnel end.
+	 * 
+	 * @param isRealData true: VOIP data; false: cover traffic
+	 * @param data payload
+	 * @throws TunnelCrashException
+	 */
 	public abstract void sendData(boolean isRealData, byte[] data) throws TunnelCrashException;
 	
 	protected abstract byte[] encrypt(byte[] payload) throws AuthApiException;
 	
 	protected abstract byte[] decrypt(byte[] payload) throws AuthApiException;
 	
+	/**
+	 * Requests the tunnel to destruct itself at the next chance.
+	 */
+	public void requestDestruction()
+	{
+		initiateDestruction = true;
+	}
+
 }

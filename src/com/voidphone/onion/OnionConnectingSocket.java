@@ -43,7 +43,7 @@ import rps.api.RpsPeerMessage;
 
 
 /**
- * When the main application wants to build a tunnel to some node, it creates an
+ * When the main application wants to build an outgoing tunnel, it creates an
  * instance of this class.
  */
 public class OnionConnectingSocket extends OnionBaseSocket {
@@ -56,29 +56,26 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	//Array holding all hops, including the tunnel end
 	protected RpsPeerMessage[] hops;
 	OnionAuthSessionHS1 hs1;
-
-
+	final private boolean isRandomTunnel;
+	private long remainingRoundTime;
 
 	/**
-	 * Constructor
-	 * 
 	 * Construct a new OnionConnectingSocket to the specified target (destAddr and destHostkey) or
-	 * a random node if destAddr or destHostkey are null.
+	 * a random node if destAddr or destHostkey are null. Use this constructor if you already have
+	 * registered an onionApiId so that this tunnel can re-use it.
 	 * 
-	 * @param m The multiplexer over which we communicate with other peers
-	 * @param destAddr the address of the target node (i.e. the last hop)
-	 * @param destHostkey the hostkey of the target node (i.e. the last hop)
-	 * @param externalID
-	 *            Other modules use this ID to refer to this tunnel (backup tunnels
-	 *            with the same end destination must get the same ID, therefore this
-	 *            input parameter). When building a backup tunnel, use this constructor
-	 *            with the same ID as the existing main tunnel, otherwise use the
-	 *            second constructor which assigns a new ID.
+	 * @param m the multiplexer
+	 * @param destAddr target address
+	 * @param destHostkey target hostkey
+	 * @param onionApiId tunnel ID used for communication with onion ID
 	 * @throws SizeLimitExceededException 
-	 * @throws TunnelCrashException 
+	 * @throws TunnelCrashException
 	 */
 	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, int onionApiId) throws SizeLimitExceededException, TunnelCrashException {
 		super(m, onionApiId);
+		isRandomTunnel = destHostkey == null || destAddr == null;
+		if(isRandomTunnel)
+			remainingRoundTime = Main.getMsUntilNextRound();
 		try
 		{
 			int hopCount = Main.getConfig().hopCount;
@@ -89,8 +86,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	
 			// Fill up an array with intermediate hops and the target node
 			hops = new RpsPeerMessage[hopCount + 1];
-			// If end node is unspecified (null), use another random node
-			for (int i = 0; i < hopCount + (destAddr == null || destHostkey == null ? 1 : 0 ) ; i++) {
+			// If end node is unspecified, use another random node
+			for (int i = 0; i < hopCount + (isRandomTunnel ? 1 : 0)  ; i++) {
 				addRpsHop(i);
 				
 				if(i==0)
@@ -112,7 +109,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 				}
 			}
 			
-			if (destAddr != null && destHostkey != null)
+			if (!isRandomTunnel)
 				hops[hopCount] = new RpsPeerMessage(destAddr, Util.getHostkeyObject(destHostkey));
 	
 		}
@@ -123,25 +120,30 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			General.fatalException(e);
 			throw new TunnelCrashException();
 		}
-
-
 	}
 	
+
 	/**
-	 * Alternative constructor - a new onionApiId is assigned implicitely
+	 * Alternative constructor - a new onionApiId is registered implicitely
 	 * 
-	 * @param m The multiplexer over which we communicate with other peers
-	 * @param destAddr the address of the target node (i.e. the last hop)
-	 * @param destHostkey the hostkey of the target node (i.e. the last hop)
-	 * @throws TunnelCrashException 
-	 * @throws SizeLimitExceededException 
-	 * @throws Exception
+	 * @param m the multiplexer
+	 * @param destAddr target address
+	 * @param destHostkey target hostkey
+	 * @throws SizeLimitExceededException
+	 * @throws TunnelCrashException
 	 */
 	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey) throws SizeLimitExceededException, TunnelCrashException 
 	{
 		this(m,destAddr,destHostkey,Main.getOas().register());
 	}
 	
+	/**
+	 * Actually builds the tunnel
+	 * 
+	 * @param newNextHopMId Multiplexer ID of the next hop
+	 * @param newNextHopAddress Address of the next hop
+	 * @throws TunnelCrashException
+	 */
 	public void constructTunnel(short newNextHopMId, InetSocketAddress newNextHopAddress) throws TunnelCrashException 
 	{
 		nextHopMId = newNextHopMId;
@@ -149,6 +151,14 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		constructTunnel();
 	}
 	
+	/**
+	 * Fills the given position with a random RPS hop
+	 * 
+	 * @param hopNum position of the hop
+	 * @throws NoRpsPeerException
+	 * @throws InterruptedException
+	 * @throws IllegalIDException
+	 */
 	void addRpsHop(int hopNum) throws NoRpsPeerException, InterruptedException, IllegalIDException
 	{
 		for(int rpsRetries = 0;rpsRetries<10;rpsRetries++)
@@ -173,8 +183,9 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	}
 	
 	/**
-	 * This method must be called after the constructor has returned
-	 * @throws TunnelCrashException 
+	 * Actually builds the tunnel.
+	 * 
+	 * @throws TunnelCrashException
 	 */
 	public void constructTunnel() throws TunnelCrashException
 	{
@@ -184,7 +195,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			
 			General.info("authenticating to hop 0, address: " + hops[0].getAddress());
 	
-			//beginAuthentication(hops[0].hostkey, 0);
 			authSessionIds[0] = finishAuthentication(Util.getHostkeyBytes(hops[0].getHostkey()), 0);
 	
 			General.info("authenticated to hop 0, address: " + hops[0].getAddress());
@@ -261,6 +271,13 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		return nextHopMId;
 	}
 	
+	/**
+	 * Used after calling beginAuthentication so that another thread can take over
+	 * once the auth response comes in. Use this to prevent blocking. 
+	 * 
+	 * @return multiplexer ID of next hop
+	 * @throws TunnelCrashException
+	 */
 	public short detachId() throws TunnelCrashException
 	{
 		try
@@ -279,10 +296,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	
 	/**
 	 * Encrypts payload for end hop.
+	 * 
 	 * @param payload the plaintext payload
 	 * @return encrypted payload
 	 * @throws AuthApiException 
-	 * @throws Exception
 	 */
 	protected byte[] encrypt(byte[] payload) throws AuthApiException {
 		return encrypt(payload, authSessionIds.length);
@@ -294,7 +311,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @param payload the encrypted payload
 	 * @return Decrypted payload
 	 * @throws AuthApiException 
-	 * @throws Exception
 	 */
 	protected byte[] decrypt(byte[] payload) throws AuthApiException {
 		return decrypt(payload, authSessionIds.length);
@@ -309,7 +325,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @param numLayers number of encryption layers to apply. 0 = no encryption.
 	 * @return encrypted payload (or plaintext if numLayers == 0)
 	 * @throws AuthApiException 
-	 * @throws Exception 
 	 */
 	protected byte[] encrypt(byte[] payload, int numLayers) throws AuthApiException
 	{
@@ -349,7 +364,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @param numLayers number of encryption layers to remove. 0 = no decryption.
 	 * @return the decrypted payload.
 	 * @throws AuthApiException 
-	 * @throws Exception
 	 */
 	protected byte[] decrypt(byte[] encryptedPayload, int numLayers) throws AuthApiException
 	{
@@ -380,7 +394,15 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		return response.getPayload();
 	}
 
-	
+	/**
+	 * Sends magic numbers and HS1. After that, the socket can be detached.
+	 * Then, construct() and/or finishAuthentication() can be used after re-attaching
+	 * to finish the authentication and tunnel building
+	 * 
+	 * @param hopHostkey
+	 * @param numLayers
+	 * @throws TunnelCrashException
+	 */
 	public void beginAuthentication(byte[] hopHostkey, int numLayers) throws TunnelCrashException
 	{
 
@@ -419,7 +441,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @param numLayers the number of layers needed for that hop
 	 * @return session ID for OnionAuth API - necessary for de-/encryption
 	 * @throws TunnelCrashException 
-	 * @throws Exception
 	 */
 	public int finishAuthentication(byte[] hopHostkey, int numLayers) throws TunnelCrashException {
 
@@ -456,9 +477,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 
 	/**
 	 * Sends a request to destroy the tunnel to all hops and tears the tunnel down.
-	 * @throws Exception
 	 */
-	public void destroy(){
+	private void destroy(){
 		try
 		{
 			byte[] plainMsg = new byte[] {MSG_DESTROY_TUNNEL};
@@ -488,6 +508,12 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	public boolean getAndProcessNextDataMessage() {
 		try
 		{
+			if(initiateDestruction)
+			{
+				destroy();
+				return true;
+			}
+			
 			OnionMessage incomingMessage = m.read(nextHopMId, nextHopAddress);
 			
 			//Handle timeouts
@@ -537,6 +563,20 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			General.error("Tunnel broke, cannot re-use it");
 			General.fatalException(e);
 			return true;
+		}
+		finally
+		{
+			if (isRandomTunnel) {
+				// random tunnels self-destruct themselves after one round
+				long currentRemainingRoundTime = Main.getMsUntilNextRound();
+				if(currentRemainingRoundTime > remainingRoundTime)
+				{
+					//round has elapsed - destroy tunnel
+					destroy();
+					return true;
+				}
+				remainingRoundTime = currentRemainingRoundTime;
+			}
 		}
 	}
 

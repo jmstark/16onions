@@ -29,11 +29,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
-import com.voidphone.general.Util;
 import com.voidphone.onion.Main;
 import com.voidphone.onion.OnionBaseSocket;
 import com.voidphone.onion.OnionConnectingSocket;
-import com.voidphone.onion.OnionListenerSocket;
 
 import onion.api.OnionCoverMessage;
 import onion.api.OnionErrorMessage;
@@ -47,7 +45,6 @@ import protocol.MessageSizeExceededException;
 import protocol.Protocol;
 import protocol.ProtocolException;
 import protocol.Protocol.MessageType;
-import rps.api.RpsPeerMessage;
 
 public class OnionApiSocket extends ApiSocket {
 	protected Config config;
@@ -83,41 +80,26 @@ public class OnionApiSocket extends ApiSocket {
 				try {
 					sleep(50000);
 				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					General.fatalException(e1);
 				}
 				while(true)
 				{
 					try {
 						Main.waitUntilBeginningOfNextRound();
 						General.info("new round commenced");
-						if(randomTunnel != null)
-						{
-							randomTunnel.destroy();
+						if (randomTunnel != null) {
+							randomTunnel.requestDestruction();
 							randomTunnel = null;
 						}
 						if (!roundHasTunnel) {
-							//TODO
-							RpsPeerMessage randomDest = Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(0));
-							if(randomDest == null)
-							{
-								General.error("Not enough RPS peers to build random tunnel");
-							}
-							else
-							{
-								General.info("building random tunnel");
-								ONIONTUNNELBUILD(new OnionTunnelBuildMessage(randomDest.getAddress(), randomDest.getHostkey()));
-								//randomTunnel = new OnionConnectingSocket(Main.getMultiplexer(), randomDest.getAddress(), Util.getHostkeyBytes(randomDest.getHostkey()));
-							}
-							//randomTunnel.beginAuthentication(null, 0);
-							//randomTunnel.detachId();
-							//addDetachedTunnel(randomTunnel);
+							General.info("building random tunnel");
+							ONIONTUNNELBUILD(null);
 						}
 					} catch (Exception e) {
 						General.warning("Error in random tunnel - new one at next round if neccessary");
 						General.fatalException(e);
 					}
-	
+
 				}
 			}
 		};
@@ -212,31 +194,6 @@ public class OnionApiSocket extends ApiSocket {
 	
 
 	/**
-	 * This function should be called shortly before a new round begins. It builds a
-	 * second backup tunnel with the same end destination and external ID.
-	 * 
-	 * @throws Exception
-	 */
-	public void prepareNextTunnel() throws Exception {
-	//	nextConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination, destinationHostkey,
-	//			currentConnectingTunnel.externalID);
-		//TODO
-	}
-
-	/**
-	 * This function should be called at the beginning of a new round. We switch
-	 * over to the new tunnel and destroy the old one.
-	 * 
-	 * @throws Exception
-	 */
-	public void switchToNextTunnel() throws Exception {
-//		OnionConnectingSocket oldTunnel = currentConnectingTunnel;
-//		currentConnectingTunnel = nextConnectingTunnel;
-//		oldTunnel.destroy();
-//TODO
-	}
-
-	/**
 	 * Returns a OnionTunnelReadyMessage.
 	 * 
 	 * @param id
@@ -317,9 +274,9 @@ public class OnionApiSocket extends ApiSocket {
 	 *            the connection from which the packet was received
 	 */
 	private void ONIONTUNNELBUILD(OnionTunnelBuildMessage otbm) {
-		tunnelDestination = otbm.getAddress();
-		destinationHostkey = otbm.getEncoding();
-		final MessageType messageType = otbm.getType();
+		tunnelDestination = otbm != null ? otbm.getAddress() : null;
+		destinationHostkey = otbm != null ? otbm.getEncoding() : null;
+		final MessageType messageType = otbm != null ? otbm.getType() : MessageType.API_ONION_TUNNEL_BUILD;
 
 		Thread t = new Thread() {
 			public void run() {
@@ -377,24 +334,16 @@ public class OnionApiSocket extends ApiSocket {
 	 */
 	private void ONIONTUNNELDESTROY(OnionTunnelDestroyMessage otdm) {
 
-		int tunnelId = (int) otdm.getId();
-/*
-		// destroy main and backup tunnel
-		if (currentConnectingTunnel.getOnionApiId() == tunnelId) {
-			try {
-				currentConnectingTunnel.destroy();
-				nextConnectingTunnel.destroy();
-				tunnelDestination = null;
-				currentConnectingTunnel = null;
-				nextConnectingTunnel = null;
-			} catch (Exception e) {
-				// This could be normal, see TODO
-				e.printStackTrace();
-			}
+		OnionBaseSocket tun = getAndRemoveActiveTunnelById((int)otdm.getId());
+		if(tun == null)
+		{
+			General.warning("Cannot destroy tunnel - ID not found");
 		}
-		*/
-		// TODO: check for destruction request of OnionListenerSocket
-		// TODO: thread-safe destruction
+		else
+		{
+			tun.requestDestruction();
+		}
+		
 	}
 
 	/**
@@ -406,12 +355,7 @@ public class OnionApiSocket extends ApiSocket {
 	 *            the connection to which the packet will be sent
 	 */
 	public void ONIONTUNNELINCOMING(OnionTunnelIncomingMessage otim) {
-		// Only send the message to CM, if the incoming tunnel
-		// is not a periodic replacement of an existing tunnel.
-		//if (currentIncomingTunnel == null || currentIncomingTunnel.getOnionApiId() != otim.getTunnelID())
-		//{
-			connection.sendMsg(otim);
-		//}
+		connection.sendMsg(otim);
 	}
 
 
@@ -436,8 +380,7 @@ public class OnionApiSocket extends ApiSocket {
 				
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			General.fatalException(e);
 		}
 	}
 

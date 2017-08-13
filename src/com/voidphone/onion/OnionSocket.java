@@ -142,11 +142,14 @@ public class OnionSocket {
 				tun.constructTunnel(id, addr);
 
 				// the tunnel handler
-				while (true)
-					tun.getAndProcessNextDataMessage();
+				boolean tunnelDestroyed = false;
+				while (!tunnelDestroyed)
+					tunnelDestroyed = tun.getAndProcessNextDataMessage();
 			} else {
 				OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
 				incomingSocket.authenticate();
+				
+				// the tunnel handler
 				boolean tunnelDestroyed = false;
 				while (!tunnelDestroyed) {
 					tunnelDestroyed = incomingSocket.getAndProcessNextMessage();
@@ -154,7 +157,8 @@ public class OnionSocket {
 			}
 		} catch (Exception e) {
 			// The tunnel has broken
-			e.printStackTrace();
+			General.warning("newConnection(): tunnel has broken");
+			General.fatalException(e);
 		}
 	}
 

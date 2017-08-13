@@ -41,10 +41,8 @@ import auth.api.OnionAuthSessionHS2;
 
 
 /**
- * Main application runs a TCP server socket. There, when it receives a new
- * connection, it then constructs an OnionListenerSocket, passing the neccessary
- * connection info (multiplexer, address, mID) to the constructor. 
- * 
+ * Class representing an incoming tunnel
+ *
  */
 public class OnionListenerSocket extends OnionBaseSocket {
 	protected InetSocketAddress previousHopAddress;
@@ -62,6 +60,15 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	protected short nextHopWriteMId;
 	protected boolean forwardedHandshakeCompleted = false;
 
+	
+	/**
+	 * Normal constructor.
+	 * 
+	 * @param previousHopAddress address of previous hop
+	 * @param m the multiplexer
+	 * @param multiplexerId multiplexer id of previous hop
+	 * @throws SizeLimitExceededException
+	 */
 	public OnionListenerSocket(InetSocketAddress previousHopAddress, Multiplexer m, short multiplexerId) throws SizeLimitExceededException {
 		super(m, Main.getOas().register());
 		previousAndNextHopReadMId = multiplexerId;
@@ -76,7 +83,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * 
 	 * @return encrypted payload
 	 * @throws AuthApiException 
-	 * @throws Exception
 	 */
 	protected byte[] encrypt(byte[] payload) throws AuthApiException {
 
@@ -101,7 +107,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * 
 	 * @return Decrypted payload
 	 * @throws AuthApiException 
-	 * @throws Exception
 	 */
 	protected byte[] decrypt(byte[] payload) throws AuthApiException  {
 		OnionAuthCipherDecryptResp response;
@@ -122,7 +127,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * @return session ID
 	 * @throws TunnelCrashException 
 	 * 
-	 * @throws IOException
 	 */
 	int authenticate() throws TunnelCrashException {
 		
@@ -172,10 +176,13 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * Fetches the next available message and processes and/or forwards it accordingly.
 	 * 
 	 * @return Only true, if the tunnel has been destroyed and cannot be reused
-	 * @throws Exception
 	 */
-	boolean getAndProcessNextMessage() {
-
+	public boolean getAndProcessNextMessage() {
+		if(initiateDestruction)
+		{
+			destroy();
+			return true;
+		}
 		try
 		{
 				
@@ -295,8 +302,6 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			{
 				General.info("MSG_INCOMING_TUNNEL received");
 				//Signal to our CM a new incoming tunnel
-				int externalID = buffer.getInt();
-				//Main.getOas().setNewIncomingTunnel(this);
 				Main.getOas().addActiveTunnel(this);
 				Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(onionApiId));
 			}
@@ -313,6 +318,23 @@ public class OnionListenerSocket extends OnionBaseSocket {
 
 	}
 
+	/**
+	 * Tears the tunnel down.
+	 */
+	private void destroy(){
+		try
+		{
+			//Close connection
+			m.unregisterID(previousHopWriteMId, previousHopAddress);
+			//Close auth and rps API connections
+			Main.getOaas().unregister(authApiId);
+		}
+		catch(IllegalAddressException | IllegalIDException e)
+		{
+			
+		}
+	}
+	
 	@Override
 	public void sendData(boolean isRealData, byte[] data) throws TunnelCrashException 
 	{
