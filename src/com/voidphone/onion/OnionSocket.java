@@ -84,7 +84,6 @@ public class OnionSocket {
 			m.registerAddress(address, this);
 		} catch (IllegalAddressException e) {
 			close();
-			e.printStackTrace();
 			throw new IOException(e.getMessage());
 		}
 		controlChannel.read(readBuffer, null, new ReadCompletionHandler());
@@ -139,16 +138,13 @@ public class OnionSocket {
 	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) {
 		try {
 			OnionConnectingSocket tun = Main.getOas().getAndRemoveDetachedTunnelById(id);
-			if(tun != null)
-			{
+			if (tun != null) {
 				tun.constructTunnel(id, addr);
 
 				// the tunnel handler
 				while (true)
 					tun.getAndProcessNextDataMessage();
-			}
-			else
-			{
+			} else {
 				OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
 				incomingSocket.authenticate();
 				boolean tunnelDestroyed = false;
