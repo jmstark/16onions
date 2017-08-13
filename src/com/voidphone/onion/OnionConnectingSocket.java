@@ -89,39 +89,35 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	
 			// Fill up an array with intermediate hops and the target node
 			hops = new RpsPeerMessage[hopCount + 1];
-			RpsPeerMessage rpsMsg;
 			// If end node is unspecified (null), use another random node
-			for (int i = 0, retries = 0; i < hopCount + (destAddr == null || destHostkey == null ? 1 : 0 ) ; i++) {
-				rpsMsg = Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId));
-				if(rpsMsg == null)
-					throw new NoRpsPeerException();
+			for (int i = 0; i < hopCount + (destAddr == null || destHostkey == null ? 1 : 0 ) ; i++) {
+				addRpsHop(i);
 				
-				if(Arrays.asList(hops).contains(rpsMsg) || rpsMsg.getAddress().equals(destAddr))
+				if(i==0)
 				{
-					retries++;
-					if(retries > 10 * hopCount)
+					try
 					{
-						General.error("Not enough RPS peers");
-						throw new NoRpsPeerException();
+						nextHopAddress = hops[0].getAddress();
+						
+						// Connect to first hop - all other connections are forwarded over this hop
+						m.registerAddress(hops[0].getAddress());
+						nextHopMId = m.registerID(hops[0].getAddress());
 					}
-					i--;
-					continue;
+					catch(IOException | TimeoutException | IllegalAddressException e)
+					{
+						General.warning("Couldn't connect to first hop - selecting another");
+						i--;
+						continue;
+					}
 				}
-					
-				hops[i] = rpsMsg;
 			}
 			
 			if (destAddr != null && destHostkey != null)
 				hops[hopCount] = new RpsPeerMessage(destAddr, Util.getHostkeyObject(destHostkey));
 	
-			nextHopAddress = hops[0].getAddress();
-			
-			// Connect to first hop - all other connections are forwarded over this hop
-			m.registerAddress(hops[0].getAddress());
-			nextHopMId = m.registerID(hops[0].getAddress());
 		}
 		
-		catch(InterruptedException | IllegalIDException | NoRpsPeerException | MessageSizeExceededException | IOException | TimeoutException | IllegalAddressException e)
+		catch(InterruptedException | IllegalIDException | MessageSizeExceededException | NoRpsPeerException e)
 		{
 			General.error("Couldn't construct outgoing tunnel");
 			General.fatalException(e);
@@ -153,6 +149,28 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		constructTunnel();
 	}
 	
+	void addRpsHop(int hopNum) throws NoRpsPeerException, InterruptedException, IllegalIDException
+	{
+		for(int rpsRetries = 0;rpsRetries<10;rpsRetries++)
+		{
+			RpsPeerMessage rpsMsg = Main.getRas().RPSQUERY(Main.getRas().newRpsQueryMessage(rpsApiId));
+			if(rpsMsg == null)
+				throw new NoRpsPeerException();
+			
+			if(Arrays.asList(hops).contains(rpsMsg) || rpsMsg.getAddress().equals(destAddr))
+			{
+				rpsRetries++;
+				if(rpsRetries > 10)
+				{
+					General.error("Not enough RPS peers");
+					throw new NoRpsPeerException();
+				}
+				continue;
+			}
+				
+			hops[hopNum] = rpsMsg;
+		}
+	}
 	
 	/**
 	 * This method must be called after the constructor has returned
@@ -188,22 +206,29 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 				outgoingData.writeInt(hops[i].getAddress().getPort());
 				byte[] encryptedPayload = encrypt(outgoingDataBAOS.toByteArray(), i);
 	
-				General.info("Sending tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].getAddress() );
-				
-				m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encryptedPayload));
-				
-				General.info("Sent tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].getAddress() );
-				
-				// Now, we are indirectly connected to the target node. 
-				// Authenticate to that node.
-				beginAuthentication(Util.getHostkeyBytes(hops[i].getHostkey()), i);
-				
-				General.info("authenticating to hop " + i  + ", address: " + hops[i].getAddress());
-				
-				authSessionIds[i] = finishAuthentication(Util.getHostkeyBytes(hops[i].getHostkey()), i);
-				
-				General.info("authenticated to hop " + i  + ", address: " + hops[i].getAddress());
-				
+				try {
+					General.info("Sending tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].getAddress() );
+					m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encryptedPayload));
+					
+					General.info("Sent tunnel building request to hop " + (i-1) + ", address: " + hops[i-1].getAddress() );
+					
+					// Now, we are indirectly connected to the target node. 
+					// Authenticate to that node.
+					beginAuthentication(Util.getHostkeyBytes(hops[i].getHostkey()), i);
+					
+					General.info("authenticating to hop " + i  + ", address: " + hops[i].getAddress());
+					
+					authSessionIds[i] = finishAuthentication(Util.getHostkeyBytes(hops[i].getHostkey()), i);
+					
+					General.info("authenticated to hop " + i  + ", address: " + hops[i].getAddress());
+				}
+				catch(IOException | TunnelCrashException e)
+				{
+					General.warning("Extending tunnel failed; Select new hop and retry");
+					addRpsHop(i);
+					i--;
+					continue;
+				}
 	
 			}
 			
@@ -222,7 +247,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			
 			General.info("Signalled successful tunnel build to CM");
 		}
-		catch (IOException | TunnelCrashException | IllegalAddressException | InterruptedException | SizeLimitExceededException | AuthApiException | IllegalIDException e)
+		catch (SizeLimitExceededException | IllegalAddressException | InterruptedException | IOException | AuthApiException | IllegalIDException | NoRpsPeerException e)
 		{
 			General.error("Couldn't construct incoming tunnel");
 			General.fatalException(e);
