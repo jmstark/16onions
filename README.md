@@ -1,2 +1,10 @@
-To generate a new hostkey, execute:
-openssl genrsa -out hostkey.pem 4096
+16onions
+===============
+
+Module: Onion
+
+Team number: 16
+
+Team name: 16onions
+
+Team members: Charlie Groh, Josef Stark
