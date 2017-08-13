@@ -22,12 +22,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+
+import com.voidphone.general.AuthApiException;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.NoRpsPeerException;
+import com.voidphone.general.OnionAuthErrorException;
 import com.voidphone.general.SizeLimitExceededException;
+import com.voidphone.general.TunnelCrashException;
 import com.voidphone.general.Util;
 
 import auth.api.OnionAuthDecryptResp;
@@ -160,7 +165,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 			ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 			DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
 			
-			outgoingData.writeShort(MSG_BUILD_TUNNEL);
+			outgoingData.write(MSG_BUILD_TUNNEL);
 			byte[] rawAddress = hops[i].getAddress().getAddress().getAddress();
 			outgoingData.write((byte) rawAddress.length);
 			outgoingData.write(rawAddress);
@@ -220,9 +225,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * Encrypts payload for end hop.
 	 * @param payload the plaintext payload
 	 * @return encrypted payload
+	 * @throws AuthApiException 
 	 * @throws Exception
 	 */
-	protected byte[] encrypt(byte[] payload) throws Exception {
+	protected byte[] encrypt(byte[] payload) throws AuthApiException {
 		return encrypt(payload, authSessionIds.length);
 	}
 
@@ -231,9 +237,10 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * 
 	 * @param payload the encrypted payload
 	 * @return Decrypted payload
+	 * @throws AuthApiException 
 	 * @throws Exception
 	 */
-	protected byte[] decrypt(byte[] payload) throws Exception {
+	protected byte[] decrypt(byte[] payload) throws AuthApiException {
 		return decrypt(payload, authSessionIds.length);
 	}
 	
@@ -245,13 +252,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @param payload the payload which will be encrypted
 	 * @param numLayers number of encryption layers to apply. 0 = no encryption.
 	 * @return encrypted payload (or plaintext if numLayers == 0)
+	 * @throws AuthApiException 
 	 * @throws Exception 
 	 */
-	protected byte[] encrypt(byte[] payload, int numLayers) throws Exception
+	protected byte[] encrypt(byte[] payload, int numLayers) throws AuthApiException
 	{
-		if(numLayers < 0)
-			throw new Exception("Negative number of layers");
-		
 		if(numLayers == 0)
 		{
 			//unencrypted packet
@@ -267,8 +272,13 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		}
 		
 		//send the data to OnionAuth API and get encrypted data back.
-		OnionAuthEncryptResp response = 
-				Main.getOaas().AUTHLAYERENCRYPT(Main.getOaas().newOnionAuthEncrypt(authApiId, neededSessionIds, payload));
+		OnionAuthEncryptResp response;
+		try {
+			response = Main.getOaas().AUTHLAYERENCRYPT(Main.getOaas().newOnionAuthEncrypt(authApiId, neededSessionIds, payload));
+		} catch (InterruptedException | IllegalIDException | OnionAuthErrorException e) {
+			General.error("AUTH API communication error");
+			throw new AuthApiException();
+		}
 
 
 		return response.getPayload();
@@ -282,13 +292,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @param encryptedPayload
 	 * @param numLayers number of encryption layers to remove. 0 = no decryption.
 	 * @return the decrypted payload.
+	 * @throws AuthApiException 
 	 * @throws Exception
 	 */
-	protected byte[] decrypt(byte[] encryptedPayload, int numLayers) throws Exception
+	protected byte[] decrypt(byte[] encryptedPayload, int numLayers) throws AuthApiException
 	{
-		if(numLayers < 0)
-			throw new Exception("Negative number of layers");
-		
 		if(numLayers == 0)
 		{
 			//unencrypted packet
@@ -305,8 +313,13 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		}
 		
 		//send the data to OnionAuth API and get decrypted data back.
-		OnionAuthDecryptResp response = 
-			Main.getOaas().AUTHLAYERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, neededSessionIds, encryptedPayload));
+		OnionAuthDecryptResp response;
+		try {
+			response = Main.getOaas().AUTHLAYERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, neededSessionIds, encryptedPayload));
+		} catch (InterruptedException | IllegalIDException | OnionAuthErrorException e) {
+			General.error("AUTH API communication error");
+			throw new AuthApiException();
+		}
 		
 		return response.getPayload();
 	}
@@ -362,10 +375,11 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * Sends data through the tunnel, be it real VOIP or cover traffic.
 	 * @param isRealData indicates if the data is real data or not (-> cover traffic)
 	 * @param data the payload
+	 * @throws TunnelCrashException 
 	 * @throws Exception 
 	 */
 	@Override	
-	public void sendData(boolean isRealData, byte[] data) throws Exception	
+	public void sendData(boolean isRealData, byte[] data) throws TunnelCrashException 
 	{
 		sendData(isRealData, data, nextHopMId, nextHopAddress);
 	}
@@ -375,7 +389,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 * @throws Exception
 	 */
 	public void destroy() throws Exception {
-		byte[] plainMsg = {MSG_DESTROY_TUNNEL};
+		byte[] plainMsg = new byte[] {MSG_DESTROY_TUNNEL};
 		// send the message iteratively to all hops,
 		// starting at the farthest one
 		for (int i = authSessionIds.length; i > 0; i--) {

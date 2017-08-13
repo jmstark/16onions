@@ -65,6 +65,10 @@ public class Config {
 	public final RSAPublicKey hostkey;
 	// Hop-count
 	public final int hopCount;
+	// round time in milliseconds
+	public final long roundtime;
+	// how many milliseconds before the next round we start preparing (e.g. backup tunnels)
+	public final long roundPrepareTime;
 
 	public Config(String configFilePath) throws InvalidFileFormatException, IOException, InvalidKeyException {
 		Wini configFile = new Wini();
@@ -114,6 +118,8 @@ public class Config {
 		apiTimeout = getInteger(configFile, "onion", "api_timeout");
 		onionTimeout = getInteger(configFile, "onion", "p2p_timeout");
 		onionSize = getInteger(configFile, "onion", "p2p_packetsize");
+		roundtime = getInteger(configFile, "onion", "roundtime");
+		roundPrepareTime = getInteger(configFile, "onion", "round_prepare_time");
 
 		General.debug("Hostkey: " + hostkeyPath);
 	}

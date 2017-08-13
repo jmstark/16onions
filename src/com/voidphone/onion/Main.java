@@ -44,7 +44,6 @@ public class Main {
 	private static @Getter Selector selector;
 	private static @Getter Config config;
 	private static @Getter OnionApiSocket oas;
-	// TODO: How and where do we initialise oaas and ras and oas?
 	private static @Getter OnionAuthApiSocket oaas;
 	private static @Getter RpsApiSocket ras;
 	private static @Getter Multiplexer multiplexer;
@@ -101,6 +100,29 @@ public class Main {
 			}
 			readBuffer.clear();
 		}
+	}
+	
+	public static long getMsUntilNextRound()
+	{
+		return config.roundtime - (System.currentTimeMillis() % config.roundtime);
+	}
+	
+	public static long getMsUntilRoundPrepare()
+	{
+		long remaining = getMsUntilNextRound() - config.roundPrepareTime;
+		return remaining > 0 ? remaining : 0;
+	}
+	
+	public static void waitUntilBeginningOfNextRound() throws InterruptedException
+	{
+		long lastRemaining, currentRemaining;
+		do
+		{
+			lastRemaining = getMsUntilNextRound();
+			Thread.sleep(lastRemaining);
+			currentRemaining = getMsUntilNextRound();
+		}
+		while(lastRemaining > currentRemaining);
 	}
 
 	private static void parseArgs(String args[]) {

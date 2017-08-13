@@ -26,7 +26,11 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import com.voidphone.general.AuthApiException;
 import com.voidphone.general.General;
+import com.voidphone.general.IllegalIDException;
+import com.voidphone.general.OnionAuthErrorException;
+import com.voidphone.general.TunnelCrashException;
 
 import auth.api.OnionAuthCipherDecryptResp;
 import auth.api.OnionAuthCipherEncryptResp;
@@ -68,28 +72,42 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 * Encrypts payload for previous hop.
 	 * 
 	 * @return encrypted payload
+	 * @throws AuthApiException 
 	 * @throws Exception
 	 */
-	protected byte[] encrypt(byte[] payload) throws Exception {
-		OnionAuthCipherEncryptResp response = 
-				Main.getOaas().AUTHCIPHERENCRYPT(Main.getOaas().
-						newOnionAuthEncrypt(authApiId, authSessionIds[0],nextHopAddress != null && forwardedHandshakeCompleted,payload));
-		if(nextHopAddress != null)
-		{
-			forwardedHandshakeCompleted = true;
-		}		
-		return response.getPayload();		
+	protected byte[] encrypt(byte[] payload) throws AuthApiException {
+
+		OnionAuthCipherEncryptResp response;
+		try {
+			response = Main.getOaas().AUTHCIPHERENCRYPT(Main.getOaas().
+					newOnionAuthEncrypt(authApiId, authSessionIds[0],nextHopAddress != null && forwardedHandshakeCompleted,payload));
+			if(nextHopAddress != null)
+			{
+				//Encryption will be enabled, as soon as the handshake is transferred
+				forwardedHandshakeCompleted = true;
+			}		
+			return response.getPayload();	
+		} catch (InterruptedException | IllegalIDException | OnionAuthErrorException e) {
+			General.error("AUTH API communication error");
+			throw new AuthApiException();
+		}	
 	}
 
 	/**
 	 * Decrypts payload of previous hop.
 	 * 
 	 * @return Decrypted payload
+	 * @throws AuthApiException 
 	 * @throws Exception
 	 */
-	protected byte[] decrypt(byte[] payload) throws Exception {
-		OnionAuthCipherDecryptResp response = 
-				Main.getOaas().AUTHCIPHERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, authSessionIds[0], payload));
+	protected byte[] decrypt(byte[] payload) throws AuthApiException  {
+		OnionAuthCipherDecryptResp response;
+		try {
+			response = Main.getOaas().AUTHCIPHERDECRYPT(Main.getOaas().newOnionAuthDecrypt(authApiId, authSessionIds[0], payload));
+		} catch (InterruptedException | IllegalIDException | OnionAuthErrorException e) {
+			General.error("AUTH API communication error");
+			throw new AuthApiException();
+		}
 		return response.getPayload();
 	}
 
@@ -223,7 +241,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		//At this point we know it is a control message for us
 		ByteBuffer buffer = ByteBuffer.wrap(payload);
-		short messageType = buffer.getShort();
+		byte messageType = buffer.get();
 		
 		if(messageType == MSG_DESTROY_TUNNEL)
 		{
@@ -266,7 +284,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	}
 
 	@Override
-	public void sendData(boolean isRealData, byte[] data) throws Exception 
+	public void sendData(boolean isRealData, byte[] data) throws TunnelCrashException 
 	{
 		sendData(isRealData, data, previousHopWriteMId, previousHopAddress);
 	}

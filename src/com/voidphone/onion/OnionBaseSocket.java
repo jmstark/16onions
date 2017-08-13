@@ -18,11 +18,16 @@
  */
 package com.voidphone.onion;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import com.voidphone.general.AuthApiException;
+import com.voidphone.general.General;
+import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.SizeLimitExceededException;
+import com.voidphone.general.TunnelCrashException;
 
 
 /**
@@ -35,7 +40,7 @@ public abstract class OnionBaseSocket
 	protected final int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
 	protected final int VERSION = 1;
 	protected final byte MSG_BUILD_TUNNEL = 0xb;
-	protected final short MSG_INCOMING_TUNNEL = 0x1;
+	protected final byte MSG_INCOMING_TUNNEL = 0x1;
 	protected final byte MSG_DESTROY_TUNNEL = 0xe;
 	protected final byte MSG_DATA = 0xd;
 	protected final byte MSG_COVER = 0xc;
@@ -51,9 +56,6 @@ public abstract class OnionBaseSocket
 		return onionApiId;
 	}
 	
-	protected static int apiRequestCounter = 1;
-	
-	
 	public OnionBaseSocket(Multiplexer m, int onionApiId) throws SizeLimitExceededException
 	{
 		this.m = m;
@@ -64,9 +66,10 @@ public abstract class OnionBaseSocket
 	/**
 	 * Sends (real) VOIP-data
 	 * @param data the payload
+	 * @throws TunnelCrashException 
 	 * @throws Exception
 	 */
-	public void sendRealData(byte[] data) throws Exception
+	public void sendRealData(byte[] data) throws TunnelCrashException  
 	{
 		sendData(true,data);
 	}
@@ -74,9 +77,10 @@ public abstract class OnionBaseSocket
 	/**
 	 * Sends fake/ cover traffic of the specified size
 	 * @param size size of the cover traffic to generate
+	 * @throws TunnelCrashException 
 	 * @throws Exception
 	 */
-	public void sendCoverData(int size) throws Exception
+	public void sendCoverData(int size) throws TunnelCrashException
 	{
 		byte[] rndData = new byte[size];
 		new Random().nextBytes(rndData);
@@ -87,29 +91,42 @@ public abstract class OnionBaseSocket
 	 * Sends data through the tunnel, be it real VOIP or cover traffic.
 	 * @param isRealData indicates if the data is real data or not (-> cover traffic)
 	 * @param data the payload
+	 * @throws TunnelCrashException 
 	 * @throws Exception 
 	 */
-	public void sendData(boolean isRealData, byte[] data, short targetHopMId, InetSocketAddress targetHopAddress) throws Exception
+	public void sendData(boolean isRealData, byte[] data, short targetHopMId, InetSocketAddress targetHopAddress) throws TunnelCrashException
 	{
 		ByteBuffer payload = ByteBuffer.allocate(data.length + 1);
 		payload.put(isRealData ? MSG_DATA : MSG_COVER);
 		payload.put(data);
 		
-		m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress, encrypt(payload.array())));		
+		try {
+			m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress, encrypt(payload.array())));
+		} catch (IllegalAddressException | InterruptedException | IOException | SizeLimitExceededException
+				| AuthApiException e) {
+			General.error("Could not write to tunnel");
+			throw new TunnelCrashException();
+		}		
 	}
 	
 	
-	public void sendHeartbeat(short targetHopMId, InetSocketAddress targetHopAddress) throws Exception
-	{
-		m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress, encrypt(new byte[] {MSG_HEARTBEAT})));
+	public void sendHeartbeat(short targetHopMId, InetSocketAddress targetHopAddress) throws TunnelCrashException {
+		try {
+			m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress,
+					encrypt(new byte[] { MSG_HEARTBEAT })));
+		} catch (IllegalAddressException | InterruptedException | IOException | SizeLimitExceededException
+				| AuthApiException e) {
+			General.error("Could not write to tunnel");
+			throw new TunnelCrashException();
+		}
 	}
 
 	
 	
-	public abstract void sendData(boolean isRealData, byte[] data) throws Exception;
+	public abstract void sendData(boolean isRealData, byte[] data) throws TunnelCrashException;
 	
-	protected abstract byte[] encrypt(byte[] payload) throws Exception;
+	protected abstract byte[] encrypt(byte[] payload) throws AuthApiException;
 	
-	protected abstract byte[] decrypt(byte[] payload) throws Exception;
+	protected abstract byte[] decrypt(byte[] payload) throws AuthApiException;
 	
 }
