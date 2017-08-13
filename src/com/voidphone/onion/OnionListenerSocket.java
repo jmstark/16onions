@@ -127,7 +127,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		m.write(new OnionMessage(previousHopWriteMId, OnionMessage.CONTROL_MESSAGE, previousHopAddress, outgoingDataBAOS.toByteArray()));
 
-		General.info("Authentication with previous hop successfull");
+		General.info("Authentication with previous hop successful");
 		
 		return hs2.getSessionID();
 	}
@@ -145,7 +145,23 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		
 		//handle time-out
 		if(incomingMessage == null)
+		{
+			if(heartbeatRetries>5)
+			{
+				throw new IOException("Tunnel timeout: no data received");				
+			}
+			if(nextHopAddress == null)
+			{
+				//send heartbeat, but not if we're an intermediate hop
+				General.info("Tunnel still alive? Sending heartbeat");
+				sendHeartbeat(previousHopWriteMId, previousHopAddress);
+			}
+			heartbeatRetries++;
 			return false;
+		}
+
+		//No timeout, so we can reset the counter
+		heartbeatRetries = 0;
 		
 		byte[] payload;
 
@@ -185,9 +201,20 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		//In case it is a VOIP-data message
 		if(incomingMessage.type == OnionMessage.DATA_MESSAGE)
 		{
-			if(payload[0] != MSG_DATA)
-				//ignore cover traffic
+			if(payload[0] == MSG_HEARTBEAT)
+			{
+				//respond with some data so the other end knows we're alive
+				General.info("Heartbeat received, responding with some data");
+				sendCoverData(32);
 				return false;
+			}	
+			
+			if(payload[0] != MSG_DATA)
+			{
+				//ignore cover traffic
+				General.info("Cover traffic received: Tunnel still alive, ignoring content");
+				return false;
+			}
 			
 			General.info("MSG_DATA received: incoming data message");
 			Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(onionApiId, Arrays.copyOfRange(payload, 1, payload.length)));

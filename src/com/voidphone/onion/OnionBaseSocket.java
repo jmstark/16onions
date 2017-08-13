@@ -18,10 +18,12 @@
  */
 package com.voidphone.onion;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.SizeLimitExceededException;
 
 
@@ -39,11 +41,13 @@ public abstract class OnionBaseSocket
 	protected final byte MSG_DESTROY_TUNNEL = 0xe;
 	protected final byte MSG_DATA = 0xd;
 	protected final byte MSG_COVER = 0xc;
+	protected final byte MSG_HEARTBEAT = 0xa;
 	protected int[] authSessionIds;
 	public int externalID;
 	protected int authApiId;
 	protected int onionApiId;
 	protected Multiplexer m;
+	protected int heartbeatRetries = 0;
 
 	public int getOnionApiId()
 	{
@@ -97,11 +101,18 @@ public abstract class OnionBaseSocket
 	public void sendData(boolean isRealData, byte[] data, short targetHopMId, InetSocketAddress targetHopAddress) throws Exception
 	{
 		ByteBuffer payload = ByteBuffer.allocate(data.length + 1);
-		payload.put(MSG_DATA);
+		payload.put(isRealData ? MSG_DATA : MSG_COVER);
 		payload.put(data);
 		
 		m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress, encrypt(payload.array())));		
 	}
+	
+	
+	public void sendHeartbeat(short targetHopMId, InetSocketAddress targetHopAddress) throws Exception
+	{
+		m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress, encrypt(new byte[] {MSG_HEARTBEAT})));
+	}
+
 	
 	
 	public abstract void sendData(boolean isRealData, byte[] data) throws Exception;

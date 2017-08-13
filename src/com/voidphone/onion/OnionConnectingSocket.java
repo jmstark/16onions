@@ -20,6 +20,7 @@ package com.voidphone.onion;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Random;
@@ -49,6 +50,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	//Array holding all hops, including the tunnel end
 	protected RpsPeerMessage[] hops;
 	OnionAuthSessionHS1 hs1;
+
 
 
 	/**
@@ -184,7 +186,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		//Inform our CM, that the requested tunnel is ready.
 		Main.getOas().ONIONTUNNELREADY(Main.getOas().newOnionTunnelReadyMessage(onionApiId, destHostkey));
 		
-		General.info("Signalled successfull tunnel build to CM");
+		General.info("Signalled successful tunnel build to CM");
 	}
 	
 	
@@ -397,14 +399,40 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		
 		//Handle timeouts
 		if(incomingMessage == null)
+		{
+			if(heartbeatRetries>5)
+			{
+				throw new IOException("Tunnel timeout: no data received");				
+			}
+			//send heartbeat
+			General.info("Tunnel still alive? Sending heartbeat");
+			sendHeartbeat(nextHopMId, nextHopAddress);;
+			heartbeatRetries++;
 			return;
+		}
+
+		//No timeout, so we can reset the counter
+		heartbeatRetries = 0;
+
+
 		
 		// decrypt data
 		byte[] payload = decrypt(incomingMessage.data);
 		
-		if(payload[0] != MSG_DATA)
-			//ignore cover traffic
+		if(payload[0] == MSG_HEARTBEAT)
+		{
+			//respond with some data so the other end knows we're alive
+			General.info("Heartbeat received, responding with some data");
+			sendCoverData(32);
 			return;
+		}	
+		
+		if(payload[0] != MSG_DATA)
+		{
+			//ignore cover traffic
+			General.info("Cover traffic received: Tunnel still alive, ignoring content");
+			return;
+		}
 		
 		Main.getOas().ONIONTUNNELDATAINCOMING(Main.getOas().newOnionTunnelDataMessage(onionApiId, Arrays.copyOfRange(payload, 1, payload.length)));
 			
