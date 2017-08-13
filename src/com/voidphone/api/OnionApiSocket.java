@@ -146,8 +146,9 @@ public class OnionApiSocket extends ApiSocket {
 	 * @throws Exception
 	 */
 	public void prepareNextTunnel() throws Exception {
-		nextConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination, destinationHostkey,
-				currentConnectingTunnel.externalID);
+	//	nextConnectingTunnel = new OnionConnectingSocket(Main.getMultiplexer(), tunnelDestination, destinationHostkey,
+	//			currentConnectingTunnel.externalID);
+		//TODO
 	}
 
 	/**
@@ -261,7 +262,7 @@ public class OnionApiSocket extends ApiSocket {
 			General.fatalException(e);
 			try {
 				ONIONERROR(newOnionErrorMessage(
-						currentConnectingTunnel != null ? currentConnectingTunnel.externalID : 0, otbm.getType()));
+						currentConnectingTunnel != null ? currentConnectingTunnel.getOnionApiId() : 0, otbm.getType()));
 			} catch (IllegalIDException e1) {
 				General.fatalException(e1);
 			}
@@ -294,7 +295,7 @@ public class OnionApiSocket extends ApiSocket {
 		int tunnelId = (int) otdm.getId();
 
 		// destroy main and backup tunnel
-		if (currentConnectingTunnel.externalID == tunnelId) {
+		if (currentConnectingTunnel.getOnionApiId() == tunnelId) {
 			try {
 				currentConnectingTunnel.destroy();
 				nextConnectingTunnel.destroy();

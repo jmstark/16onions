@@ -56,7 +56,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	protected boolean forwardedHandshakeCompleted = false;
 
 	public OnionListenerSocket(InetSocketAddress previousHopAddress, Multiplexer m, short multiplexerId) throws Exception {
-		super(m);
+		super(m, Main.getOas().register());
 		previousAndNextHopReadMId = multiplexerId;
 		previousHopWriteMId = multiplexerId;
 		this.previousHopAddress = previousHopAddress;
@@ -140,7 +140,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 	 */
 	boolean getAndProcessNextMessage() throws Exception {
 		
-		//remove one layer of encryption. TODO: maybe it's from nextHopAddress?
+		//remove one layer of encryption.
 		OnionMessage incomingMessage = m.read(previousHopWriteMId, previousHopAddress);
 		
 		//handle time-out
@@ -153,7 +153,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			if(nextHopAddress == null)
 			{
 				//send heartbeat, but not if we're an intermediate hop
-				General.info("Tunnel still alive? Sending heartbeat");
+				General.info("Tunnel still alive? Sending heartbeat, expecting some answer (e.g. cover traffic)");
 				sendHeartbeat(previousHopWriteMId, previousHopAddress);
 			}
 			heartbeatRetries++;
@@ -212,7 +212,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 			if(payload[0] != MSG_DATA)
 			{
 				//ignore cover traffic
-				General.info("Cover traffic received: Tunnel still alive, ignoring content");
+				General.info("Cover traffic received");
 				return false;
 			}
 			
@@ -256,7 +256,7 @@ public class OnionListenerSocket extends OnionBaseSocket {
 		{
 			General.info("MSG_INCOMING_TUNNEL received");
 			//Signal to our CM a new incoming tunnel
-			externalID = buffer.getInt();
+			int externalID = buffer.getInt();
 			//Main.getOas().setNewIncomingTunnel(this);
 			Main.getOas().addActiveTunnel(this);
 			Main.getOas().ONIONTUNNELINCOMING(Main.getOas().newOnionTunnelIncomingMessage(onionApiId));

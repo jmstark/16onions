@@ -23,11 +23,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.Random;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.NoRpsPeerException;
+import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.general.Util;
 
 import auth.api.OnionAuthDecryptResp;
@@ -70,8 +70,8 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	 *            second constructor which assigns a new ID.
 	 * @throws Exception
 	 */
-	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, int externalID) throws Exception {
-		super(m, externalID);
+	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey, int onionApiId) throws Exception {
+		super(m, onionApiId);
 		int hopCount = Main.getConfig().hopCount;
 		this.destAddr = destAddr;
 		this.destHostkey = destHostkey;
@@ -112,6 +112,19 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		nextHopMId = m.registerID(hops[0].getAddress());
 
 
+	}
+	
+	/**
+	 * Alternative constructor - a new onionApiId is assigned implicitely
+	 * 
+	 * @param m The multiplexer over which we communicate with other peers
+	 * @param destAddr the address of the target node (i.e. the last hop)
+	 * @param destHostkey the hostkey of the target node (i.e. the last hop)
+	 * @throws Exception
+	 */
+	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey) throws SizeLimitExceededException, Exception
+	{
+		this(m,destAddr,destHostkey,Main.getOas().register());
 	}
 	
 	public void constructTunnel(short newNextHopMId, InetSocketAddress newNextHopAddress) throws Exception
@@ -177,7 +190,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		ByteArrayOutputStream outgoingDataBAOS = new ByteArrayOutputStream();
 		DataOutputStream outgoingData = new DataOutputStream(outgoingDataBAOS);
 		outgoingData.writeShort(MSG_INCOMING_TUNNEL);
-		outgoingData.writeInt(externalID);
+		outgoingData.writeInt(onionApiId);
 		m.write(new OnionMessage(nextHopMId, OnionMessage.CONTROL_MESSAGE, nextHopAddress, encrypt(outgoingDataBAOS.toByteArray())));
 		
 		General.info("Signaled tunnel end to last hop");
@@ -202,18 +215,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 	}
 	
 	
-	/**
-	 * Alternative constructor - a new externalID is assigned implicitely
-	 * 
-	 * @param m The multiplexer over which we communicate with other peers
-	 * @param destAddr the address of the target node (i.e. the last hop)
-	 * @param destHostkey the hostkey of the target node (i.e. the last hop)
-	 * @throws Exception
-	 */
-	public OnionConnectingSocket(Multiplexer m, InetSocketAddress destAddr, byte[] destHostkey) throws Exception {
-		this(m, destAddr, destHostkey, new Random().nextInt());
-	}
-
 	
 	/**
 	 * Encrypts payload for end hop.
@@ -405,7 +406,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 				throw new IOException("Tunnel timeout: no data received");				
 			}
 			//send heartbeat
-			General.info("Tunnel still alive? Sending heartbeat");
+			General.info("Tunnel still alive? Sending heartbeat, expecting some answer (e.g. cover traffic)");
 			sendHeartbeat(nextHopMId, nextHopAddress);;
 			heartbeatRetries++;
 			return;
@@ -430,7 +431,7 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		if(payload[0] != MSG_DATA)
 		{
 			//ignore cover traffic
-			General.info("Cover traffic received: Tunnel still alive, ignoring content");
+			General.info("Cover traffic received");
 			return;
 		}
 		
