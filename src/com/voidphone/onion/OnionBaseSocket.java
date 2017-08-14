@@ -29,13 +29,11 @@ import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.SizeLimitExceededException;
 import com.voidphone.general.TunnelCrashException;
 
-
 /**
  * Base class for OnionConnectingSocket and OnionListenerSocket
  * 
  */
-public abstract class OnionBaseSocket
-{
+public abstract class OnionBaseSocket {
 
 	protected final int MAGIC_SEQ_CONNECTION_START = 0x7af3bef1;
 	protected final int VERSION = 1;
@@ -52,67 +50,73 @@ public abstract class OnionBaseSocket
 	protected int heartbeatRetries = 0;
 	protected boolean initiateDestruction = false;
 
-	public int getOnionApiId()
-	{
+	public int getOnionApiId() {
 		return onionApiId;
 	}
-	
-	public OnionBaseSocket(Multiplexer m, int onionApiId) throws SizeLimitExceededException
-	{
+
+	public OnionBaseSocket(Multiplexer m, int onionApiId) throws SizeLimitExceededException {
 		this.m = m;
 		authApiId = Main.getOaas().register();
 		this.onionApiId = onionApiId;
 	}
-	
+
 	/**
 	 * Sends (real) VOIP-data to the other tunnel end
-	 * @param data the payload
-	 * @throws TunnelCrashException 
+	 * 
+	 * @param data
+	 *            the payload
+	 * @throws TunnelCrashException
 	 */
-	public void sendRealData(byte[] data) throws TunnelCrashException  
-	{
-		sendData(true,data);
+	public void sendRealData(byte[] data) throws TunnelCrashException {
+		sendData(true, data);
 	}
-	
+
 	/**
 	 * Sends fake/ cover traffic of the specified size to the other tunnel end
-	 * @param size size of the cover traffic to generate
-	 * @throws TunnelCrashException 
+	 * 
+	 * @param size
+	 *            size of the cover traffic to generate
+	 * @throws TunnelCrashException
 	 */
-	public void sendCoverData(int size) throws TunnelCrashException
-	{
+	public void sendCoverData(int size) throws TunnelCrashException {
 		byte[] rndData = new byte[size];
 		new Random().nextBytes(rndData);
 		sendData(false, rndData);
 	}
-	
+
 	/**
 	 * Sends data to the other tunnel end, be it real VOIP or cover traffic.
-	 * @param isRealData indicates if the data is real data or not (-> cover traffic)
-	 * @param data the payload
-	 * @throws TunnelCrashException 
+	 * 
+	 * @param isRealData
+	 *            indicates if the data is real data or not (-> cover traffic)
+	 * @param data
+	 *            the payload
+	 * @throws TunnelCrashException
 	 */
-	public void sendData(boolean isRealData, byte[] data, short targetHopMId, InetSocketAddress targetHopAddress) throws TunnelCrashException
-	{
+	public void sendData(boolean isRealData, byte[] data, short targetHopMId, InetSocketAddress targetHopAddress)
+			throws TunnelCrashException {
 		ByteBuffer payload = ByteBuffer.allocate(data.length + 1);
 		payload.put(isRealData ? MSG_DATA : MSG_COVER);
 		payload.put(data);
-		
+
 		try {
-			m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress, encrypt(payload.array())));
+			m.write(new OnionMessage(targetHopMId, OnionMessage.DATA_MESSAGE, targetHopAddress,
+					encrypt(payload.array())));
 		} catch (IllegalAddressException | InterruptedException | IOException | SizeLimitExceededException
 				| AuthApiException e) {
 			General.error("Could not write to tunnel");
 			throw new TunnelCrashException();
-		}		
+		}
 	}
-	
+
 	/**
-	 * Sends a heartbeat message to the other tunnel end, which is expected to respond with 
-	 * some kind of data (e.g. cover traffic)
+	 * Sends a heartbeat message to the other tunnel end, which is expected to
+	 * respond with some kind of data (e.g. cover traffic)
 	 * 
-	 * @param targetHopMId multiplexer id of target hop (previous or next)
-	 * @param targetHopAddress address of target hop  (previous or next)
+	 * @param targetHopMId
+	 *            multiplexer id of target hop (previous or next)
+	 * @param targetHopAddress
+	 *            address of target hop (previous or next)
 	 * @throws TunnelCrashException
 	 */
 	public void sendHeartbeat(short targetHopMId, InetSocketAddress targetHopAddress) throws TunnelCrashException {
@@ -126,25 +130,27 @@ public abstract class OnionBaseSocket
 		}
 	}
 
-	
 	/**
 	 * sends and encrypts data to the other tunnel end.
 	 * 
-	 * @param isRealData true: VOIP data; false: cover traffic
-	 * @param data payload
+	 * @param isRealData
+	 *            true: VOIP data; false: cover traffic
+	 * @param data
+	 *            payload
 	 * @throws TunnelCrashException
 	 */
 	public abstract void sendData(boolean isRealData, byte[] data) throws TunnelCrashException;
-	
+
 	protected abstract byte[] encrypt(byte[] payload) throws AuthApiException;
-	
+
 	protected abstract byte[] decrypt(byte[] payload) throws AuthApiException;
-	
+
+	protected abstract boolean getAndProcessNextMessage() throws InterruptedException, TunnelCrashException;
+
 	/**
 	 * Requests the tunnel to destruct itself at the next chance.
 	 */
-	public void requestDestruction()
-	{
+	public void requestDestruction() {
 		initiateDestruction = true;
 	}
 

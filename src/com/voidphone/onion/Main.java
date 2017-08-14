@@ -47,6 +47,7 @@ public class Main {
 	private static @Getter OnionAuthApiSocket oaas;
 	private static @Getter RpsApiSocket ras;
 	private static @Getter Multiplexer multiplexer;
+	private static @Getter RoundScheduler scheduler;
 
 	/**
 	 * Runs the Onion module.
@@ -58,6 +59,7 @@ public class Main {
 		final AsynchronousServerSocketChannel onionServerSocket;
 		final ByteBuffer readBuffer;
 
+		scheduler = new RoundScheduler();
 		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress, config.onionAuthAPIPort));
 		ras = new RpsApiSocket(new InetSocketAddress(config.rpsAPIAddress, config.rpsAPIPort));
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
@@ -101,28 +103,23 @@ public class Main {
 			readBuffer.clear();
 		}
 	}
-	
-	public static long getMsUntilNextRound()
-	{
+
+	public static long getMsUntilNextRound() {
 		return config.roundtime - (System.currentTimeMillis() % config.roundtime);
 	}
-	
-	public static long getMsUntilRoundPrepare()
-	{
+
+	public static long getMsUntilRoundPrepare() {
 		long remaining = getMsUntilNextRound() - config.roundPrepareTime;
 		return remaining > 0 ? remaining : 0;
 	}
-	
-	public static void waitUntilBeginningOfNextRound() throws InterruptedException
-	{
+
+	public static void waitUntilBeginningOfNextRound() throws InterruptedException {
 		long lastRemaining, currentRemaining;
-		do
-		{
+		do {
 			lastRemaining = getMsUntilNextRound();
 			Thread.sleep(lastRemaining);
 			currentRemaining = getMsUntilNextRound();
-		}
-		while(lastRemaining > currentRemaining);
+		} while (lastRemaining > currentRemaining);
 	}
 
 	private static void parseArgs(String args[]) {

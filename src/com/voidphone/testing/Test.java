@@ -19,7 +19,7 @@ public class Test {
 
 		Thread.sleep(60000);
 
-		newCM(1, 4);
+		newCM(0, 1);
 		newCM(3, 2);
 		newCM(5, 0);
 
@@ -33,20 +33,11 @@ public class Test {
 		TestProcess test;
 
 		address = Helper.getPeerConfig(j).config.get("onion", "listen_address", String.class);
-		parameter = new String[] { "-c", Helper.getConfigPath(i), "-k",
+		parameter = new String[] { "-c", Helper.getConfigPath(i), "-d", Helper.getConfigPath(j), "-k",
 				Helper.getPeerConfig(j).config.get("onion", "hostkey", String.class), "-p",
 				address.substring(address.lastIndexOf(":") + 1) + "", "-t",
 				address.substring(0, address.lastIndexOf(":")) };
-		test = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
-		rbt = new RedirectBackupThread(test.getOut(), 5);
-		rbt.start();
-
-		address = Helper.getPeerConfig(i).config.get("onion", "listen_address", String.class);
-		parameter = new String[] { "-c", Helper.getConfigPath(j), "-k",
-				Helper.getPeerConfig(i).config.get("onion", "hostkey", String.class), "-p",
-				address.substring(address.lastIndexOf(":") + 1) + "", "-t",
-				address.substring(0, address.lastIndexOf(":")), "-l" };
-		test = new TestProcess(tests.onion.Main.class, Helper.classpath, parameter);
+		test = new TestProcess(com.voidphone.testing.OnionTest.class, Helper.classpath, parameter);
 		rbt = new RedirectBackupThread(test.getOut(), 5);
 		rbt.start();
 	}

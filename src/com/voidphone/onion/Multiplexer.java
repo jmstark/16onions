@@ -80,8 +80,12 @@ public class Multiplexer {
 	 *             if the operation was interrupted
 	 */
 	public OnionMessage read(short id, InetSocketAddress addr)
-			throws IllegalAddressException, IllegalIDException, InterruptedException {
-		return getReadQueue(id, addr).poll(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS);
+			throws IllegalAddressException, IllegalIDException, InterruptedException, TimeoutException {
+		OnionMessage msg = getReadQueue(id, addr).poll(Main.getConfig().onionTimeout, TimeUnit.MILLISECONDS);
+		if (msg == null) {
+			throw new TimeoutException("Read timed out!");
+		}
+		return msg;
 	}
 
 	/**
@@ -220,8 +224,7 @@ public class Multiplexer {
 	 *             if an I/O-error occurs
 	 * @return the OnionSocket for the address
 	 */
-	public OnionSocket registerAddress(InetSocketAddress addr)
-			throws IOException, TimeoutException, InterruptedException {
+	public OnionSocket registerAddress(InetSocketAddress addr) throws IOException, TimeoutException {
 		OnionSocket sock = null;
 		firstLock.writeLock().lock();
 		try {
@@ -230,7 +233,12 @@ public class Multiplexer {
 				firstLock.writeLock().unlock();
 				return sock;
 			}
-			sock = new OnionSocket(this, addr, channel);
+			try {
+				sock = new OnionSocket(this, addr, channel);
+			} catch (IOException e) {
+				firstLock.writeLock().unlock();
+				throw e;
+			}
 		} catch (IllegalAddressException e) {
 			General.fatal("Address is not registered, but it must be!");
 		}

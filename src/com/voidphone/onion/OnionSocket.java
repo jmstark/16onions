@@ -34,6 +34,7 @@ import com.voidphone.general.General;
 import com.voidphone.general.IllegalAddressException;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
+import com.voidphone.general.TunnelCrashException;
 
 public class OnionSocket {
 	// TODO: Move backup tunnels into this class, update currentIncomingTunnel
@@ -136,29 +137,43 @@ public class OnionSocket {
 	 * @param addr
 	 */
 	private void newConnection(Multiplexer m, short id, InetSocketAddress addr) {
-		try {
-			OnionConnectingSocket tun = Main.getOas().getAndRemoveDetachedTunnelById(id);
-			if (tun != null) {
-				tun.constructTunnel(id, addr);
-
-				// the tunnel handler
-				boolean tunnelDestroyed = false;
-				while (!tunnelDestroyed)
-					tunnelDestroyed = tun.getAndProcessNextDataMessage();
-			} else {
-				OnionListenerSocket incomingSocket = new OnionListenerSocket(addr, m, id);
-				incomingSocket.authenticate();
-				
-				// the tunnel handler
-				boolean tunnelDestroyed = false;
-				while (!tunnelDestroyed) {
-					tunnelDestroyed = incomingSocket.getAndProcessNextMessage();
-				}
+		OnionBaseSocket tunnel;
+		OnionConnectingSocket ocs = Main.getOas().getAndRemoveDetachedTunnelById(id);
+		if (ocs != null) {
+			try {
+				ocs.constructTunnel(id, addr);
+			} catch (TunnelCrashException e) {
+				General.warning("Incoming tunnel crashed!");
+				return;
 			}
-		} catch (Exception e) {
-			// The tunnel has broken
-			General.warning("newConnection(): tunnel has broken");
-			General.fatalException(e);
+			tunnel = ocs;
+		} else {
+			OnionListenerSocket incomingSocket;
+			try {
+				incomingSocket = new OnionListenerSocket(addr, m, id);
+			} catch (SizeLimitExceededException e) {
+				General.error(e.getMessage());
+				return;
+			}
+			try {
+				incomingSocket.authenticate();
+			} catch (TunnelCrashException e) {
+				General.error("Tunnel crashed!");
+				return;
+			}
+			tunnel = incomingSocket;
+		}
+		// the tunnel handler
+		boolean tunnelDestroyed = false;
+		while (!tunnelDestroyed) {
+			try {
+				tunnelDestroyed = tunnel.getAndProcessNextMessage();
+			} catch (InterruptedException e) {
+				General.fatalException(e);
+			} catch (TunnelCrashException e) {
+				General.error("Tunnel crashed!");
+				return;
+			}
 		}
 	}
 

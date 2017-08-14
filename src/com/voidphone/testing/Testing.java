@@ -40,14 +40,4 @@ public class Testing {
 	public void testeeAcceptsOnionConnection() {
 		TestFramework.runTest(com.voidphone.testing.TesteeAcceptsOnionConnections.class);
 	}
-
-	@Test
-	public void testeeManagesMultipleOnionConnections() {
-		TestFramework.runTest(com.voidphone.testing.TesteeManagesMultipleOnionConnections.class);
-	}
-
-	@Test
-	public void testeeRoutesPackets() {
-		TestFramework.runTest(com.voidphone.testing.TesteeRoutesPackets.class);
-	}
 }
