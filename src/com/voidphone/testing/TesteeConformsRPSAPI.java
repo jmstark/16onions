@@ -18,49 +18,75 @@
  */
 package com.voidphone.testing;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.util.HashMap;
+import java.util.concurrent.Executors;
 
-import com.voidphone.api.RpsApiSocket;
-import com.voidphone.general.General;
 import com.voidphone.testing.TestProcess;
 
 import rps.api.RpsPeerMessage;
 
+import com.voidphone.api.RpsApiSocket;
+import com.voidphone.testing.Helper.RedirectBackupThread;
+
 public class TesteeConformsRPSAPI {
 	public static void main(String args[]) throws Exception {
-		HashMap<String, String> properties = new HashMap<String, String>();
-		properties.put("keystore.config.file", System.getProperty("user.dir") + "/../.keystore");
-		String classpath[] = new String[] { System.getProperty("user.dir") + "/testing/libs/commons-cli-1.3.1.jar",
-				System.getProperty("user.dir") + "/testing/libs/ini4j-0.5.4.jar", "junit-4.12.jar",
-				System.getProperty("user.dir") + "/testing/libs/bcprov-jdk15on-155.jar" };
-		String peer0[] = new String[] { "-c", System.getProperty("user.dir") + "/tests/peer0/peer0.conf" };
-		String peer1[] = new String[] { "-c", System.getProperty("user.dir") + "/tests/peer1/peer1.conf" };
+		Helper.generateConfig(3, 0);
+		newPeer(0);
+		newPeer(1);
+		newPeer(2);
 
-		TestProcess gossip0 = new TestProcess(gossip.Main.class, properties, classpath, peer0);
-		TestProcess rps0 = new TestProcess(mockups.rps.Main.class, properties, classpath, peer0);
-		General.info("Launched peer 0");
-		TestProcess gossip1 = new TestProcess(gossip.Main.class, properties, classpath, peer1);
-		TestProcess rps1 = new TestProcess(mockups.rps.Main.class, properties, classpath, peer1);
-		General.info("Launched peer 1");
 		Thread.sleep(60000);
-		RpsApiSocket uut = new RpsApiSocket(new InetSocketAddress("127.0.0.1", 31101));
-		General.info("Launched test");
-		int id = uut.register();
-		for (int i = 0; i < 24; i++) {
-			RpsPeerMessage rpm = uut.RPSQUERY(uut.newRpsQueryMessage(id));
-			if (rpm == null) {
-				General.info("No peer!");
-			} else {
-				General.info("Received peer with address: " + rpm.getAddress());
-			}
-			Thread.sleep(5000);
-		}
-		uut.unregister(id);
 
-		rps1.terminate();
-		rps0.terminate();
-		gossip1.terminate();
-		gossip0.terminate();
+		Helper.info("Launching test!");
+		String addr = Helper.getPeerConfig(0).config.get("rps", "api_address", String.class);
+		InetSocketAddress address = new InetSocketAddress(addr.substring(0, addr.lastIndexOf(":")),
+				Integer.parseInt(addr.substring(addr.lastIndexOf(":") + 1)));
+		RpsApiSocket ras = new RpsApiSocket(address,
+				AsynchronousChannelGroup.withFixedThreadPool(1, Executors.defaultThreadFactory()), 5000);
+		int id = ras.register();
+		int responseCounter = 0;
+		int queryCounter = 0;
+		for (; queryCounter <= 16;) {
+			RpsPeerMessage rpm = ras.RPSQUERY(ras.newRpsQueryMessage(id));
+			queryCounter++;
+			if (rpm == null) {
+				Helper.info("No peer!");
+			} else {
+				Helper.info("Received peer with address: " + rpm.getAddress());
+				responseCounter++;
+			}
+			Thread.sleep(100);
+		}
+		ras.unregister(id);
+		Helper.info("Sent " + queryCounter + " queries. Got " + responseCounter + " responses.");
+		if (responseCounter < queryCounter / 2) {
+			System.exit(1);
+		} else {
+			System.exit(0);
+		}
+	}
+
+	public static void newPeer(int i) throws IOException, InterruptedException {
+		HashMap<String, String> properties = new HashMap<String, String>();
+		properties.put("keystore.config.file", System.getProperty("keystore.config.file", "security.properties"));
+		RedirectBackupThread rbt[] = new RedirectBackupThread[2];
+		int j = 0;
+
+		TestProcess gossip = new TestProcess(gossip.Main.class, properties, Helper.classpath,
+				new String[] { "-c", Helper.getConfigPath(i) });
+		rbt[j] = new RedirectBackupThread(gossip.getOut(), 10 * i + j);
+		rbt[j].start();
+		j++;
+		Thread.sleep(100);
+		TestProcess rps = new TestProcess(mockups.rps.Main.class, properties, Helper.classpath,
+				new String[] { "-c", Helper.getConfigPath(i) });
+		rbt[j] = new RedirectBackupThread(rps.getOut(), 10 * i + j);
+		rbt[j].start();
+		j++;
+		Thread.sleep(100);
+		Helper.info("Launched peer " + i);
 	}
 }

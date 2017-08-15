@@ -21,6 +21,7 @@ package com.voidphone.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -68,8 +69,8 @@ public class OnionApiSocket extends ApiSocket {
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public OnionApiSocket(final InetSocketAddress addr) throws IOException {
-		super(addr, true);
+	public OnionApiSocket(final InetSocketAddress addr, AsynchronousChannelGroup group) throws IOException {
+		super(addr, group, true);
 		random = new Random();
 		map = new HashMap<Integer, Void>();
 		activeTunnels = new HashMap<Integer, OnionBaseSocket>();

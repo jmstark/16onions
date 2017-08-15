@@ -33,7 +33,7 @@ public class ConfigFactory {
 	private final String name;
 	private int port;
 
-	public ConfigFactory(String name, String bootstrapper, int port) {
+	public ConfigFactory(String name, String bootstrapper, int port, int hopCount) {
 		this.port = port;
 		this.name = name;
 		this.config = new Wini();
@@ -52,17 +52,14 @@ public class ConfigFactory {
 		config.add("rps", "listen_address", nextPort());
 		config.add("onion", "api_address", nextPort());
 		config.add("onion", "listen_address", nextPort());
-		config.add("onion", "api_timeout", 2000);
+		config.add("onion", "api_timeout", 5000);
 		config.add("onion", "cache_size", 10);
-		config.add("onion", "hopcount", 3);
+		config.add("onion", "hopcount", hopCount);
 		config.add("onion", "roundtime", 15000);
 		config.add("onion", "round_prepare_time", 5000);
-		// config.add("onion", "p2p_hostname", "xxx");
-		// config.add("onion", "p2p_port", this.port);
-		// this.port++;
 		config.add("onion", "p2p_data_port", this.port);
 		this.port++;
-		config.add("onion", "p2p_timeout", 2000);
+		config.add("onion", "p2p_timeout", 5000);
 		config.add("onion", "p2p_packetsize", 20 * 1024 + 4);
 		config.add("auth", "api_address", nextPort());
 		config.add("auth", "listen_address", nextPort());

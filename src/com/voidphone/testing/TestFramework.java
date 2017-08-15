@@ -42,7 +42,7 @@ public class TestFramework {
 			Process p = new ProcessBuilder(cmd).start();
 			new RedirectThread(p.getInputStream(), System.out).start();
 			new RedirectThread(p.getErrorStream(), System.err).start();
-			if (!p.waitFor(10, TimeUnit.SECONDS)) {
+			if (!p.waitFor(2, TimeUnit.MINUTES)) {
 				p.destroy();
 				if (!p.waitFor(2, TimeUnit.SECONDS)) {
 					p.destroyForcibly();
@@ -52,9 +52,7 @@ public class TestFramework {
 			} else if (p.exitValue() != 0) {
 				fail("Test returns non-null!");
 			}
-		} catch (IOException |
-
-				InterruptedException e) {
+		} catch (IOException | InterruptedException e) {
 			fail("Test throws unexpected Exception!");
 		}
 	}

@@ -1,4 +1,4 @@
-package com.voidphone.testing;
+package com.voidphone.testing.tests.onion;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +12,8 @@ import java.util.Random;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 
+import com.voidphone.testing.Helper;
+
 import onion.OnionConfiguration;
 import onion.OnionConfigurationImpl;
 import onion.api.OnionTunnelDataMessage;
@@ -24,7 +26,7 @@ import util.PEMParser;
 import util.Program;
 import util.config.CliParser;
 
-public class OnionTest extends Program {
+public class Main extends Program {
 	private InetSocketAddress api_address;
 	private InetSocketAddress target_api_address;
 	private InetSocketAddress targetAddress;
@@ -33,7 +35,7 @@ public class OnionTest extends Program {
 	private RSAPublicKey targetHostkey;
 	private long number;
 
-	public OnionTest() {
+	public Main() {
 		super("com.voidphone.testing", "API conformance test case for ONION");
 		number = new Random().nextLong();
 	}
@@ -108,7 +110,7 @@ public class OnionTest extends Program {
 				connection2 = new Connection(channel, new DisconnectHandler<Void>(null) {
 					@Override
 					protected void handleDisconnect(Void closure) {
-						if (!OnionTest.this.inShutdown()) {
+						if (!Main.this.inShutdown()) {
 							Helper.fatal("Onion API disconnected!");
 							connection2 = null;
 							shutdown();
@@ -130,14 +132,14 @@ public class OnionTest extends Program {
 				connection1 = new Connection(channel, new DisconnectHandler<Void>(null) {
 					@Override
 					protected void handleDisconnect(Void closure) {
-						if (!OnionTest.this.inShutdown()) {
+						if (!Main.this.inShutdown()) {
 							Helper.fatal("Onion API disconnected!");
 							connection1 = null;
 							shutdown();
 						}
 					}
 				});
-				new Context1(number, connection1, targetHostkey, targetAddress);
+				new Context1(number, 20, connection1, targetHostkey, targetAddress);
 			}
 
 			@Override
@@ -149,16 +151,18 @@ public class OnionTest extends Program {
 	}
 
 	public static void main(String args[]) throws IOException {
-		new OnionTest().start(args);
+		new Main().start(args);
 	}
 
 	private static class Context1 extends Context {
 		private long number;
+		private long destNumber;
 
-		public Context1(long number, Connection connection, RSAPublicKey targetHostkey,
+		public Context1(long number, long difference, Connection connection, RSAPublicKey targetHostkey,
 				InetSocketAddress targetAddress) {
 			super(connection, targetHostkey, targetAddress);
 			this.number = number;
+			this.destNumber = number + difference;
 		}
 
 		@Override
@@ -178,6 +182,9 @@ public class OnionTest extends Program {
 			long n = Long.parseLong(new String(msg.getData()));
 			if (n != number) {
 				Helper.fatal("Received wrong number: Expected " + number + ", got " + n + "!");
+			}
+			if (number == destNumber) {
+				System.exit(0);
 			}
 			super.sendData(super.id, number++ + "");
 		}
@@ -211,8 +218,7 @@ public class OnionTest extends Program {
 			try {
 				Thread.sleep(200);
 			} catch (InterruptedException e) {
-				e.printStackTrace();
-				return;
+				Helper.fatal("This code is never reached!");
 			}
 			super.sendData(super.id, ++number + "");
 		}

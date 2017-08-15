@@ -21,6 +21,7 @@ package com.voidphone.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -28,7 +29,6 @@ import java.nio.channels.CompletionHandler;
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
 import com.voidphone.general.SizeLimitExceededException;
-import com.voidphone.onion.Main;
 
 import protocol.Connection;
 import protocol.DisconnectHandler;
@@ -44,9 +44,18 @@ public abstract class ApiSocket {
 	protected AsynchronousSocketChannel channel;
 	protected Connection connection;
 
-	private void listenForApi(final InetSocketAddress addr) throws IOException {
-		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open(Main.getConfig().group)
-				.bind(addr);
+	/**
+	 * Waits for an API connection on the specified IP address and port number.
+	 * 
+	 * @param addr
+	 *            the IP-address and port number
+	 * @param group
+	 *            the ChannelGroup to use
+	 * @throws IOException
+	 *             if there is an I/O-error
+	 */
+	private void listenForApi(final InetSocketAddress addr, AsynchronousChannelGroup group) throws IOException {
+		AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open(group).bind(addr);
 		General.info("Waiting for API connection on " + addr + ".....");
 		listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
 			@Override
@@ -78,8 +87,19 @@ public abstract class ApiSocket {
 		});
 	}
 
-	private void connectToApi(final InetSocketAddress addr) throws IOException {
-		channel = AsynchronousSocketChannel.open(Main.getConfig().group);
+	/**
+	 * Creates a new API socket and connects it to the specified IP address and port
+	 * number.
+	 * 
+	 * @param addr
+	 *            the IP-address and port number
+	 * @param group
+	 *            the ChannelGroup to use
+	 * @throws IOException
+	 *             if there is an I/O-error
+	 */
+	private void connectToApi(final InetSocketAddress addr, AsynchronousChannelGroup group) throws IOException {
+		channel = AsynchronousSocketChannel.open(group);
 		channel.connect(addr, channel, new CompletionHandler<Void, AsynchronousSocketChannel>() {
 			@Override
 			public void completed(Void none, AsynchronousSocketChannel channel) {
@@ -112,16 +132,18 @@ public abstract class ApiSocket {
 	 * 
 	 * @param addr
 	 *            the IP-address and port number
+	 * @param group
+	 *            the ChannelGroup to use
 	 * @param listen
-	 *            should the API socket wait for incoming connections?
+	 *            should the API wait for a incoming connection?
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public ApiSocket(final InetSocketAddress addr, boolean listen) throws IOException {
+	public ApiSocket(final InetSocketAddress addr, AsynchronousChannelGroup group, boolean listen) throws IOException {
 		if (listen) {
-			listenForApi(addr);
+			listenForApi(addr, group);
 		} else {
-			connectToApi(addr);
+			connectToApi(addr, group);
 		}
 	}
 

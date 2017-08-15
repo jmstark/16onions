@@ -21,12 +21,12 @@ package com.voidphone.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.voidphone.general.General;
 import com.voidphone.general.IllegalIDException;
-import com.voidphone.onion.Main;
 
 import protocol.MessageParserException;
 import protocol.Protocol.MessageType;
@@ -36,6 +36,7 @@ import rps.api.RpsQueryMessage;
 
 public class RpsApiSocket extends ApiSocket {
 	private final LinkedBlockingQueue<RpsPeerMessage> peerQueue;
+	private final int timeout;
 
 	/**
 	 * Creates a new RPS API connection.
@@ -45,8 +46,9 @@ public class RpsApiSocket extends ApiSocket {
 	 * @throws IOException
 	 *             if there is an I/O-error
 	 */
-	public RpsApiSocket(InetSocketAddress addr) throws IOException {
-		super(addr, false);
+	public RpsApiSocket(InetSocketAddress addr, AsynchronousChannelGroup group, int timeout) throws IOException {
+		super(addr, group, false);
+		this.timeout = timeout;
 		peerQueue = new LinkedBlockingQueue<RpsPeerMessage>(32);
 	}
 
@@ -94,7 +96,7 @@ public class RpsApiSocket extends ApiSocket {
 	 */
 	public RpsPeerMessage RPSQUERY(RpsQueryMessage rqm) throws InterruptedException {
 		fillPeerQueue();
-		return peerQueue.poll(Main.getConfig().apiTimeout, TimeUnit.MILLISECONDS);
+		return peerQueue.poll(timeout, TimeUnit.MILLISECONDS);
 	}
 
 	/**

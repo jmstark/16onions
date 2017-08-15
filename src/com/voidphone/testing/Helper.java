@@ -53,22 +53,22 @@ public class Helper {
 		return peers.get(peer);
 	}
 
-	public static String generateConfig(int number) throws IOException, InterruptedException {
+	public static String generateConfig(int number, int hopCount) throws IOException, InterruptedException {
 		if (configs.toFile().exists()) {
 			General.fatal(configs.toString() + " exists. Please delete it.");
 		}
-		//Signed short workaround: Only ports up to Short.MAX_VALUE
+		// Signed short workaround: Only ports up to Short.MAX_VALUE
 		int port = new Random().nextInt(/* 2 * */ Short.MAX_VALUE - 1024) + 1024;
 		if (number <= 0) {
 			throw new IllegalArgumentException("Number of peers is <= 0!");
 		}
 		String bootstrapper = "127.0.0.1:" + port;
-		ConfigFactory config = new ConfigFactory("peer0", null, port);
+		ConfigFactory config = new ConfigFactory("peer0", null, port, hopCount);
 		config.store(configs);
 		peers.put(0, config);
 		for (int i = 1; i < number; i++) {
 			port += 64;
-			config = new ConfigFactory("peer" + i, bootstrapper, port);
+			config = new ConfigFactory("peer" + i, bootstrapper, port, hopCount);
 			config.store(configs);
 			peers.put(i, config);
 		}

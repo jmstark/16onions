@@ -85,4 +85,12 @@ public class TestProcess {
 			process.waitFor();
 		}
 	}
+
+	public int waitFor(long timeout, TimeUnit unit) throws InterruptedException {
+		if (!process.waitFor(timeout, unit)) {
+			return 1;
+		} else {
+			return process.exitValue();
+		}
+	}
 }

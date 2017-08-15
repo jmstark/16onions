@@ -60,14 +60,16 @@ public class Main {
 		final ByteBuffer readBuffer;
 
 		scheduler = new RoundScheduler();
-		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress, config.onionAuthAPIPort));
-		ras = new RpsApiSocket(new InetSocketAddress(config.rpsAPIAddress, config.rpsAPIPort));
+		oaas = new OnionAuthApiSocket(new InetSocketAddress(config.onionAuthAPIAddress, config.onionAuthAPIPort),
+				config.group, config.apiTimeout);
+		ras = new RpsApiSocket(new InetSocketAddress(config.rpsAPIAddress, config.rpsAPIPort), config.group,
+				config.apiTimeout);
 		readBuffer = ByteBuffer.allocate(config.onionSize + OnionMessage.ONION_HEADER_SIZE);
 		InetSocketAddress dataAddress = new InetSocketAddress(config.onionAddress, config.onionPort);
 		General.info("Waiting for onion data packets on " + dataAddress + ".....");
 		dataChannel = DatagramChannel.open().bind(dataAddress);
 		multiplexer = new Multiplexer(dataChannel, config.onionSize);
-		oas = new OnionApiSocket(new InetSocketAddress(config.onionAPIAddress, config.onionAPIPort));
+		oas = new OnionApiSocket(new InetSocketAddress(config.onionAPIAddress, config.onionAPIPort), config.group);
 
 		InetSocketAddress controlAddress = new InetSocketAddress(config.onionAddress, config.onionPort);
 		General.info("Waiting for onion control connections on " + controlAddress + ".....");

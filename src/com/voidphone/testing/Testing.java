@@ -22,22 +22,17 @@ import org.junit.Test;
 
 public class Testing {
 	@Test
-	public void testeePrintsAPIPort() {
-		TestFramework.runTest(com.voidphone.testing.TesteePrintsAPIPort.class);
+	public void testeeConformsRPSAPI() {
+		TestFramework.runTest(com.voidphone.testing.TesteeConformsRPSAPI.class);
 	}
 
 	@Test
-	public void testeeAcceptsAPIConnection() {
-		TestFramework.runTest(com.voidphone.testing.TesteeAcceptsAPIConnection.class);
+	public void testeeTransmitsDataWithoutHops() {
+		TestFramework.runTest(com.voidphone.testing.TesteeTransmitsDataWithoutHops.class);
 	}
 
 	@Test
-	public void testeePrintsOnionPort() {
-		TestFramework.runTest(com.voidphone.testing.TesteePrintsOnionPort.class);
-	}
-
-	@Test
-	public void testeeAcceptsOnionConnection() {
-		TestFramework.runTest(com.voidphone.testing.TesteeAcceptsOnionConnections.class);
+	public void testeeTransmitsDataThroughThreeHopTunnel() {
+		TestFramework.runTest(com.voidphone.testing.TesteeTransmitsDataThroughThreeHopTunnel.class);
 	}
 }

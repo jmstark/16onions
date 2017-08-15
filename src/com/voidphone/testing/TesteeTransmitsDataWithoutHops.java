@@ -2,31 +2,23 @@ package com.voidphone.testing;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
 import com.voidphone.testing.Helper.RedirectBackupThread;
 
-public class Test {
-
+public class TesteeTransmitsDataWithoutHops {
 	public static void main(String args[]) throws Exception {
-
-		Helper.generateConfig(6, 3);
+		Helper.generateConfig(2, 0);
 		newPeer(0);
 		newPeer(1);
-		newPeer(2);
-		newPeer(3);
-		newPeer(4);
-		newPeer(5);
 
 		Thread.sleep(60000);
 
-		newCM(4, 1);
-		newCM(3, 2);
-		newCM(5, 0);
-
-		Thread.sleep(60000);
+		Helper.info("Launching test!");
+		System.exit(newCM(0, 1).waitFor(30, TimeUnit.SECONDS));
 	}
 
-	public static void newCM(int i, int j) throws IOException {
+	public static TestProcess newCM(int i, int j) throws IOException {
 		RedirectBackupThread rbt;
 		String address;
 		String parameter[];
@@ -37,8 +29,9 @@ public class Test {
 				Helper.getPeerConfig(j).config.get("onion", "hostkey", String.class), "-p",
 				address.substring(address.lastIndexOf(":") + 1), "-t", address.substring(0, address.lastIndexOf(":")) };
 		test = new TestProcess(com.voidphone.testing.tests.onion.Main.class, Helper.classpath, parameter);
-		rbt = new RedirectBackupThread(test.getOut(), 5);
+		rbt = new RedirectBackupThread(test.getOut(), 10 * i + 5);
 		rbt.start();
+		return test;
 	}
 
 	public static void newPeer(int i) throws IOException, InterruptedException {

@@ -1,8 +1,10 @@
-package com.voidphone.testing;
+package com.voidphone.testing.tests.onion;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
+
+import com.voidphone.testing.Helper;
 
 import onion.api.OnionErrorMessage;
 import onion.api.OnionTunnelBuildMessage;
@@ -20,6 +22,7 @@ public abstract class Context extends MessageHandler<Void> {
 	private final Connection connection;
 	protected long id;
 	protected boolean tunnelPresent;
+	private boolean killed;
 
 	public Context(Connection connection, RSAPublicKey targetHostkey, InetSocketAddress targetAddress) {
 		this(connection);
@@ -36,6 +39,7 @@ public abstract class Context extends MessageHandler<Void> {
 		super(null);
 		this.connection = connection;
 		tunnelPresent = false;
+		killed = false;
 		connection.receive(this);
 	}
 
@@ -64,6 +68,10 @@ public abstract class Context extends MessageHandler<Void> {
 	@Override
 	public void parseMessage(ByteBuffer buf, Protocol.MessageType type, Void closure)
 			throws MessageParserException, ProtocolException {
+		if (killed) {
+			Helper.error("Tunnel was killed!");
+			return;
+		}
 		switch (type) {
 		case API_ONION_TUNNEL_READY: {
 			if (tunnelPresent) {
@@ -94,7 +102,7 @@ public abstract class Context extends MessageHandler<Void> {
 		case API_ONION_ERROR: {
 			OnionErrorMessage msg = OnionErrorMessage.parser(buf);
 			Helper.error("Received Onion error with ID " + msg.getId() + "!");
-			tunnelPresent = false;
+			killed = true;
 			return;
 		}
 		default:
