@@ -35,7 +35,6 @@ import com.voidphone.general.General;
 
 import util.PEMParser;
 
-
 /**
  * This class reads all neccesary config values from an INI-file.
  *
@@ -67,8 +66,6 @@ public class Config {
 	public final int hopCount;
 	// round time in milliseconds
 	public final long roundtime;
-	// how many milliseconds before the next round we start preparing (e.g. backup tunnels)
-	public final long roundPrepareTime;
 
 	public Config(String configFilePath) throws InvalidFileFormatException, IOException, InvalidKeyException {
 		Wini configFile = new Wini();
@@ -119,7 +116,6 @@ public class Config {
 		onionTimeout = getInteger(configFile, "onion", "p2p_timeout");
 		onionSize = getInteger(configFile, "onion", "p2p_packetsize");
 		roundtime = getInteger(configFile, "onion", "roundtime");
-		roundPrepareTime = getInteger(configFile, "onion", "round_prepare_time");
 
 		General.debug("Hostkey: " + hostkeyPath);
 	}

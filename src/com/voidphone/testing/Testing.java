@@ -35,4 +35,14 @@ public class Testing {
 	public void testeeTransmitsDataThroughThreeHopTunnel() {
 		TestFramework.runTest(com.voidphone.testing.TesteeTransmitsDataThroughThreeHopTunnel.class);
 	}
+
+	@Test
+	public void testeeConformsOnionAuthAPI() {
+		TestFramework.runTest(com.voidphone.testing.TesteeConformsOnionAuthAPI.class);
+	}
+
+	@Test
+	public void testeeResistsDOSAttacks() {
+		TestFramework.runTest(com.voidphone.testing.TesteeResistsDOSAttacks.class);
+	}
 }

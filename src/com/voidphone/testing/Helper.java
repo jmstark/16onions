@@ -39,7 +39,8 @@ import com.voidphone.onion.OnionMessage;
 public class Helper {
 	public static final String classpath[] = new String[] {
 			System.getProperty("user.dir") + "/testing/libs/commons-cli-1.3.1.jar",
-			System.getProperty("user.dir") + "/testing/libs/ini4j-0.5.4.jar", "junit-4.12.jar",
+			System.getProperty("user.dir") + "/testing/libs/ini4j-0.5.4.jar",
+			System.getProperty("user.dir") + "/testing/libs/junit-4.12.jar",
 			System.getProperty("user.dir") + "/testing/libs/bcprov-jdk15on-155.jar" };
 	private static final boolean deleteConfigAfterTest = true;
 	private static final HashMap<Integer, ConfigFactory> peers = new HashMap<Integer, ConfigFactory>();

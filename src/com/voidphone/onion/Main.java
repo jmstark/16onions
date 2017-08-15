@@ -106,24 +106,6 @@ public class Main {
 		}
 	}
 
-	public static long getMsUntilNextRound() {
-		return config.roundtime - (System.currentTimeMillis() % config.roundtime);
-	}
-
-	public static long getMsUntilRoundPrepare() {
-		long remaining = getMsUntilNextRound() - config.roundPrepareTime;
-		return remaining > 0 ? remaining : 0;
-	}
-
-	public static void waitUntilBeginningOfNextRound() throws InterruptedException {
-		long lastRemaining, currentRemaining;
-		do {
-			lastRemaining = getMsUntilNextRound();
-			Thread.sleep(lastRemaining);
-			currentRemaining = getMsUntilNextRound();
-		} while (lastRemaining > currentRemaining);
-	}
-
 	private static void parseArgs(String args[]) {
 		if (args.length < 2 || !"-c".equals(args[0])) {
 			System.out.println("Usage: java Main -c <path_to_config_file>");

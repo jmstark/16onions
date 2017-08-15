@@ -419,7 +419,6 @@ public class OnionConnectingSocket extends OnionBaseSocket {
 		} catch (IllegalAddressException | IllegalIDException | InterruptedException | AuthApiException
 				| TimeoutException e) {
 			General.error("Tunnel construction failed");
-			General.fatalException(e);
 			throw new TunnelCrashException();
 		}
 

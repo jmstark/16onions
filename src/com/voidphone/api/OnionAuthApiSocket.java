@@ -143,9 +143,9 @@ public class OnionAuthApiSocket extends ApiSocket {
 		}
 	}
 
-	public OnionAuthClose newOnionAuthDecrypt(int id) throws IllegalIDException {
+	public OnionAuthClose newOnionAuthClose(int id, int session) throws IllegalIDException {
 		getReadQueue(id);
-		return new OnionAuthClose(id);
+		return new OnionAuthClose(session);
 
 	}
 

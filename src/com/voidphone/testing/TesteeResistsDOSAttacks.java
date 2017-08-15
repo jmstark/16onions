@@ -6,40 +6,34 @@ import java.util.concurrent.TimeUnit;
 
 import com.voidphone.testing.Helper.RedirectBackupThread;
 
-public class Test {
-
+public class TesteeResistsDOSAttacks {
 	public static void main(String args[]) throws Exception {
-
-		Helper.generateConfig(6, 3);
+		Helper.generateConfig(2, 0);
 		newPeer(0);
 		newPeer(1);
-		newPeer(2);
-		newPeer(3);
-		newPeer(4);
-		newPeer(5);
 
 		Thread.sleep(60000);
 
-		TestProcess a = newCM(4, 1);
-		TestProcess b = newCM(3, 2);
-		TestProcess c = newCM(5, 0);
+		Helper.info("Launching attack!");
+		newAttacker(0);
+		newAttacker(1);
 
-		int successCounter = 0;
-		if (a.waitFor(30, TimeUnit.SECONDS) == 0) {
-			successCounter++;
-		}
-		if (b.waitFor(5, TimeUnit.SECONDS) == 0) {
-			successCounter++;
-		}
-		if (c.waitFor(5, TimeUnit.SECONDS) == 0) {
-			successCounter++;
-		}
-		Helper.info(successCounter + "/3 transmits were successful!");
-		if (successCounter <= 2) {
-			System.exit(0);
-		} else {
-			System.exit(1);
-		}
+		Helper.info("Launching test!");
+		System.exit(newCM(0, 1).waitFor(30, TimeUnit.SECONDS));
+	}
+
+	public static void newAttacker(int i) throws IOException {
+		RedirectBackupThread rbt;
+		String address;
+		String parameter[];
+		TestProcess test;
+
+		address = Helper.getPeerConfig(i).config.get("onion", "listen_address", String.class);
+		parameter = new String[] { "-n", "64", "-p", address.substring(address.lastIndexOf(":") + 1), "-s",
+				address.substring(0, address.lastIndexOf(":")) };
+		test = new TestProcess(tests.ConnectionTest.class, Helper.classpath, parameter);
+		rbt = new RedirectBackupThread(test.getOut(), 10 * i + 6);
+		rbt.start();
 	}
 
 	public static TestProcess newCM(int i, int j) throws IOException {
@@ -53,8 +47,9 @@ public class Test {
 				Helper.getPeerConfig(j).config.get("onion", "hostkey", String.class), "-p",
 				address.substring(address.lastIndexOf(":") + 1), "-t", address.substring(0, address.lastIndexOf(":")) };
 		test = new TestProcess(com.voidphone.testing.tests.onion.Main.class, Helper.classpath, parameter);
-		rbt = new RedirectBackupThread(test.getOut(), 5);
+		rbt = new RedirectBackupThread(test.getOut(), 10 * i + 5);
 		rbt.start();
+
 		return test;
 	}
 
