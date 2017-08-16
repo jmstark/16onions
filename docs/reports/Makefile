@@ -1,4 +1,4 @@
-NAME = interim_report
+NAME = final_report
 TEX = $(NAME).tex
 PDF = $(NAME).pdf
 
