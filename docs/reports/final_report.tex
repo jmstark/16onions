@@ -27,9 +27,9 @@ Control messages, i.e. messages for authentication, tunnel construction, tunnel 
 
 User data messages, i.e. messages containing VoIP and cover data, are transferred and forwarded over UDP, since for those a short delay is a requirement which UDP can satisfy. UDP is packet based and does not acknowledge the arrival of packets at all, so the lower delay that this causes comes at the price of possibly losing some packets which are not resent and therefore never reach their target, without the sender being informed about the loss. This is acceptable for VoIP and cover data.
 
-Other modules can use this module to send user data messages (UDP), while control messages are only used internally by the module for tunnel management tasks.
+Other modules can use the onion module only to send user data messages (UDP), while control messages are exclusively used internally for tunnel management tasks.
 
-\subsubsection{Network abstraction layer}
+\subsubsection{Layer 0: Network abstraction layer}
 
 At the lowest level of our application lies the so-called multiplexer, which abstracts away low-level protocol details and offers a clean interface for message interchange between nodes. The core tunnel mechanisms exclusively use this interface. The main tasks of the multiplexer are:
 \begin{itemize}
@@ -59,6 +59,109 @@ This is the only message type that is exchanged on its own. After it has been se
 		\wordbox[blr]{1}{}
 	\end{bytefield} \\
 (TCP or UDP message)
+
+\subsubsection{Layer 1: Tunnel management layer}
+The core tunnel mechanisms build upon the network abstraction layer provided by the multiplexer and use its interface to exchange messages. Those messages, which will be described in this section are thus free of metadata and padding from Layer 0. This information is added/removed and generally handled transparently by the multiplexer.
+
+This section lists each message type and their exact structure used during all the phases of a tunnel lifespan. For the sake of readability, we will refer to the initiator of a connection as "peer A" and to the other node as "peer B".
+
+\begin{itemize}
+	\item Handshake 1 \\
+	
+		\begin{bytefield}[bitwidth=1.0em]{32}
+			\bitheader{0,7,8,15,16,23,24,31} \\
+			& \bitbox{8}{MAGIC SEQ}
+			& \bitbox{8}{VERSION}
+			& \bitbox[lrt]{16}{} \\
+			\bitbox[lr]{32}{Handshake 1} \\
+			\skippedwords \\	
+			\wordbox[blr]{1}{}			
+		\end{bytefield} \\
+		(TCP message)
+		
+		This message is sent from peer A to initiate the authentication process. MAGIC SEQ is a bit sequence identifying the connection initiator as onion peer; VERSION contains the P2P protocol version. Handshake 1 is obtained from the ONION AUTH module of peer A and forwarded to peer B via this message, where it is passed to the local ONION AUTH module---given that it is actually a onion node, MAGIC SEQ matches and VERSION is compatible.
+		
+	\item Handshake 2 \\
+	
+		\begin{bytefield}[bitwidth=1.0em]{32}
+			\bitheader{0,7,8,15,16,23,24,31} \\
+			\bitbox[lrt]{32}{Handshake 2} \\
+			\skippedwords \\				
+			\wordbox[blr]{1}{}
+		\end{bytefield} \\
+		(TCP message)
+		
+		After having processed Handshake 1, peer B obtains Handshake 2 from its ONION AUTH module---given that the Handshake was valid. It then sends this Handshake 2 back to peer A. ONION AUTH of peer A now checks the received Handshake for validity. If positive, the handshake is further processed and an encrypted connection between peer A and peer B has been established. In any other case---peer A received an invalid handshake or no answer at all and timed out---the authentication is aborted and adequate measures are to be taken, e.g. selecting a different node and starting over the procedure.
+	
+	\item Tunnel building/expansion request \\
+	
+		\begin{bytefield}[bitwidth=1.0em]{32}
+			\bitheader{0,7,8,15,16,23,24,31} \\
+			& \bitbox{8}{TUN BUILD}
+			& \bitbox{8}{addr length}
+			& \bitbox[lrt]{16}{} \\
+			\bitbox[lr]{32}{IP address} \\
+			\skippedwords \\	
+			\bitbox[blr]{16}{}		
+			& \bitbox{16}{port number}	
+		\end{bytefield} \\
+		(TCP message)
+		
+		Peer A can send this message to an authenticated peer B to instruct it to connect to another peer C, whose address is specified in this message. Upon receiving it, peer B will now forward all incoming messages between peer A and peer C, so peer A can begin authenticating with peer C over peer B.
+		
+	\item Incoming tunnel notification \\
+			
+		\begin{bytefield}[bitwidth=1.0em]{32}
+			\bitheader{0,7} \\
+			& \bitbox{8}{TUN INCOMING}
+		\end{bytefield} \\
+		(TCP message)
+		
+		This message is sent from peer A to the peer D at the end of the tunnel, so that peer D knows that the established tunnel ends at peer D and that the further incoming data is destined to him and must not be forwarded. After receiving this message, no more tunnel building/expansion requests can be sent to peer D.
+		
+	\item User data \\
+	
+	\begin{bytefield}[bitwidth=1.0em]{32}
+		\bitheader{0,7,8,15,16,23,24,31} \\
+		& \bitbox{8}{DATA}
+		& \bitbox[lrt]{24}{} \\
+		\bitbox[lr]{32}{payload} \\
+		\skippedwords \\	
+		\wordbox[blr]{1}{}
+	\end{bytefield} \\
+	(UDP message)
+	
+	Contains real user (i.e. VoIP) data, which was requested to be sent by another local module. Requires the previous reception of an incoming tunnel notification in order to be interpreted.
+	
+	\item User data \\
+	
+		\begin{bytefield}[bitwidth=1.0em]{32}
+			\bitheader{0,7,8,15,16,23,24,31} \\
+			& \bitbox{8}{COVER}
+			& \bitbox[lrt]{24}{} \\
+			\bitbox[lr]{32}{random data} \\
+			\skippedwords \\	
+			\wordbox[blr]{1}{}
+		\end{bytefield} \\
+		(UDP message)
+		
+		Contains cover traffic, which was requested to be sent by another local module. The message is discarded upon reception.
+		
+	\item Heartbeat \\
+	
+	\begin{bytefield}[bitwidth=1.0em]{32}
+		\bitheader{0,7} \\
+		& \bitbox{8}{HEARTBEAT}
+	\end{bytefield} \\
+	(TCP message)
+	
+	If a time-out was triggered, meaning that a peer has not received data of any kind from a certain tunnel in a certain amount of time, it sends this message to request a sign of live from the node at the other end of the tunnel. This sign of live can be any data, but if there is currently no real user data available for being sent, it is simply cover traffic.
+	Each time-out triggers the sending of such a heartbeat message and the incrementation of a retries-counter. Once a response has been received, that counter is reset to zero; if the counter exceeds five, the tunnel is presumed dead.
+	
+		
+			
+	
+\end{itemize}
 
 \end{document}
 \grid
