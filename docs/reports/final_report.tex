@@ -145,7 +145,7 @@ This section lists each message type and their exact structure used during all t
 		\end{bytefield} \\
 		(UDP message)
 		
-		Contains cover traffic, which was requested to be sent by another local module. The message is discarded upon reception.
+		Contains cover traffic of a specified size, which was requested to be sent by the local CM/UI module. Since it contains no meaningful data, the message is discarded upon reception.
 		
 	\item Heartbeat \\
 	
@@ -153,15 +153,46 @@ This section lists each message type and their exact structure used during all t
 		\bitheader{0,7} \\
 		& \bitbox{8}{HEARTBEAT}
 	\end{bytefield} \\
-	(TCP message)
+	(UDP message)
 	
-	If a time-out was triggered, meaning that a peer has not received data of any kind from a certain tunnel in a certain amount of time, it sends this message to request a sign of live from the node at the other end of the tunnel. This sign of live can be any data, but if there is currently no real user data available for being sent, it is simply cover traffic.
-	Each time-out triggers the sending of such a heartbeat message and the incrementation of a retries-counter. Once a response has been received, that counter is reset to zero; if the counter exceeds five, the tunnel is presumed dead.
-	
-		
-			
-	
+	If a time-out was triggered, meaning that a peer has not received data of any kind from a certain tunnel in a predefined amount of time, it sends this message to request a sign of live from the node at the other end of the tunnel. This sign of live can be any data, but if there is currently no real user data available for being sent, it is simply cover traffic.
+	Each time-out triggers the sending of such a heartbeat message and the incrementation of a retries-counter. Once a response has been received, that counter is reset to zero; if the counter exceeds five, the tunnel is presumed dead. This message (as well as cover traffic and real data) can only be sent by the two end nodes of a tunnel. An intermediate hop also counts the time-outs and disconnects from its predecessor and successor if necessary, but does not send messages on its own, it only forwards them.
 \end{itemize}
+	
+	\subsection{Mode Of Operation}
+	After the application has been initialized, it accepts requests from the CM/UI to
+	\begin{itemize}
+		\item Build tunnels
+		\item Destroy tunnels
+		\item Send data through tunnels
+		\item Send cover traffic through tunnels
+	\end{itemize}
+	Apart from that, it listens for new incoming tunnels and data arriving through tunnels and notifies the CM/UI for any of those events. \\
+	Time in the system is divided into equal intervals called rounds. New tunnels are established at the beginning of the next round and destroyed upon request. If at the beginning of a round there is not any tunnel in existence or pending to be built, the module builds a tunnel to a random destination, which is automatically destroyed at the end of the round. This kind of tunnel can only be used to send cover traffic.
+	
+	\subsubsection{Tunnel Construction Process}
+	The class used for constructing outgoing tunnels is called OnionConnectingSocket. For incoming as well as intermediate tunnels (when a peer is only forwarding traffic), OnionListenerSocket is used. The process of constructing it is as follows:
+	\begin{enumerate}
+		\item An array of intermediate hops is constructed by repeatedly asking the RPS module for random peers. The amount of hops is determined in the config file. The last node is the specified target.
+		\item The first unconnected node in the hop array is selected.
+		\item Handshake 1 is generated and sent to the selected hop.
+		\item Handshake 2 is received.
+		\item Test, if there are any unconnected hops remaining in the array: 
+		\begin{enumerate}
+			\item If yes: A tunnel building/expansion request, containing the next hop as target, is sent to the current hop. That hop then connects to the specified target and forwards all traffic coming through that tunnel to it and vice-versa. The next unconnected node in the array is connected and the next loop iteration executed, starting at point 3.
+			\item If not: The tunnel endpoint is reached, so the incoming tunnel notification is sent.
+		\end{enumerate}
+	\end{enumerate}
+	If during this construction process an unexpected packet is received or an answer takes too long, a different intermediate peer is selected or, if the node in question is the tunnel endpoint, the construction is aborted and the failure, if required, reported to the CM/UI module.
+	
+	Once established, a tunnel can and will be used to transfer data-messages, heartbeats and cover-traffic. 
+	
+	While the CM/UI cannot explicitly send cover data over tunnels whose construction it requested, cover messages are used internally if a node needs to respond to a Heartbeat and has no real user data available to be sent.
+	
+	\subsubsection{Tunnel Destruction Process}
+	Tearing down a tunnel happens in the reverse order of construction: The respective message is sent to all hops, starting with the tunnel node to the node which is directly connected to the initiator. Once a hop receives the message, it closes the connection to its predecessor in that tunnel. Should an error happen while sending the message
+	
+	
 
 \section{Project Work}
 Although, there are still some bugs in our module we consider the project as successful.
