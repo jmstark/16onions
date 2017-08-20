@@ -17,10 +17,10 @@ letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.}}
 We are the team ``16 Onions'' consisting of Josef Stark and Charlie Groh,
 and our goal is to develop a prototype implementation of the Onion module.
 
-\section{Application internals}
+\section{Application Internals}
 In this section we will describe the general structure of the application, the network protocol we implemented, as well as an overview over how the source code is organized.
 
-\subsection{Network protocols}
+\subsection{Network Protocols}
 For the communication between distinct onion instances we decided to use both TCP and UDP as underlying protocols in order to avoid reinventing the wheel, since they both fulfill the respective requirements perfectly.
 
 Control messages, i.e. messages for authentication, tunnel construction, tunnel destruction and heartbeat are transferred and forwarded over TCP, because for those messages it is very important that they actually arrive or that we get feedback if one of those messages could not be delivered to the target, so we can react in an appropriate manner---e.g. assume that the corresponding node went down and construct an alternative route. TCP satisfies these requirements as it acknowledges the reception of messages, resends messages if necessary and reports a failure if a message still didn't provoke an acknowledgement after a few retries. If we used UDP instead, we would have had to re-implement all of these features by hand. 
@@ -29,7 +29,7 @@ User data messages, i.e. messages containing VoIP and cover data, are transferre
 
 Other modules can use the onion module only to send user data messages (UDP), while control messages are exclusively used internally for tunnel management tasks.
 
-\subsubsection{Layer 0: Network abstraction layer}
+\subsubsection{Layer 0: Network Abstraction Layer}
 
 At the lowest level of our application lies the so-called multiplexer, which abstracts away low-level protocol details and offers a clean interface for message interchange between nodes. The core tunnel mechanisms exclusively use this interface. The main tasks of the multiplexer are:
 \begin{itemize}
@@ -60,7 +60,7 @@ This is the only message type that is exchanged on its own. After it has been se
 	\end{bytefield} \\
 (TCP or UDP message)
 
-\subsubsection{Layer 1: Tunnel management layer}
+\subsubsection{Layer 1: Tunnel Management Layer}
 The core tunnel mechanisms build upon the network abstraction layer provided by the multiplexer and use its interface to exchange messages. Those messages, which will be described in this section are thus free of metadata and padding from Layer 0. This information is added/removed and generally handled transparently by the multiplexer.
 
 This section lists each message type and their exact structure used during all the phases of a tunnel lifespan. For the sake of readability, we will refer to the initiator of a connection as "peer A" and to the other node as "peer B".
@@ -162,6 +162,15 @@ This section lists each message type and their exact structure used during all t
 			
 	
 \end{itemize}
+
+\section{Project Work}
+Although, there are still some bugs in our module we consider the project as successful.
+
+\subsection{Work Distribution}
+
+\subsection{Spent Effort}
+Since we mostly worked on the project at the same time, the effort spent by each individual is
+almost identical. On average, every team member spent around three hours per week for the project.
 
 \end{document}
 \grid
