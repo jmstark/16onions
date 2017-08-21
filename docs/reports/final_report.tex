@@ -3,6 +3,10 @@
 \usepackage{url}
 \usepackage{bytefield}
 \usepackage{verbatim}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows.meta}
+
 \begin{document}
 \title{\Huge Final Report \normalsize}
 \date{\today}
@@ -67,7 +71,7 @@ This section lists each message type and their exact structure used during all t
 
 \begin{itemize}
 	\item Handshake 1 \\
-	
+
 		\begin{bytefield}[bitwidth=1.0em]{32}
 			\bitheader{0,7,8,15,16,23,24,31} \\
 			& \bitbox{8}{MAGIC SEQ}
@@ -82,7 +86,7 @@ This section lists each message type and their exact structure used during all t
 		This message is sent from peer A to initiate the authentication process. MAGIC SEQ is a bit sequence identifying the connection initiator as onion peer; VERSION contains the P2P protocol version. Handshake 1 is obtained from the ONION AUTH module of peer A and forwarded to peer B via this message, where it is passed to the local ONION AUTH module---given that it is actually a onion node, MAGIC SEQ matches and VERSION is compatible.
 		
 	\item Handshake 2 \\
-	
+
 		\begin{bytefield}[bitwidth=1.0em]{32}
 			\bitheader{0,7,8,15,16,23,24,31} \\
 			\bitbox[lrt]{32}{Handshake 2} \\
@@ -159,7 +163,7 @@ This section lists each message type and their exact structure used during all t
 	Each time-out triggers the sending of such a heartbeat message and the incrementation of a retries-counter. Once a response has been received, that counter is reset to zero; if the counter exceeds five, the tunnel is presumed dead. This message (as well as cover traffic and real data) can only be sent by the two end nodes of a tunnel. An intermediate hop also counts the time-outs and disconnects from its predecessor and successor if necessary, but does not send messages on its own, it only forwards them.
 \end{itemize}
 	
-	\subsection{Mode Of Operation}
+	\subsection{Mode of Operation}
 	After the application has been initialized, it accepts requests from the CM/UI to
 	\begin{itemize}
 		\item Build tunnels
@@ -192,16 +196,94 @@ This section lists each message type and their exact structure used during all t
 	\subsubsection{Tunnel Destruction Process}
 	Tearing down a tunnel happens in the reverse order of construction: The respective message is sent to all hops, starting with the tunnel node to the node which is directly connected to the initiator. Once a hop receives the message, it closes the connection to its predecessor in that tunnel. Should an error happen while sending the message
 	
-	
+\subsection{Testsuite}
+The module contains a testsuite that tests artificial and real world situations. The testsuite is
+located in the package \texttt{com.voidphone.testing}. The class \texttt{Testing} is a unit test
+that tests the module for API conformance and some basic functionality like building a tunnel
+between two hops. The class \texttt{Test} launches multiple hops and tries to build multiple
+tunnels between them. When the test terminates, it will print the number of successful calls.
+
+In order to avoid stale files, the testsuite will delete generated config files in \texttt{tmp/}
+after executing the test. If you want to keep them, you must set \texttt{deleteConfigAfterTest}
+to \texttt{false} in the \texttt{Helper} class. To prevent stale open ports, every started process
+is killed after usage. In addition, every test is terminated after at most two minutes.
+Unfortuanly, we were not able to add satisfying support for the \texttt{SecurityHelper} class in
+the \texttt{testing}-module. So it may be necessary to hardcode the keystore path in the
+\texttt{propertiesPath} variable.
+
+\subsection{Bugs and Limitations}
 
 \section{Project Work}
-Although, there are still some bugs in our module we consider the project as successful.
+Although there are still some bugs in our module, we consider the project as successful.
 
 \subsection{Work Distribution}
 
 \subsection{Spent Effort}
 Since we mostly worked on the project at the same time, the effort spent by each individual is
 almost identical. On average, every team member spent around three hours per week for the project.
+
+\noindent
+\newcommand{\queue}[2]{%
+\begin{scope}[shift={#1},scale=#2]%
+\draw[fill=white,draw=black] (-0.5,0) rectangle (0.5,-4);%
+\foreach \i in {-1,-2,-3}%
+\draw (-0.5,\i) -- (0.5,\i);%
+\end{scope}%
+}
+\begin{tikzpicture}[scale=\textwidth/16.2cm]
+\draw[draw=black] (0,0) rectangle (16,8);
+\node[anchor=west] at (0,8.25) {Multiplexer};
+\coordinate (root) at (8,7.5);
+\coordinate (peer1) at (2.5,5);
+\coordinate (peer2) at (8.5,5);
+\coordinate (peer3) at (13.5,5);
+\coordinate (conn11) at (1.5,3);
+\coordinate (conn12) at (3.5,3);
+\coordinate (conn21) at (6.5,3);
+\coordinate (conn22) at (8.5,3);
+\coordinate (conn23) at (10.5,3);
+\coordinate (conn31) at (13.5,3);
+\coordinate (onionsocket1) at (2.5,-1);
+\coordinate (onionsocket2) at (9,-1);
+\coordinate (onionsocket3) at (13.5,-1);
+\coordinate (udp) at (7,-1);
+\draw (root) -- node[sloped,anchor=center,above] {\small{}43.173.4.85:5634\normalsize} (peer1);
+\draw (root) -- node[sloped,anchor=center,above] {\small{}9.3.6.2:72\normalsize} (peer2);
+\draw (root) -- node[sloped,anchor=center,above] {\small{}209.78.138.9:23896\normalsize} (peer3);
+\draw (peer1) -- node[sloped,anchor=center,above] {\small{}3421\normalsize} (conn11);
+\draw (peer1) -- node[sloped,anchor=center,above] {\small{}29745\normalsize} (conn12);
+\draw (peer2) -- node[sloped,anchor=center,above] {\small{}18293\normalsize} (conn21);
+\draw (peer2) -- node[sloped,anchor=center,above] {\small{}50\normalsize} (conn22);
+\draw (peer2) -- node[sloped,anchor=center,above] {\small{}7384\normalsize} (conn23);
+\draw (peer3) -- node[sloped,anchor=center,above] {\small{}2\normalsize} (conn31);
+\queue{($ (conn11) + (0,-0.2) $)}{0.5}
+\queue{($ (conn12) + (0,-0.2) $)}{0.5}
+\queue{($ (conn21) + (0,-0.2) $)}{0.5}
+\queue{($ (conn22) + (0,-0.2) $)}{0.5}
+\queue{($ (conn23) + (0,-0.2) $)}{0.5}
+\queue{($ (conn31) + (0,-0.2) $)}{0.5}
+\draw[-{Latex[length=6pt]}] (onionsocket1) --  ($ (conn11) + (-0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (onionsocket1) -- ($ (conn12) + (-0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (onionsocket2) --  ($ (conn21) + (0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (onionsocket2) -- ($ (conn22) + (0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (onionsocket2) -- ($ (conn23) + (0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (onionsocket3) -- ($ (conn31) + (0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (udp) --  ($ (conn11) + (0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn12) + (0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (udp) --  ($ (conn21) + (-0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn22) + (-0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn23) + (-0.1,-2.5) $);
+\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn31) + (-0.1,-2.5) $);
+\draw[fill=white,draw=black] ($ (onionsocket1) + (-0.15,-0.15) $)  rectangle ($ (onionsocket1) + (0.15,0.15) $);
+\draw[fill=white,draw=black] ($ (onionsocket2) + (-0.15,-0.15) $)  rectangle ($ (onionsocket2) + (0.15,0.15) $);
+\draw[fill=white,draw=black] ($ (onionsocket3) + (-0.15,-0.15) $)  rectangle ($ (onionsocket3) + (0.15,0.15) $);
+\draw[fill=white,draw=black] ($ (udp) + (-0.15,-0.15) $)  rectangle ($ (udp) + (0.15,0.15) $);
+\node[anchor=north] at ($ (onionsocket1) + (0,-0.15) $) {OnionSocket};
+\node[anchor=north] at ($ (onionsocket2) + (0,-0.15) $) {OnionSocket};
+\node[anchor=north] at ($ (onionsocket3) + (0,-0.15) $) {OnionSocket};
+\node[anchor=north] at ($ (udp) + (0,-0.15) $) {UDP};
+\end{tikzpicture}
+
 
 \end{document}
 \grid
