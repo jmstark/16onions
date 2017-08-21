@@ -134,7 +134,7 @@ This is the only message type that is exchanged on its own. After it has been se
 		\skippedwords \\
 		\wordbox[blr]{1}{}
 	\end{bytefield} \\
-(TCP or UDP message) \\
+	(TCP or UDP message) \\
 
 
 Whenever a previously unknown peer---that is, a host with a source address-port combination, which did not communicate with the peer previously---connects (via TCP) to the peer, the multiplexer assigns an ID to that connection and creates a message queue for it. All incoming messages from the underlying connections are assigned and put into the respective queue belonging to the connection: Messages from \texttt{OnionSocket}, which are basically TCP messages, as well as UDP messages, whose filtering would otherwise need to be done by hand, since UDP is by nature connectionless. The queues, which are essentially the logical overlay connections exported by the multiplexer, can be accessed by their previously assigned ID to read and write TCP and UDP packets---or rather control and data messages, represented by the \texttt{OnionMessage} class. Even though there are no separate queues for TCP and UDP packets of a connection, their type can be determined to be control or data message via \texttt{type} field. 
@@ -334,12 +334,12 @@ In order to avoid stale files, the testsuite will delete generated config files 
 after executing the test. If you want to keep them, you must set \texttt{deleteConfigAfterTest}
 to \texttt{false} in the \texttt{Helper} class. To prevent stale open ports, every started process
 is killed after usage. In addition, every test is terminated after at most two minutes.
-Unfortunately, we were not able to add satisfying support for the \texttt{SecurityHelper} class in
-the \texttt{testing}-module. So it may be necessary to hardcode the keystore path in the
+The suite uses parts of the voidphone testing framework\footnote{url{https://gitlab.lrz.de/voidphone/testing}}. A keystore has to be set up as described in their README file. Unfortunately, we were not able to add satisfying support for the \texttt{SecurityHelper} class in
+the \texttt{testing}-module, so it may be necessary to hardcode the keystore path in the
 \texttt{propertiesPath} variable.
 The testing module does not need to be provided with hostkeys and configuration files, since it generates them on-the-fly by itself.
 
-To run the tests, everything has to be built and the classes \texttt{Testing} and \texttt{Test} run. This can all be done via the respective Eclipse GUI commands or else via command-line interface:
+After having done the mentioned steps, everything has to be built and then the testsuite classes \texttt{Testing} and  \texttt{Test} can be run. This can all be done via the respective Eclipse GUI commands or else via command-line interface:
 
 \begin{lstlisting}
 .../16onions$ ant clean
@@ -365,11 +365,32 @@ org.junit.runner.JUnitCore com.voidphone.testing.Test
 \end{lstlisting}
 
 \section{Bugs and Limitations}
+\begin{itemize}
+	\item There remain some errors in the code which lead to sporadic tunnel failures, which are hard to track and reproduce and which we were not able to remedy due to timely constraints. They are probably related to unresolved race conditions. This often affects the node behaviour, when it is an intermediate or end hop of more than 1 tunnel and can result in local exceptions and thus some messages not being forwarded or the tunnel breaking down. It can be observed when executing the real-life test in \texttt{Test}, while the artificial tests inside \texttt{Testing} do not seem to be affected.
+	\item In the case that at the beginning of a round there is no tunnel existing or to be constructed, a random destination is to be chosen and a tunnel to be constructed to it, which would then be used to exchange cover traffic. The necessary routines for this are in the code, but commented out, since we were not able to make it work in time. It is most probably related to the previously mentioned issue.
+\end{itemize}
+
 
 \section{Project Work}
 Although there are still some bugs in our module, we consider the project as successful.
 
 \subsection{Work Distribution}
+We tried to split the work equally and to reduce intersections between the two team members. Each member focused on its assigned parts, however, intersections could not always be avoided. \\
+
+Charlie Groh:
+\begin{itemize}
+	\item Multiplexer, layer 1 abstractions
+	\item TestSuite (Includes ConfigFactory)
+	\item API (Onion, Onion Auth and RPS) abstractions \\
+\end{itemize}
+
+Josef Stark:
+\begin{itemize}
+	\item Tunnel building, management, usage and destruction
+	\item Config file parser \\
+\end{itemize}
+The reports were written by both members.
+
 
 \subsection{Spent Effort}
 Since we mostly worked on the project at the same time, the effort spent by each individual is
