@@ -7,10 +7,81 @@
 \usetikzlibrary{calc}
 \usetikzlibrary{arrows.meta}
 
+
+
+
+\newcommand{\queue}[2]{%
+	\begin{scope}[shift={#1},scale=#2]%
+		\draw[fill=white,draw=black] (-0.5,0) rectangle (0.5,-4);%
+		\foreach \i in {-1,-2,-3}%
+		\draw (-0.5,\i) -- (0.5,\i);%
+	\end{scope}%
+}
+\newcommand{\multiplexerpic}{
+	\begin{tikzpicture}[scale=\textwidth/16.2cm]
+	\draw[draw=black] (0,0) rectangle (16,8);
+	\node[anchor=west] at (0,8.25) {Multiplexer};
+	\coordinate (root) at (8,7.5);
+	\coordinate (peer1) at (2.5,5);
+	\coordinate (peer2) at (8.5,5);
+	\coordinate (peer3) at (13.5,5);
+	\coordinate (conn11) at (1.5,3);
+	\coordinate (conn12) at (3.5,3);
+	\coordinate (conn21) at (6.5,3);
+	\coordinate (conn22) at (8.5,3);
+	\coordinate (conn23) at (10.5,3);
+	\coordinate (conn31) at (13.5,3);
+	\coordinate (onionsocket1) at (2.5,-1);
+	\coordinate (onionsocket2) at (9,-1);
+	\coordinate (onionsocket3) at (13.5,-1);
+	\coordinate (udp) at (7,-1);
+	\draw (root) -- node[sloped,anchor=center,above] {\small{}43.173.4.85:5634\normalsize} (peer1);
+	\draw (root) -- node[sloped,anchor=center,above] {\small{}9.3.6.2:72\normalsize} (peer2);
+	\draw (root) -- node[sloped,anchor=center,above] {\small{}209.78.138.9:23896\normalsize} (peer3);
+	\draw (peer1) -- node[sloped,anchor=center,above] {\small{}3421\normalsize} (conn11);
+	\draw (peer1) -- node[sloped,anchor=center,above] {\small{}29745\normalsize} (conn12);
+	\draw (peer2) -- node[sloped,anchor=center,above] {\small{}18293\normalsize} (conn21);
+	\draw (peer2) -- node[sloped,anchor=center,above] {\small{}50\normalsize} (conn22);
+	\draw (peer2) -- node[sloped,anchor=center,above] {\small{}7384\normalsize} (conn23);
+	\draw (peer3) -- node[sloped,anchor=center,above] {\small{}2\normalsize} (conn31);
+	\queue{($ (conn11) + (0,-0.2) $)}{0.5}
+	\queue{($ (conn12) + (0,-0.2) $)}{0.5}
+	\queue{($ (conn21) + (0,-0.2) $)}{0.5}
+	\queue{($ (conn22) + (0,-0.2) $)}{0.5}
+	\queue{($ (conn23) + (0,-0.2) $)}{0.5}
+	\queue{($ (conn31) + (0,-0.2) $)}{0.5}
+	\draw[-{Latex[length=6pt]}] (onionsocket1) --  ($ (conn11) + (-0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (onionsocket1) -- ($ (conn12) + (-0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (onionsocket2) --  ($ (conn21) + (0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (onionsocket2) -- ($ (conn22) + (0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (onionsocket2) -- ($ (conn23) + (0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (onionsocket3) -- ($ (conn31) + (0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (udp) --  ($ (conn11) + (0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn12) + (0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (udp) --  ($ (conn21) + (-0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn22) + (-0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn23) + (-0.1,-2.5) $);
+	\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn31) + (-0.1,-2.5) $);
+	\draw[fill=white,draw=black] ($ (onionsocket1) + (-0.15,-0.15) $)  rectangle ($ (onionsocket1) + (0.15,0.15) $);
+	\draw[fill=white,draw=black] ($ (onionsocket2) + (-0.15,-0.15) $)  rectangle ($ (onionsocket2) + (0.15,0.15) $);
+	\draw[fill=white,draw=black] ($ (onionsocket3) + (-0.15,-0.15) $)  rectangle ($ (onionsocket3) + (0.15,0.15) $);
+	\draw[fill=white,draw=black] ($ (udp) + (-0.15,-0.15) $)  rectangle ($ (udp) + (0.15,0.15) $);
+	\node[anchor=north] at ($ (onionsocket1) + (0,-0.15) $) {OnionSocket};
+	\node[anchor=north] at ($ (onionsocket2) + (0,-0.15) $) {OnionSocket};
+	\node[anchor=north] at ($ (onionsocket3) + (0,-0.15) $) {OnionSocket};
+	\node[anchor=north] at ($ (udp) + (0,-0.15) $) {UDP};
+	\end{tikzpicture} \\
+	
+}
+
+
+
+
+
 \begin{document}
 \title{\Huge Final Report \normalsize}
 \date{\today}
-\author{\LARGE 16 Onions \normalsize \\[5pt] Josef Stark \hspace{20pt} Charlie Groh}
+\author{\LARGE 16 Onions \normalsize \\[5pt] Charlie Groh \hspace{20pt} Josef Stark}
 \maketitle
 {\let\thefootnote\relax\footnotetext{This work is licensed under the Creative
 Commons Attribution-ShareAlike 4.0 International License. To view a copy of
@@ -18,7 +89,7 @@ this license, visit http://creativecommons.org/licenses/by-sa/4.0/ or send a
 letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.}}
 
 \section{General}
-We are the team ``16 Onions'' consisting of Josef Stark and Charlie Groh,
+We are the team ``16 Onions'' consisting of Charlie Groh and Josef Stark,
 and our goal is to develop a prototype implementation of the Onion module.
 
 \section{Application Internals}
@@ -35,7 +106,7 @@ Other modules can use the onion module only to send user data messages (UDP), wh
 
 \subsubsection{Layer 0: Network Abstraction Layer}
 
-At the lowest level of our application lies the so-called multiplexer, which abstracts away low-level protocol details and offers a clean interface for message interchange between nodes. The core tunnel mechanisms exclusively use this interface. The main tasks of the multiplexer are:
+At the lowest level of our application lies the so-called multiplexer, which abstracts away low-level protocol details of the underlay connections and offers a clean interface for message interchange between nodes via logical overlay connections. The core tunnel mechanisms exclusively use this interface. The main tasks of the multiplexer are:
 \begin{itemize}
 	\item Establishing and terminating control data channels to other peers using TCP
 	\item Establishing and terminating user data channels to other peers using UDP
@@ -62,10 +133,15 @@ This is the only message type that is exchanged on its own. After it has been se
 		\skippedwords \\
 		\wordbox[blr]{1}{}
 	\end{bytefield} \\
-(TCP or UDP message)
+(TCP or UDP message) \\
+
+
+Whenever a previously unknown peer---that is, a host with a source address-port combination, which did not communicate with the peer previously---connects (via TCP) to the peer, the multiplexer assigns an ID to that connection and creates a message queue for it. All incoming messages from the underlying connections are assigned and put into the respective queue belonging to the connection: Messages from \texttt{OnionSocket}, which are basically TCP messages, as well as UDP messages, whose filtering would otherwise need to be done by hand, since UDP is by nature connectionless. The queues, which are essentially the logical overlay connections exported by the multiplexer, can be accessed by their previously assigned ID to read and write TCP and UDP packets---or rather control and data messages, represented by the \texttt{OnionMessage} class. Even though there are no separate queues for TCP and UDP packets of a connection, their type can be determined to be control or data message via \texttt{type} field. 
+\multiplexerpic{}
+New connections are signaled by calling the \texttt{newConnection()} method, where almost all higher-level (Layer 1) messaging is done.
 
 \subsubsection{Layer 1: Tunnel Management Layer}
-The core tunnel mechanisms build upon the network abstraction layer provided by the multiplexer and use its interface to exchange messages. Those messages, which will be described in this section are thus free of metadata and padding from Layer 0. This information is added/removed and generally handled transparently by the multiplexer.
+The core tunnel mechanisms build upon the network abstraction layer provided by the multiplexer and use its interface to access the logical overlay connections and exchange messages. Those messages, which will be described in this section are thus free of metadata and padding from Layer 0. This information is added/removed and generally handled transparently by the multiplexer.
 
 This section lists each message type and their exact structure used during all the phases of a tunnel lifespan. For the sake of readability, we will refer to the initiator of a connection as "peer A" and to the other node as "peer B".
 
@@ -164,7 +240,7 @@ This section lists each message type and their exact structure used during all t
 \end{itemize}
 	
 	\subsection{Mode of Operation}
-	After the application has been initialized, it accepts requests from the CM/UI to
+	After the application has been initialized, it accepts requests from the CM/UI to:
 	\begin{itemize}
 		\item Build tunnels
 		\item Destroy tunnels
@@ -175,7 +251,7 @@ This section lists each message type and their exact structure used during all t
 	Time in the system is divided into equal intervals called rounds. New tunnels are established at the beginning of the next round and destroyed upon request. If at the beginning of a round there is not any tunnel in existence or pending to be built, the module builds a tunnel to a random destination, which is automatically destroyed at the end of the round. This kind of tunnel can only be used to send cover traffic.
 	
 	\subsubsection{Tunnel Construction Process}
-	The class used for constructing outgoing tunnels is called OnionConnectingSocket. For incoming as well as intermediate tunnels (when a peer is only forwarding traffic), OnionListenerSocket is used. The process of constructing it is as follows:
+	The class used for constructing outgoing tunnels is called \texttt{OnionConnectingSocket}. For incoming as well as intermediate tunnels (when a peer is only forwarding traffic), \texttt{OnionListenerSocket} is used. The process of constructing it is as follows:
 	\begin{enumerate}
 		\item An array of intermediate hops is constructed by repeatedly asking the RPS module for random peers. The amount of hops is determined in the config file. The last node is the specified target.
 		\item The first unconnected node in the hop array is selected.
@@ -223,66 +299,6 @@ Since we mostly worked on the project at the same time, the effort spent by each
 almost identical. On average, every team member spent around three hours per week for the project.
 
 \noindent
-\newcommand{\queue}[2]{%
-\begin{scope}[shift={#1},scale=#2]%
-\draw[fill=white,draw=black] (-0.5,0) rectangle (0.5,-4);%
-\foreach \i in {-1,-2,-3}%
-\draw (-0.5,\i) -- (0.5,\i);%
-\end{scope}%
-}
-\begin{tikzpicture}[scale=\textwidth/16.2cm]
-\draw[draw=black] (0,0) rectangle (16,8);
-\node[anchor=west] at (0,8.25) {Multiplexer};
-\coordinate (root) at (8,7.5);
-\coordinate (peer1) at (2.5,5);
-\coordinate (peer2) at (8.5,5);
-\coordinate (peer3) at (13.5,5);
-\coordinate (conn11) at (1.5,3);
-\coordinate (conn12) at (3.5,3);
-\coordinate (conn21) at (6.5,3);
-\coordinate (conn22) at (8.5,3);
-\coordinate (conn23) at (10.5,3);
-\coordinate (conn31) at (13.5,3);
-\coordinate (onionsocket1) at (2.5,-1);
-\coordinate (onionsocket2) at (9,-1);
-\coordinate (onionsocket3) at (13.5,-1);
-\coordinate (udp) at (7,-1);
-\draw (root) -- node[sloped,anchor=center,above] {\small{}43.173.4.85:5634\normalsize} (peer1);
-\draw (root) -- node[sloped,anchor=center,above] {\small{}9.3.6.2:72\normalsize} (peer2);
-\draw (root) -- node[sloped,anchor=center,above] {\small{}209.78.138.9:23896\normalsize} (peer3);
-\draw (peer1) -- node[sloped,anchor=center,above] {\small{}3421\normalsize} (conn11);
-\draw (peer1) -- node[sloped,anchor=center,above] {\small{}29745\normalsize} (conn12);
-\draw (peer2) -- node[sloped,anchor=center,above] {\small{}18293\normalsize} (conn21);
-\draw (peer2) -- node[sloped,anchor=center,above] {\small{}50\normalsize} (conn22);
-\draw (peer2) -- node[sloped,anchor=center,above] {\small{}7384\normalsize} (conn23);
-\draw (peer3) -- node[sloped,anchor=center,above] {\small{}2\normalsize} (conn31);
-\queue{($ (conn11) + (0,-0.2) $)}{0.5}
-\queue{($ (conn12) + (0,-0.2) $)}{0.5}
-\queue{($ (conn21) + (0,-0.2) $)}{0.5}
-\queue{($ (conn22) + (0,-0.2) $)}{0.5}
-\queue{($ (conn23) + (0,-0.2) $)}{0.5}
-\queue{($ (conn31) + (0,-0.2) $)}{0.5}
-\draw[-{Latex[length=6pt]}] (onionsocket1) --  ($ (conn11) + (-0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (onionsocket1) -- ($ (conn12) + (-0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (onionsocket2) --  ($ (conn21) + (0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (onionsocket2) -- ($ (conn22) + (0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (onionsocket2) -- ($ (conn23) + (0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (onionsocket3) -- ($ (conn31) + (0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (udp) --  ($ (conn11) + (0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn12) + (0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (udp) --  ($ (conn21) + (-0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn22) + (-0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn23) + (-0.1,-2.5) $);
-\draw[-{Latex[length=6pt]}] (udp) -- ($ (conn31) + (-0.1,-2.5) $);
-\draw[fill=white,draw=black] ($ (onionsocket1) + (-0.15,-0.15) $)  rectangle ($ (onionsocket1) + (0.15,0.15) $);
-\draw[fill=white,draw=black] ($ (onionsocket2) + (-0.15,-0.15) $)  rectangle ($ (onionsocket2) + (0.15,0.15) $);
-\draw[fill=white,draw=black] ($ (onionsocket3) + (-0.15,-0.15) $)  rectangle ($ (onionsocket3) + (0.15,0.15) $);
-\draw[fill=white,draw=black] ($ (udp) + (-0.15,-0.15) $)  rectangle ($ (udp) + (0.15,0.15) $);
-\node[anchor=north] at ($ (onionsocket1) + (0,-0.15) $) {OnionSocket};
-\node[anchor=north] at ($ (onionsocket2) + (0,-0.15) $) {OnionSocket};
-\node[anchor=north] at ($ (onionsocket3) + (0,-0.15) $) {OnionSocket};
-\node[anchor=north] at ($ (udp) + (0,-0.15) $) {UDP};
-\end{tikzpicture}
 
 
 \end{document}
