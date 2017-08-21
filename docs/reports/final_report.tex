@@ -3,6 +3,7 @@
 \usepackage{url}
 \usepackage{bytefield}
 \usepackage{verbatim}
+\usepackage{listings}
 \usepackage{tikz}
 \usetikzlibrary{calc}
 \usetikzlibrary{arrows.meta}
@@ -271,6 +272,56 @@ This section lists each message type and their exact structure used during all t
 	
 	\subsubsection{Tunnel Destruction Process}
 	Tearing down a tunnel happens in the reverse order of construction: The respective message is sent to all hops, starting with the tunnel node to the node which is directly connected to the initiator. Once a hop receives the message, it closes the connection to its predecessor in that tunnel. Should an error happen while sending the message
+
+\section{Usage}
+In order to use the module, a Java runtime environment (version 7 or later), as well as Apache Ant\footnote{\url{https://ant.apache.org/}} is needed on the host. The code depends on some 3rd-party libraries, but they are all included in the repository. \\
+For further development of the module, Eclipse\footnote{\url{http://www.eclipse.org/}} (version 3.8 or later) with Lombok\footnote{\url{https://projectlombok.org/}} (version 1.16.16 or later) is recommended. The respective project file is included.
+To use the module, the RPS and ONION AUTH modules have to be started. Also, the module has to be compiled and the class \texttt{Main} of the package \texttt{com.voidphone.onion} must be started. Those last two things can be done either via the respective GUI commands in Eclipse or via command-line interface:
+\begin{lstlisting}
+.../16onions$ ant clean
+.../16onions$ ant build
+.../16onions$ java -classpath bin:\
+libs/ini4j-0.5.4.jar:\
+libs/commons-cli-1.3.1.jar:\
+testing/libs/bcprov-jdk15on-155.jar:\
+testing/libs/lombok-1.16.16.jar \
+com.voidphone.onion.Main -c <path to configuration file>
+\end{lstlisting}
+
+\subsection{Configuration}
+The module needs a hostkey, which it will use to identify itself to other peers, as well as a configuration file with all the necessary options specified. The hostkey can be generated like this:
+\begin{lstlisting}
+openssl genrsa -out hostkey.pem 4096
+\end{lstlisting} 
+The configuration file needs to be in INI format. Here is how an example configuration file could look like:
+\begin{lstlisting}
+[onion]
+hostkey = /home/p2p/hostkey.pem
+api_address = 0.0.0.0:2223
+listen_address = 0.0.0.0:2512
+hopcount = 3
+api_timeout = 2000
+p2p_timeout = 2000
+p2p_packetsize = 20480
+roundtime = 15000
+[auth]
+api_address = 0.0.0.0:2023
+[rps]
+api_address = 0.0.0.0:2123
+\end{lstlisting}
+Explanation of the options:
+\begin{itemize}
+\item \texttt{hostkey}: Path to the hostkey
+\item \texttt{api\_address} in sections \texttt{[auth]} and \texttt{[rps]}: The listening address---consisting of binding address and port---of the API interfaces of ONION AUTH and RPS modules
+\item \texttt{api\_address} in section \texttt{[onion]}: The listening address---consisting of binding address and port---of the onion module API, where it will listen and respond to API requests from the CM/UI module
+\item \texttt{listen\_address}: The P2P listening address---consisting of binding address and port---where the onion module will listen for new incoming tunnels from other nodes
+\item \texttt{hopcount}: The amount of intermediate hops used for building outgoing tunnels. This number does not include start and end node, i.e. a hopcount of zero equals a direct connection.
+\item \texttt{api\_timeout}: The API timeout in milliseconds. When waiting for a response from one of the API interfaces, the module will give up after not receiving anything in the given amount of time.
+\item \texttt{p2p\_timeout}: The P2P timeout in milliseconds. If, for any given tunnel, which the local module instance is a part of, no message has been arrived, measures are taken (i.e. the sending or forwarding of a heartbeat) to ensure that it is still alive. If those measures are unsuccessful, the respective tunnel is presumed dead and torn down.
+\item \texttt{p2p\_packetsize}: The size in bytes which all incoming and outgoing messages are padded/unpadded to/from by the multiplexer. This value should be moderately low in order to avoid excessive, unnecessary UDP packet loss: Even small messages are padded to the specified size, and big UDP messages are often segmented, and if even one segment does not arrive at the target, the whole packet will be discarded, even if the loss would only affect the padding. Also, it must be the same on all peers. Nonetheless, we left this as a config option, since at the same time it must be sufficiently high so that the payloads returned by ONION AUTH fit into a message and we do not know what their size is, since our module should run with any ONION AUTH implementation.
+\item \texttt{roundtime}: The roundtime in milliseconds
+\end{itemize}
+The path to the config file is passed to the module as parameter, as explained before.
 	
 \subsection{Testsuite}
 The module contains a testsuite that tests artificial and real world situations. The testsuite is
@@ -283,11 +334,37 @@ In order to avoid stale files, the testsuite will delete generated config files 
 after executing the test. If you want to keep them, you must set \texttt{deleteConfigAfterTest}
 to \texttt{false} in the \texttt{Helper} class. To prevent stale open ports, every started process
 is killed after usage. In addition, every test is terminated after at most two minutes.
-Unfortuanly, we were not able to add satisfying support for the \texttt{SecurityHelper} class in
+Unfortunately, we were not able to add satisfying support for the \texttt{SecurityHelper} class in
 the \texttt{testing}-module. So it may be necessary to hardcode the keystore path in the
 \texttt{propertiesPath} variable.
+The testing module does not need to be provided with hostkeys and configuration files, since it generates them on-the-fly by itself.
 
-\subsection{Bugs and Limitations}
+To run the tests, everything has to be built and the classes \texttt{Testing} and \texttt{Test} run. This can all be done via the respective Eclipse GUI commands or else via command-line interface:
+
+\begin{lstlisting}
+.../16onions$ ant clean
+.../16onions$ ant build
+
+.../16onions$ java -classpath bin:\
+libs/ini4j-0.5.4.jar:\
+libs/commons-cli-1.3.1.jar:\
+testing/libs/junit-4.12.jar:\
+testing/libs/test/hamcrest-core-1.3.jar:\
+testing/libs/bcprov-jdk15on-155.jar:\
+testing/libs/lombok-1.16.16.jar \
+org.junit.runner.JUnitCore com.voidphone.testing.Testing
+
+.../16onions$ java -classpath bin:\
+libs/ini4j-0.5.4.jar:\
+libs/commons-cli-1.3.1.jar:\
+testing/libs/junit-4.12.jar:\
+testing/libs/test/hamcrest-core-1.3.jar:\
+testing/libs/bcprov-jdk15on-155.jar:\
+testing/libs/lombok-1.16.16.jar \
+org.junit.runner.JUnitCore com.voidphone.testing.Test
+\end{lstlisting}
+
+\section{Bugs and Limitations}
 
 \section{Project Work}
 Although there are still some bugs in our module, we consider the project as successful.
