@@ -8,9 +8,6 @@
 \usetikzlibrary{calc}
 \usetikzlibrary{arrows.meta}
 
-
-
-
 \newcommand{\queue}[2]{%
 	\begin{scope}[shift={#1},scale=#2]%
 		\draw[fill=white,draw=black] (-0.5,0) rectangle (0.5,-4);%
@@ -19,6 +16,7 @@
 	\end{scope}%
 }
 \newcommand{\multiplexerpic}{
+	\noindent
 	\begin{tikzpicture}[scale=\textwidth/16.2cm]
 	\draw[draw=black] (0,0) rectangle (16,8);
 	\node[anchor=west] at (0,8.25) {Multiplexer};
@@ -71,13 +69,8 @@
 	\node[anchor=north] at ($ (onionsocket2) + (0,-0.15) $) {OnionSocket};
 	\node[anchor=north] at ($ (onionsocket3) + (0,-0.15) $) {OnionSocket};
 	\node[anchor=north] at ($ (udp) + (0,-0.15) $) {UDP};
-	\end{tikzpicture} \\
-	
+	\end{tikzpicture}	
 }
-
-
-
-
 
 \begin{document}
 \title{\Huge Final Report \normalsize}
@@ -107,39 +100,69 @@ Other modules can use the onion module only to send user data messages (UDP), wh
 
 \subsubsection{Layer 0: Network Abstraction Layer}
 
-At the lowest level of our application lies the so-called multiplexer, which abstracts away low-level protocol details of the underlay connections and offers a clean interface for message interchange between nodes via logical overlay connections. The core tunnel mechanisms exclusively use this interface. The main tasks of the multiplexer are:
+At the lowest level of our application lies the so-called multiplexer, which abstracts away
+low-level protocol details of the underlay connections and offers a clean interface for message
+interchange between nodes via logical overlay connections. The core tunnel mechanisms exclusively
+use this interface. The main tasks of the multiplexer are:
 \begin{itemize}
 	\item Establishing and terminating control data channels to other peers using TCP
 	\item Establishing and terminating user data channels to other peers using UDP
+	\item Multiplexing multiple overlay connections over the same underlay connection
 	\item Padding/Unpadding messages to/from a fixed, configurable size while offering transport functionality of variable-sized payload
-	\item Correctly assigning and relating incoming and outgoing messages to the tunnel they belong to
+	\item Correctly assigning and relating incoming and outgoing messages to the overlay tunnel they belong to
 \end{itemize}
-Upon receiving the request to connect to a certain peer, the multiplexer first establishes a TCP connection to that peer for transporting control data and then immediately sends a packet to that peer containing the UDP port on which it is listening for user data: \\
 
+The multiplexer differentiate between two types of connections:
+\begin{description}
+	\item[Underlay connections] between two peers are the respective TCP connection. Between a pair of peers there is at most one underlay connection.
+	\item[Overlay connections] are multiplexed over the underlay connection between the peers. They are identified by the ID field in the packets.
+\end{description}
+
+Upon receiving the request to establish an overlay connections to a certain peer, the multiplexer
+first checks whether the peer is already connected by an underlay connection. If this is not the
+case, the multiplexer establishes a TCP connection to the peer and immediately sends a packet
+containing the UDP port on which it is listening for user data: \\[8pt]
 	\begin{bytefield}[bitwidth=1.0em]{32}
 		\bitheader{0,7,8,15} \\
-		\bitbox{16}{UDP listening port number} \\
+		\bitbox{16}{UDP listening port number}
 	\end{bytefield} \\
 (TCP message)
 
-This is the only message type that is exchanged on its own. After it has been sent, messages are only sent upon request of the core tunnel mechanism. They can be transmitted over TCP or UDP, which is controlled by a flag of the corresponding function. They have the following structure:
-
+All succeeding messages are sent upon request of the core tunnel mechanism. The protocol (TCP or
+UDP) is selected by the \texttt{type} flag in the \texttt{OnionMessage} class. The transmitted
+messages have the following structure: \\[8pt]
 	\begin{bytefield}[bitwidth=1.0em]{32}
 		\bitheader{0,7,8,15,16,23,24,31} \\
 		& \bitbox{16}{payload length} 
-		& \bitbox{16}{tunnel ID} \\
+		& \bitbox{16}{ID} \\
 		\bitbox[lrt]{32}{payload} \\
-		\skippedwords \\				
+		\skippedwords \\
 		\bitbox[lrt]{32}{padding} \\
 		\skippedwords \\
 		\wordbox[blr]{1}{}
 	\end{bytefield} \\
-	(TCP or UDP message) \\
+(TCP or UDP message)
 
+It is worth mentioning that everything is transmitted in plaintext. The \texttt{padding} is
+necessary, to guarantee a equal sized packets. It does not provide any kind of anonymity protection
+mechanism. Furthermore, if the ONION module is configured properly (i.e. \texttt{p2p\_packetsize}
+is equal to the packet size of the ONION AUTH module) most packets will not contain a padding.
 
-Whenever a previously unknown peer---that is, a host with a source address-port combination, which did not communicate with the peer previously---connects (via TCP) to the peer, the multiplexer assigns an ID to that connection and creates a message queue for it. All incoming messages from the underlying connections are assigned and put into the respective queue belonging to the connection: Messages from \texttt{OnionSocket}, which are basically TCP messages, as well as UDP messages, whose filtering would otherwise need to be done by hand, since UDP is by nature connectionless. The queues, which are essentially the logical overlay connections exported by the multiplexer, can be accessed by their previously assigned ID to read and write TCP and UDP packets---or rather control and data messages, represented by the \texttt{OnionMessage} class. Even though there are no separate queues for TCP and UDP packets of a connection, their type can be determined to be control or data message via \texttt{type} field. 
+The multiplexer identifies a overlay connection by the tuple (IP-address:port, ID). This makes it
+possible to run multiple instances of ONION modules on the same IP-address, although it ease sybil
+attacks. We decided to take the risk, because it simplifies tests for the module. Nevertheless, the
+code design makes it simple to change it.
+
+Internally the multiplexer holds for every overlay connection a queue that contains received
+messages for this connection. Therefore, a queue contains packtes received over UDP and TCP, which
+is indicated by the \texttt{type} field in \texttt{OnionMessage}. Incoming UDP packets are
+processed in the \texttt{Main} class; incoming TCP packets by the responsible \texttt{OnionSocket}
+class.
+
+New connections are signaled by calling the \texttt{newConnection(\dots{})} method that does almost
+all higher-level (Layer 1) messaging.
+
 \multiplexerpic{}
-New connections are signaled by calling the \texttt{newConnection()} method, where almost all higher-level (Layer 1) messaging is done.
 
 \subsubsection{Layer 1: Tunnel Management Layer}
 The core tunnel mechanisms build upon the network abstraction layer provided by the multiplexer and use its interface to access the logical overlay connections and exchange messages. Those messages, which will be described in this section are thus free of metadata and padding from Layer 0. This information is added/removed and generally handled transparently by the multiplexer.
@@ -147,8 +170,7 @@ The core tunnel mechanisms build upon the network abstraction layer provided by 
 This section lists each message type and their exact structure used during all the phases of a tunnel lifespan. For the sake of readability, we will refer to the initiator of a connection as "peer A" and to the other node as "peer B".
 
 \begin{itemize}
-	\item Handshake 1 \\
-
+	\item Handshake 1 \\[8pt]
 		\begin{bytefield}[bitwidth=1.0em]{32}
 			\bitheader{0,7,8,15,16,23,24,31} \\
 			& \bitbox{8}{MAGIC SEQ}
@@ -162,8 +184,7 @@ This section lists each message type and their exact structure used during all t
 		
 		This message is sent from peer A to initiate the authentication process. MAGIC SEQ is a bit sequence identifying the connection initiator as onion peer; VERSION contains the P2P protocol version. Handshake 1 is obtained from the ONION AUTH module of peer A and forwarded to peer B via this message, where it is passed to the local ONION AUTH module---given that it is actually a onion node, MAGIC SEQ matches and VERSION is compatible.
 		
-	\item Handshake 2 \\
-
+	\item Handshake 2 \\[8pt]
 		\begin{bytefield}[bitwidth=1.0em]{32}
 			\bitheader{0,7,8,15,16,23,24,31} \\
 			\bitbox[lrt]{32}{Handshake 2} \\
@@ -174,8 +195,7 @@ This section lists each message type and their exact structure used during all t
 		
 		After having processed Handshake 1, peer B obtains Handshake 2 from its ONION AUTH module---given that the Handshake was valid. It then sends this Handshake 2 back to peer A. ONION AUTH of peer A now checks the received Handshake for validity. If positive, the handshake is further processed and an encrypted connection between peer A and peer B has been established. In any other case---peer A received an invalid handshake or no answer at all and timed out---the authentication is aborted and adequate measures are to be taken, e.g. selecting a different node and starting over the procedure.
 	
-	\item Tunnel building/expansion request \\
-	
+	\item Tunnel building/expansion request \\[8pt]
 		\begin{bytefield}[bitwidth=1.0em]{32}
 			\bitheader{0,7,8,15,16,23,24,31} \\
 			& \bitbox{8}{TUN BUILD}
@@ -190,8 +210,7 @@ This section lists each message type and their exact structure used during all t
 		
 		Peer A can send this message to an authenticated peer B to instruct it to connect to another peer C, whose address is specified in this message. Upon receiving it, peer B will now forward all incoming messages between peer A and peer C, so peer A can begin authenticating with peer C over peer B.
 		
-	\item Incoming tunnel notification \\
-			
+	\item Incoming tunnel notification \\[8pt]
 		\begin{bytefield}[bitwidth=1.0em]{32}
 			\bitheader{0,7} \\
 			& \bitbox{8}{TUN INCOMING}
@@ -200,22 +219,20 @@ This section lists each message type and their exact structure used during all t
 		
 		This message is sent from peer A to the peer D at the end of the tunnel, so that peer D knows that the established tunnel ends at peer D and that the further incoming data is destined to him and must not be forwarded. After receiving this message, no more tunnel building/expansion requests can be sent to peer D.
 		
-	\item User data \\
+	\item User data \\[8pt]	
+		\begin{bytefield}[bitwidth=1.0em]{32}
+			\bitheader{0,7,8,15,16,23,24,31} \\
+			& \bitbox{8}{DATA}
+			& \bitbox[lrt]{24}{} \\
+			\bitbox[lr]{32}{payload} \\
+			\skippedwords \\	
+			\wordbox[blr]{1}{}
+		\end{bytefield} \\
+		(UDP message)
 	
-	\begin{bytefield}[bitwidth=1.0em]{32}
-		\bitheader{0,7,8,15,16,23,24,31} \\
-		& \bitbox{8}{DATA}
-		& \bitbox[lrt]{24}{} \\
-		\bitbox[lr]{32}{payload} \\
-		\skippedwords \\	
-		\wordbox[blr]{1}{}
-	\end{bytefield} \\
-	(UDP message)
+		Contains real user (i.e. VoIP) data, which was requested to be sent by another local module. Requires the previous reception of an incoming tunnel notification in order to be interpreted.
 	
-	Contains real user (i.e. VoIP) data, which was requested to be sent by another local module. Requires the previous reception of an incoming tunnel notification in order to be interpreted.
-	
-	\item User data \\
-	
+	\item User data \\[8pt]
 		\begin{bytefield}[bitwidth=1.0em]{32}
 			\bitheader{0,7,8,15,16,23,24,31} \\
 			& \bitbox{8}{COVER}
@@ -228,16 +245,15 @@ This section lists each message type and their exact structure used during all t
 		
 		Contains cover traffic of a specified size, which was requested to be sent by the local CM/UI module. Since it contains no meaningful data, the message is discarded upon reception.
 		
-	\item Heartbeat \\
-	
-	\begin{bytefield}[bitwidth=1.0em]{32}
-		\bitheader{0,7} \\
-		& \bitbox{8}{HEARTBEAT}
-	\end{bytefield} \\
-	(UDP message)
-	
-	If a time-out was triggered, meaning that a peer has not received data of any kind from a certain tunnel in a predefined amount of time, it sends this message to request a sign of live from the node at the other end of the tunnel. This sign of live can be any data, but if there is currently no real user data available for being sent, it is simply cover traffic.
-	Each time-out triggers the sending of such a heartbeat message and the incrementation of a retries-counter. Once a response has been received, that counter is reset to zero; if the counter exceeds five, the tunnel is presumed dead. This message (as well as cover traffic and real data) can only be sent by the two end nodes of a tunnel. An intermediate hop also counts the time-outs and disconnects from its predecessor and successor if necessary, but does not send messages on its own, it only forwards them.
+	\item Heartbeat \\[8pt]
+		\begin{bytefield}[bitwidth=1.0em]{32}
+			\bitheader{0,7} \\
+			& \bitbox{8}{HEARTBEAT}
+		\end{bytefield} \\
+		(UDP message)
+
+		If a time-out was triggered, meaning that a peer has not received data of any kind from a certain tunnel in a predefined amount of time, it sends this message to request a sign of live from the node at the other end of the tunnel. This sign of live can be any data, but if there is currently no real user data available for being sent, it is simply cover traffic.
+		Each time-out triggers the sending of such a heartbeat message and the incrementation of a retries-counter. Once a response has been received, that counter is reset to zero; if the counter exceeds five, the tunnel is presumed dead. This message (as well as cover traffic and real data) can only be sent by the two end nodes of a tunnel. An intermediate hop also counts the time-outs and disconnects from its predecessor and successor if necessary, but does not send messages on its own, it only forwards them.
 \end{itemize}
 	
 	\subsection{Mode of Operation}
@@ -312,13 +328,13 @@ api_address = 0.0.0.0:2123
 Explanation of the options:
 \begin{itemize}
 \item \texttt{hostkey}: Path to the hostkey
-\item \texttt{api\_address} in sections \texttt{[auth]} and \texttt{[rps]}: The listening address---consisting of binding address and port---of the API interfaces of ONION AUTH and RPS modules
-\item \texttt{api\_address} in section \texttt{[onion]}: The listening address---consisting of binding address and port---of the onion module API, where it will listen and respond to API requests from the CM/UI module
-\item \texttt{listen\_address}: The P2P listening address---consisting of binding address and port---where the onion module will listen for new incoming tunnels from other nodes
+\item \texttt{api\_address} in sections \texttt{[auth]} and \texttt{[rps]}: The listening address of the API interfaces of ONION AUTH and RPS modules
+\item \texttt{api\_address} in section \texttt{[onion]}: The listening address of the onion module API, where it will listen and respond to API requests from the CM/UI module
+\item \texttt{listen\_address}: The P2P listening address where the onion module will listen for new incoming tunnels from other nodes
 \item \texttt{hopcount}: The amount of intermediate hops used for building outgoing tunnels. This number does not include start and end node, i.e. a hopcount of zero equals a direct connection.
 \item \texttt{api\_timeout}: The API timeout in milliseconds. When waiting for a response from one of the API interfaces, the module will give up after not receiving anything in the given amount of time.
 \item \texttt{p2p\_timeout}: The P2P timeout in milliseconds. If, for any given tunnel, which the local module instance is a part of, no message has been arrived, measures are taken (i.e. the sending or forwarding of a heartbeat) to ensure that it is still alive. If those measures are unsuccessful, the respective tunnel is presumed dead and torn down.
-\item \texttt{p2p\_packetsize}: The size in bytes which all incoming and outgoing messages are padded/unpadded to/from by the multiplexer. This value should be moderately low in order to avoid excessive, unnecessary UDP packet loss: Even small messages are padded to the specified size, and big UDP messages are often segmented, and if even one segment does not arrive at the target, the whole packet will be discarded, even if the loss would only affect the padding. Also, it must be the same on all peers. Nonetheless, we left this as a config option, since at the same time it must be sufficiently high so that the payloads returned by ONION AUTH fit into a message and we do not know what their size is, since our module should run with any ONION AUTH implementation.
+\item \texttt{p2p\_packetsize}: Every layer 0 packet is padded if necessary. This option defines the size of the \texttt{payload}+\texttt{padding} section. It must be larger or equal than the packet size of the ONION AUTH module (for best performance results it should be equal). To achieve unobservability, it must be the same on all peers. Nevertheless, we left this as a config option, because we do not know the packet size of the ONION AUTH module and our module should run with any ONION AUTH implementation.
 \item \texttt{roundtime}: The roundtime in milliseconds
 \end{itemize}
 The path to the config file is passed to the module as parameter, as explained before.
@@ -334,7 +350,7 @@ In order to avoid stale files, the testsuite will delete generated config files 
 after executing the test. If you want to keep them, you must set \texttt{deleteConfigAfterTest}
 to \texttt{false} in the \texttt{Helper} class. To prevent stale open ports, every started process
 is killed after usage. In addition, every test is terminated after at most two minutes.
-The suite uses parts of the voidphone testing framework\footnote{url{https://gitlab.lrz.de/voidphone/testing}}. A keystore has to be set up as described in their README file. Unfortunately, we were not able to add satisfying support for the \texttt{SecurityHelper} class in
+The suite uses parts of the voidphone testing framework\footnote{\url{https://gitlab.lrz.de/voidphone/testing}}. A keystore has to be set up as described in their README file. Unfortunately, we were not able to add satisfying support for the \texttt{SecurityHelper} class in
 the \texttt{testing}-module, so it may be necessary to hardcode the keystore path in the
 \texttt{propertiesPath} variable.
 The testing module does not need to be provided with hostkeys and configuration files, since it generates them on-the-fly by itself.
@@ -375,19 +391,19 @@ org.junit.runner.JUnitCore com.voidphone.testing.Test
 Although there are still some bugs in our module, we consider the project as successful.
 
 \subsection{Work Distribution}
-We tried to split the work equally and to reduce intersections between the two team members. Each member focused on its assigned parts, however, intersections could not always be avoided. \\
+We tried to split the work equally and to reduce intersections between the two team members. Each member focused on its assigned parts, however, intersections could not always be avoided.
 
 Charlie Groh:
 \begin{itemize}
 	\item Multiplexer, layer 1 abstractions
 	\item TestSuite (Includes ConfigFactory)
-	\item API (Onion, Onion Auth and RPS) abstractions \\
+	\item API (Onion, Onion Auth and RPS) abstractions
 \end{itemize}
 
 Josef Stark:
 \begin{itemize}
 	\item Tunnel building, management, usage and destruction
-	\item Config file parser \\
+	\item Config file parser
 \end{itemize}
 The reports were written by both members.
 
@@ -395,9 +411,5 @@ The reports were written by both members.
 \subsection{Spent Effort}
 Since we mostly worked on the project at the same time, the effort spent by each individual is
 almost identical. On average, every team member spent around three hours per week for the project.
-
-\noindent
-
-
 \end{document}
 \grid
