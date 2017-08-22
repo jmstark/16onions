@@ -381,11 +381,14 @@ org.junit.runner.JUnitCore com.voidphone.testing.Test
 \end{lstlisting}
 
 \section{Bugs and Limitations}
+Since this is alpha software, it contains bugs and many further improvements are possible.
 \begin{itemize}
-	\item There remain some errors in the code which lead to sporadic tunnel failures, which are hard to track and reproduce and which we were not able to remedy due to timely constraints. They are probably related to unresolved race conditions. This often affects the node behaviour, when it is an intermediate or end hop of more than 1 tunnel and can result in local exceptions and thus some messages not being forwarded or the tunnel breaking down. It can be observed when executing the real-life test in \texttt{Test}, while the artificial tests inside \texttt{Testing} do not seem to be affected.
-	\item In the case that at the beginning of a round there is no tunnel existing or to be constructed, a random destination is to be chosen and a tunnel to be constructed to it, which would then be used to exchange cover traffic. The necessary routines for this are in the code, but commented out, since we were not able to make it work in time. It is most probably related to the previously mentioned issue.
+\item When two peers try to build a new underlay connection between them at the same time, both connections will fail. The reason is a race condition in the \texttt{OnionSocket} handler for incoming connections. Nevertheless, this bug is not critical, because in case of a connection failure another hop is chosen.
+\item Even though we use the ONION AUTH encryption, it is quite simple to inject forged packets, because the underlay connections are not encrypted. This could lead to denial of service and a simplification of other kinds of attacks. It is not possible to simply use TLS, because packets from the same peer can arrive at the UDP port or at the TCP port.
+\item The exception handling in the core tunnel mechanisms is not very sophisticated so that occurring exceptions sporadically lead to a shutdown of the peer and thus tunnel failures. In addition, there remain some other errors in the code that are hard to track and reproduce. They are probably related to unresolved race conditions. This can be observed when executing the real world test in \texttt{Test}, whose success rate differs from execution to execution, while the artificial tests inside \texttt{Testing} does not seem to be affected.
+\item We were not able to correctly pass the keystore path to the \texttt{SecurityHelper} class in the testing module, so it has to be hardcoded, as already mentioned before.
+\item We tried to implement support for rounds like requested by the specification, but we were not able to finish it, because we had some problems in understanding this part and because we ran out of time. The necessary routines for this are in the code, but commented out, because they are not tested. 
 \end{itemize}
-
 
 \section{Project Work}
 Although there are still some bugs in our module, we consider the project as successful.
